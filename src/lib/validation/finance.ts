@@ -37,6 +37,13 @@ export const createPaymentInputSchema = z.object({
   notes: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
+export const voidStudentChargeInputSchema = z.object({
+  studentChargeId: idSchema,
+  reason: nonEmptyString("Alasan pembatalan", 3, 500),
+});
+
+export function validateVoidStudentChargeInput(input: unknown) { return validate(voidStudentChargeInputSchema, input); }
+
 export const voidPaymentInputSchema = z.object({
   paymentTransactionId: idSchema,
   reason: nonEmptyString("Alasan pembatalan", 3, 500),
