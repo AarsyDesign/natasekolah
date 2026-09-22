@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { DashboardSnapshot } from "../../lib/dashboard/overview-service";
 import {
   AlertTriangle,
   ArrowRight,
@@ -30,23 +34,55 @@ function attendanceClass(status: "NOT_STARTED" | "OPEN" | "CLOSED") {
   return "border-stone-200 bg-stone-50 text-stone-600";
 }
 
-export default async function DashboardPage() {
-  const result = await getDashboardSnapshotAction();
+export default function DashboardPage() {
+  const [data, setData] = useState<DashboardSnapshot | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!result.success || !result.data) {
+  useEffect(() => {
+    const now = new Date();
+    const localDate = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    getDashboardSnapshotAction(localDate).then((result) => {
+      if (result.success && result.data) {
+        setData(result.data);
+        setError(null);
+      } else {
+        setError(result.error || "Dashboard tidak dapat dimuat.");
+      }
+    });
+  }, []);
+
+  if (error) {
     return (
       <div className="min-h-screen bg-stone-100/60 text-stone-900">
         <NavHeader subtitle="Dashboard Operasional" />
         <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
-            {result.error || "Dashboard tidak dapat dimuat."}
+            {error}
           </div>
         </main>
       </div>
     );
   }
 
-  const { institution, today, activeAcademicYear, counts, dataQuality, attendance } = result.data;
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-stone-100/60 text-stone-900">
+        <NavHeader subtitle="Dashboard Operasional" />
+        <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-stone-200 bg-white p-5 text-sm text-stone-600 shadow-xs">
+            Memuat dashboard operasional...
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+    const { institution, today, activeAcademicYear, counts, dataQuality, attendance } = data;
 
   const actionLinks = [
     { href: "/attendance", label: "Buka Presensi", description: "Catat kehadiran hari ini.", icon: ClipboardCheck, visible: attendance.visible },
