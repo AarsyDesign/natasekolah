@@ -95,3 +95,27 @@ Setiap mutasi bisnis penting (pembayaran SPP, absensi harian) mencatat event ke 
    * Guru hanya diizinkan melihat, membuka, mengisi, dan menutup sesi untuk `TeacherAssignment` miliknya sendiri. Akses ke penugasan guru lain ditolak instan (403 Forbidden).
    * Admin dan Kepala Sekolah dengan hak administratif dapat mengelola sesi lintas guru dalam institusi yang sama.
 
+
+
+## 8. Finance Core & Immutable Financial Ledger (Phase 3)
+
+1. **Finance 3-Tier Flow:**
+   Finance follows FeeCategory -> StudentCharge -> PaymentTransaction.
+   * FeeCategory is the tenant-scoped catalog.
+   * StudentCharge stores gross amount, discount, period, due date, and payment status.
+   * PaymentTransaction stores actual payments and is never hard-deleted.
+2. **Atomic Payment Workflow:**
+   Validate -> Authorize -> Idempotency Check -> Payment + Receipt + Cashbook + Audit -> Commit.
+   All payment components are created in one database transaction.
+3. **Immutable Correction Model:**
+   * POSTED payments are not edited or deleted.
+   * Cancellation uses VOID and creates a reversal entry in CashbookEntry.
+   * Receipts remain historical evidence; corrections never erase the original proof.
+4. **Charge Lifecycle:**
+   * UNPAID -> no active payment.
+   * PARTIAL -> active payment is below net charge value.
+   * PAID -> active payment exactly equals net charge value.
+   * OVERPAID -> active payment exceeds net charge value.
+   * VOID -> charge is cancelled without deleting history.
+5. **Tenant Boundary:**
+   All domain services receive TenantContext, derive institutionId from the authenticated server session, and use tenant-scoped lookups before mutation.
