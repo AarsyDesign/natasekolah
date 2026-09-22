@@ -472,8 +472,8 @@ model PaymentTransaction {
   institution       Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   charge            StudentCharge @relation(fields: [studentChargeId, institutionId], references: [id, institutionId], onDelete: Restrict)
   receivedBy        User           @relation("PaymentReceivedBy", fields: [receivedById, institutionId], references: [id, institutionId], onDelete: Restrict)
-  receipt           Receipt?
-  cashbookEntry     CashbookEntry?
+  receipt           Receipt?          @relation("PaymentReceipt")
+  cashbookEntry     CashbookEntry?    @relation("PaymentCashbook")
 
   @@unique([id, institutionId])
   @@unique([institutionId, idempotencyKey])
@@ -495,7 +495,7 @@ model Receipt {
   createdAt            DateTime            @default(now())
 
   institution           Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  paymentTransaction    PaymentTransaction  @relation(fields: [paymentTransactionId], references: [id], onDelete: Restrict)
+  paymentTransaction    PaymentTransaction  @relation("PaymentReceipt", fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: Restrict)
   issuedBy              User                @relation("ReceiptIssuedBy", fields: [issuedById, institutionId], references: [id, institutionId], onDelete: Restrict)
 
   @@unique([id, institutionId])
@@ -521,8 +521,8 @@ model CashbookEntry {
   createdAt             DateTime            @default(now())
 
   institution           Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  paymentTransaction    PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: Restrict)
-  reversalOf            CashbookEntry?      @relation("CashbookReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  paymentTransaction    PaymentTransaction? @relation("PaymentCashbook", fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  reversalOf            CashbookEntry?      @relation("CashbookReversal", fields: [reversalOfId, institutionId], references: [id, institutionId], onDelete: Restrict)
   reversal              CashbookEntry?      @relation("CashbookReversal")
   createdBy             User                @relation("CashbookCreatedBy", fields: [createdById, institutionId], references: [id, institutionId], onDelete: Restrict)
 
