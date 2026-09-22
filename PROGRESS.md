@@ -111,3 +111,11 @@
    * Finance 3-Tier Layer (FeeCategory, StudentCharge, PaymentTransaction).
    * Cashbook & Unique Receipt Generator (`KW-...`).
    * Operational Dashboard berbasis aksi pengguna.
+
+
+## [2026-09-23] - Finance Core VERIFY Audit
+* **Audit:** Source review completed against `staging`, including Finance services/actions/validation/UI, auth/tenant guards, Prisma schema, tests, architecture/ADR/progress/changelog.
+* **Fixes applied during audit:** tenant-scoped compound FKs for PaymentTransaction↔Receipt/Cashbook and Cashbook reversal; Serializable transaction + retry for concurrent payment creation/void; Serializable charge create/void; UI idempotency key preserved across retry/double-submit protection.
+* **Verification limitation:** This GitHub-only session cannot execute local `npx prisma validate`, `npx prisma generate`, TypeScript, tests, or production build. No GitHub Actions checks are configured/reported for the current feature commit.
+* **Migration:** No Prisma migration directory/changed migration is present in PR #1. Database migration remains BLOCKED pending project environment/database workflow verification.
+* **Status:** PARTIALLY COMPLETE — NOT READY until environment verification passes and database migration is created/applied through the project's approved workflow.
