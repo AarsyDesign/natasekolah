@@ -1,7 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { calculateChargeStatus, calculateOutstanding, calculateExcess } from "../src/lib/finance";
-import { validateCreatePaymentInput, validateCreateStudentChargeInput } from "../src/lib/validation/finance";
+import { validateCreatePaymentInput, validateCreateStudentChargeInput, validateVoidStudentChargeInput } from "../src/lib/validation/finance";
+import { sanitizeClientInput } from "../src/lib/tenant/guard";
 import { hasPermission } from "../src/lib/auth/permissions";
 import type { TenantContext } from "../src/lib/tenant/context";
 
@@ -32,6 +33,41 @@ describe("Phase 3 — Finance Core", () => {
       amount: 100000,
       discountAmount: 100001,
     }));
+  });
+
+  it("rejects invalid payment method and short idempotency keys", () => {
+    assert.throws(() => validateCreatePaymentInput({
+      studentChargeId: "charge_1",
+      amount: 100000,
+      method: "INVALID",
+      idempotencyKey: "short",
+    }));
+  });
+
+  it("validates charge void reason", () => {
+    assert.throws(() => validateVoidStudentChargeInput({
+      studentChargeId: "charge_1",
+      reason: "x",
+    }));
+  });
+
+  it("strips client security fields and binds the server tenant", () => {
+    const cleaned = sanitizeClientInput({
+      institutionId: "attacker_tenant",
+      userId: "attacker_user",
+      role: "SUPER_ADMIN",
+      roles: ["SUPER_ADMIN"],
+      permissions: ["*"],
+      isSuperAdmin: true,
+      amount: 100000,
+    }, {
+      userId: "real_user",
+      institutionId: "real_tenant",
+      roles: ["FINANCE_STAFF"],
+      permissions: ["finance:view", "finance:manage"],
+      isSuperAdmin: false,
+    });
+    assert.deepEqual(cleaned, { amount: 100000, institutionId: "real_tenant" });
   });
 
   it("enforces finance RBAC by role context", () => {
