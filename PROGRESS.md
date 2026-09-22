@@ -119,3 +119,6 @@
 * **Verification limitation:** This GitHub-only session cannot execute local `npx prisma validate`, `npx prisma generate`, TypeScript, tests, or production build. No GitHub Actions checks are configured/reported for the current feature commit.
 * **Migration:** No Prisma migration directory/changed migration is present in PR #1. Database migration remains BLOCKED pending project environment/database workflow verification.
 * **Status:** PARTIALLY COMPLETE — NOT READY until environment verification passes and database migration is created/applied through the project's approved workflow.
+
+* **Additional hardening:** FeeCategory mutations and standalone Cashbook expenses now commit together with AuditLog; void-charge reason is Zod-validated; paginated cashbook returns aggregate tenant balance; project test script added; PR verification workflow added.
+* **CI status:** workflow committed, but no workflow run is currently reported for the new commit in this session.
