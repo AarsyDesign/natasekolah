@@ -4,7 +4,6 @@ import { useEffect, useState, useTransition } from "react";
 import { NavHeader } from "../../components/nav-header";
 import {
   getCashbookBalanceAction,
-  listCashbookAction,
   listFeeCategoriesAction,
   listPaymentsAction,
   listStudentChargesAction,
@@ -38,6 +37,7 @@ export default function FinancePage() {
   const [paymentChargeId, setPaymentChargeId] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentIdempotencyKey, setPaymentIdempotencyKey] = useState(() => crypto.randomUUID());
 
   const load = () => startTransition(async () => {
     setError(null);
@@ -57,13 +57,13 @@ export default function FinancePage() {
 
   useEffect(() => { load(); }, []);
 
-  const run = (fn: () => Promise<{ success: boolean; error?: string }>, message: string) => {
+  const run = (fn: () => Promise<{ success: boolean; error?: string }>, message: string, onSuccess?: () => void) => {
     startTransition(async () => {
       setError(null);
       setSuccess(null);
       const res = await fn();
       if (!res.success) setError(res.error || "Operasi gagal.");
-      else { setSuccess(message); load(); }
+      else { setSuccess(message); onSuccess?.(); load(); }
     });
   };
 
@@ -108,7 +108,7 @@ export default function FinancePage() {
 
         <section className="rounded-2xl border border-stone-200 bg-white p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-bold">Catat Pembayaran</h2><p className="text-xs text-stone-500">Idempotency key mencegah pembayaran ganda dari retry.</p></div></div>
-          <form onSubmit={(e) => { e.preventDefault(); run(() => createPaymentAction({ studentChargeId: paymentChargeId, amount: Number(paymentAmount), method: paymentMethod, idempotencyKey: crypto.randomUUID() }), "Pembayaran tercatat dan kuitansi diterbitkan."); }} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <form onSubmit={(e) => { e.preventDefault(); run(() => createPaymentAction({ studentChargeId: paymentChargeId, amount: Number(paymentAmount), method: paymentMethod, idempotencyKey: paymentIdempotencyKey }), "Pembayaran tercatat dan kuitansi diterbitkan.", () => setPaymentIdempotencyKey(crypto.randomUUID())); }} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
             <select value={paymentChargeId} onChange={(e) => setPaymentChargeId(e.target.value)} className="rounded-xl border border-stone-300 px-3 py-2 text-sm sm:col-span-2"><option value="">Pilih tagihan</option>{charges.filter((c) => c.status !== "VOID").map((c) => <option key={c.id} value={c.id}>{c.student.fullName} — {c.feeCategory.name} — {rupiah(c.amount - c.discountAmount)}</option>)}</select>
             <input value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" min="1" placeholder="Nominal bayar" className="rounded-xl border border-stone-300 px-3 py-2 text-sm" />
             <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="rounded-xl border border-stone-300 px-3 py-2 text-sm"><option>CASH</option><option>TRANSFER</option><option>QRIS</option><option>OTHER</option></select>
