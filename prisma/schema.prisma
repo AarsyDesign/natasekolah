@@ -1,0 +1,390 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// PHASE 0 — MULTI-TENANCY & FOUNDATION SCHEMA
+// -------------------------------------------------------------
+
+// Tenant Root Entity
+model Institution {
+  id              String         @id @default(cuid())
+  name            String
+  slug            String         @unique
+  type            String         @default("SEKOLAH") // SEKOLAH | PESANTREN | PESANTREN_TERPADU | RUMAH_TAHFIDZ | PKBM
+  enabledPlugins  String         @default("[\"FORMAL_ACADEMIC\"]") // JSON Array
+  address         String?
+  phone           String?
+  logoUrl         String?
+  settingsJson    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Tenant-Scoped Core Relations
+  users               User[]
+  academicYears       AcademicYear[]
+  classrooms          Classroom[]
+  students            Student[]
+  enrollments         Enrollment[]
+  subjects            Subject[]
+  teacherAssignments  TeacherAssignment[]
+  guardians           Guardian[]
+  guardianStudents    GuardianStudent[]
+  guardianInvitations GuardianInvitation[]
+  sessions            Session[]
+  auditLogs           AuditLog[]
+  attendanceSessions  AttendanceSession[]
+  attendanceRecords   AttendanceRecord[]
+
+  @@index([slug])
+  @@index([type])
+}
+
+// Tenant-Scoped User & Staff
+model User {
+  id              String         @id @default(cuid())
+  institutionId   String
+  name            String
+  email           String
+  phoneWa         String?
+  passwordHash    String
+  roles           String         @default("[\"STAFF\"]") // JSON: SUPER_ADMIN, INSTITUTION_ADMIN, TEACHER, TREASURER, etc.
+  isActive        Boolean        @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution         Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  sessions            Session[]
+  auditLogs           AuditLog[]
+  teacherAssignments  TeacherAssignment[]
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, email])
+  @@index([institutionId, isActive])
+}
+
+// Academic Period
+model AcademicYear {
+  id              String         @id @default(cuid())
+  institutionId   String
+  name            String         // e.g. "2025/2026"
+  isActive        Boolean        @default(false)
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution         Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  classrooms          Classroom[]
+  enrollments         Enrollment[]
+  teacherAssignments  TeacherAssignment[]
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, name])
+  @@index([institutionId, isActive])
+}
+
+// Classroom / Rombel
+model Classroom {
+  id              String         @id @default(cuid())
+  institutionId   String
+  academicYearId  String
+  name            String         // e.g. "Kelas 7A", "Halaqah Ula"
+  gradeLevel      String?        // "7", "8", "Ula", "Wustha"
+  capacity        Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution         Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear        AcademicYear        @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  enrollments         Enrollment[]
+  teacherAssignments  TeacherAssignment[]
+
+  @@unique([id, institutionId])
+  @@unique([id, academicYearId, institutionId])
+  @@unique([institutionId, academicYearId, name])
+  @@index([institutionId, academicYearId])
+}
+
+// Student Master Entity
+model Student {
+  id              String         @id @default(cuid())
+  institutionId   String
+  nis             String
+  nisn            String?
+  nik             String?
+  fullName        String
+  nickname        String?
+  gender          String         @default("L") // L | P
+  birthPlace      String?
+  birthDate       DateTime?
+  religion        String?
+  address         String?
+  phone           String?
+  email           String?
+  status          String         @default("ACTIVE") // ACTIVE | INACTIVE | GRADUATED | TRANSFERRED | ALUMNI
+  parentWaPhone   String?        // Legacy fallback
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  enrollments     Enrollment[]
+  guardians       GuardianStudent[]
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, nis])
+  @@index([institutionId, status])
+  @@index([institutionId, fullName])
+  @@index([institutionId, nisn])
+}
+
+// Sacred History: Enrollment Engine
+model Enrollment {
+  id              String         @id @default(cuid())
+  institutionId   String
+  studentId       String
+  academicYearId  String
+  classroomId     String
+  status          String         @default("ENROLLED") // ENROLLED | PROMOTED | RETAINED | GRADUATED | TRANSFERRED
+  enrolledAt      DateTime       @default(now())
+  endedAt         DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student         Student        @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  academicYear    AcademicYear   @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  classroom       Classroom      @relation(fields: [classroomId, academicYearId, institutionId], references: [id, academicYearId, institutionId], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+
+  // 1 siswa hanya memiliki 1 rekaman rombel per tahun ajaran
+  @@unique([studentId, academicYearId])
+  @@unique([id, institutionId])
+  @@index([institutionId, academicYearId, classroomId])
+  @@index([institutionId, status])
+}
+
+// Tenant Audit Trail
+model AuditLog {
+  id              String         @id @default(cuid())
+  institutionId   String
+  userId          String?
+  action          String         // CREATE | UPDATE | DELETE | LOGIN | IMPERSONATE | EXPORT
+  entityType      String         // User | Student | Classroom | Enrollment | Institution
+  entityId        String?
+  detailsJson     String?
+  ipAddress       String?
+  createdAt       DateTime       @default(now())
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId, createdAt])
+  @@index([institutionId, entityType, entityId])
+}
+
+// Tenant-Scoped Authenticated Session (Unified for Staff and Guardian)
+model Session {
+  id             String       @id @default(cuid())
+  tokenHash      String       @unique
+  subjectType    String       @default("INTERNAL_USER") // INTERNAL_USER | GUARDIAN
+  userId         String?
+  guardianId     String?
+  institutionId  String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  lastUsedAt     DateTime     @default(now())
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime     @default(now())
+
+  user           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guardian       Guardian?    @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  institution    Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@index([guardianId])
+  @@index([institutionId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// Institution-Scoped Guardian Identity
+model Guardian {
+  id              String               @id @default(cuid())
+  institutionId   String
+  fullName        String
+  phoneWa         String
+  email           String?
+  status          String               @default("INVITED") // INVITED | ACTIVE | INACTIVE
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  institution     Institution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  students        GuardianStudent[]
+  invitations     GuardianInvitation[]
+  sessions        Session[]
+
+  @@unique([id, institutionId])
+  @@index([institutionId, phoneWa])
+  @@index([institutionId, status])
+  @@map("guardians")
+}
+
+// Relationship Access: Guardian to Student (Cross-Tenant Relational Integrity enforced by Compound FKs)
+model GuardianStudent {
+  id            String      @id @default(cuid())
+  institutionId String
+  guardianId    String
+  studentId     String
+  relationship  String      // AYAH | IBU | WALI | LAINNYA
+  isPrimary     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  guardian      Guardian    @relation(fields: [guardianId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  student       Student     @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([guardianId, studentId])
+  @@index([institutionId, studentId])
+  @@index([institutionId, guardianId])
+  @@map("guardian_students")
+}
+
+// Ephemeral One-Time Guardian Onboarding Invitation
+model GuardianInvitation {
+  id            String      @id @default(cuid())
+  tokenHash     String      @unique
+  guardianId    String
+  institutionId String
+  expiresAt     DateTime
+  redeemedAt    DateTime?
+  sentVia       String      @default("WHATSAPP") // WHATSAPP | SMS | MANUAL
+  createdById   String?
+  createdAt     DateTime    @default(now())
+
+  guardian      Guardian    @relation(fields: [guardianId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([guardianId, expiresAt])
+  @@index([institutionId])
+  @@map("guardian_invitations")
+}
+
+// -------------------------------------------------------------
+// PHASE 2 — ACADEMIC TEACHING CORE
+// -------------------------------------------------------------
+
+// Subject / Mata Pelajaran
+model Subject {
+  id              String         @id @default(cuid())
+  institutionId   String
+  code            String?        // e.g. "MAT", "BIND", "PAI"
+  name            String         // e.g. "Matematika", "Bahasa Indonesia"
+  shortName       String?        // e.g. "MTK", "BIN"
+  category        String?        // "UMUM" | "AGAMA" | "MULOK" | "PEMINATAN"
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution         Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  teacherAssignments  TeacherAssignment[]
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, code])
+  @@index([institutionId, isActive])
+  @@index([institutionId, name])
+  @@map("subjects")
+}
+
+// Teacher Teaching Assignment (Penugasan Mengajar)
+model TeacherAssignment {
+  id              String         @id @default(cuid())
+  institutionId   String
+  teacherId       String         // Foreign key to User
+  subjectId       String
+  classroomId     String
+  academicYearId  String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  teacher         User           @relation(fields: [teacherId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  subject         Subject        @relation(fields: [subjectId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  academicYear    AcademicYear   @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  classroom       Classroom      @relation(fields: [classroomId, academicYearId, institutionId], references: [id, academicYearId, institutionId], onDelete: Cascade)
+  attendanceSessions AttendanceSession[]
+
+  @@unique([id, institutionId])
+  @@unique([teacherId, subjectId, classroomId, academicYearId])
+  @@index([institutionId, academicYearId, classroomId])
+  @@index([institutionId, teacherId])
+  @@index([institutionId, subjectId])
+  @@map("teacher_assignments")
+}
+
+// -------------------------------------------------------------
+// PHASE 3 — ATTENDANCE CORE
+// -------------------------------------------------------------
+
+// Attendance Session (Sesi Absensi Guru per Penugasan dan Tanggal)
+model AttendanceSession {
+  id                  String             @id @default(cuid())
+  institutionId       String
+  teacherAssignmentId String
+  attendanceDate      DateTime           // Tanggal absensi akademik (UTC Date)
+  status              String             @default("OPEN") // OPEN | CLOSED
+  openedAt            DateTime           @default(now())
+  closedAt            DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  institution         Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  teacherAssignment   TeacherAssignment  @relation(fields: [teacherAssignmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  records             AttendanceRecord[]
+
+  @@unique([id, institutionId])
+  @@unique([teacherAssignmentId, attendanceDate])
+  @@index([institutionId, attendanceDate])
+  @@index([institutionId, status])
+  @@index([institutionId, teacherAssignmentId])
+  @@map("attendance_sessions")
+}
+
+// Attendance Record (Rekaman Kehadiran Siswa Terikat Enrollment)
+model AttendanceRecord {
+  id                  String             @id @default(cuid())
+  institutionId       String
+  attendanceSessionId String
+  studentId           String
+  enrollmentId        String
+  status              String             // PRESENT | EXCUSED | SICK | ABSENT
+  note                String?
+  markedAt            DateTime           @default(now())
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  institution         Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  session             AttendanceSession  @relation(fields: [attendanceSessionId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  student             Student            @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  enrollment          Enrollment         @relation(fields: [enrollmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([attendanceSessionId, studentId])
+  @@index([institutionId, attendanceSessionId])
+  @@index([institutionId, studentId])
+  @@index([institutionId, enrollmentId])
+  @@index([institutionId, status])
+  @@map("attendance_records")
+}
+
