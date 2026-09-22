@@ -122,3 +122,10 @@
 
 * **Additional hardening:** FeeCategory mutations and standalone Cashbook expenses now commit together with AuditLog; void-charge reason is Zod-validated; paginated cashbook returns aggregate tenant balance; project test script added; PR verification workflow added.
 * **CI status:** workflow committed, but no workflow run is currently reported for the new commit in this session.
+
+## [2026-09-23] - Backend & Frontend Architecture Preparation
+* Re-read MASTER PRD v5.0 and current architecture/domain/database/security/ADR/roadmap/TODO before design work.
+* Added `01_ARCHITECTURE/BACKEND-ARCHITECTURE.md` as the incremental backend contract for Modular Monolith, TenantContext, Server Actions, domain services, transactions, external-provider boundaries, and future plugin integration.
+* Added `01_ARCHITECTURE/FRONTEND-ARCHITECTURE.md` as the frontend contract for App Router, tenant-aware UX, dynamic terminology, plugin-aware navigation, mutation state, mobile-first behavior, and domain boundaries.
+* Updated `01_ARCHITECTURE/ARCHITECTURE.md` and `03_EXECUTION/TODO.md` to reference the blueprints.
+* No existing working domain was structurally refactored for this preparation step.
