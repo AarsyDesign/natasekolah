@@ -197,3 +197,11 @@
 * Recorded architecture-preparation gate in `03_EXECUTION/TODO.md`.
 ### Scope
 * Design/documentation only. Existing working domain implementations were not mass-refactored.
+
+## [2026-09-23] - Application Contract Preparation
+### Added
+* `01_ARCHITECTURE/APPLICATION-CONTRACT.md`
+### Changed
+* Linked application contract from `01_ARCHITECTURE/ARCHITECTURE.md`.
+### Scope
+* Architecture/documentation only; existing runtime domains were not refactored.
