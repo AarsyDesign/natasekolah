@@ -521,8 +521,8 @@ model CashbookEntry {
   createdAt             DateTime            @default(now())
 
   institution           Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  paymentTransaction    PaymentTransaction? @relation(fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: Restrict)
-  reversalOf            CashbookEntry?      @relation("CashbookReversal", fields: [reversalOfId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  paymentTransaction    PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: Restrict)
+  reversalOf            CashbookEntry?      @relation("CashbookReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
   reversal              CashbookEntry?      @relation("CashbookReversal")
   createdBy             User                @relation("CashbookCreatedBy", fields: [createdById, institutionId], references: [id, institutionId], onDelete: Restrict)
 
