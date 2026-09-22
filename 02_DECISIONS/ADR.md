@@ -156,3 +156,17 @@
   6. **Teacher Resource-Scope Authorization:**
      Guru (`TEACHER`) hanya berhak melihat, membuka, mengisi, dan menutup sesi untuk `TeacherAssignment` miliknya sendiri (`assignment.teacherId = session.userId`). Guru dilarang keras mengakses atau memodifikasi absensi guru lain (`AttendanceAccessDeniedError`). Admin dan Kepala Sekolah (`academic:manage` / `attendance:manage`) berhak mengakses seluruh sesi dalam tenant.
 * **Konsekuensi:** Histori kehadiran siswa tersimpan abadi dan dapat dipertanggungjawabkan, bebas dari korupsi data historis kenaikan kelas, kebal dari manipulasi retroaktif setelah sesi ditutup, serta tenant isolation dan teacher scope terlindungi di seluruh lapisan sistem.
+
+
+## ADR-014: Financial Transaction Integrity, Idempotency & Immutable Ledger
+* **Status:** Diterima (Accepted)
+* **Konteks:** NataSekolah membutuhkan kasir SPP/syahriah yang aman terhadap retry jaringan, pembayaran parsial, overpayment, dan koreksi transaksi tanpa menghapus histori.
+* **Keputusan:**
+  1. Model finansial menggunakan tiga lapisan FeeCategory -> StudentCharge -> PaymentTransaction.
+  2. Nilai uang disimpan sebagai integer rupiah.
+  3. Pembayaran memakai idempotencyKey tenant-scoped unique.
+  4. Pembayaran posted dibuat atomik bersama Receipt, CashbookEntry, dan AuditLog.
+  5. Pembayaran tidak di-hard-delete dan tidak diedit setelah posted. Koreksi dilakukan melalui VOID dan reversal cashbook entry.
+  6. Receipt number dibuat deterministik dari bulan transaksi dan suffix ID payment, sehingga tetap unik tanpa pola counter MAX()+1.
+  7. Overpayment disimpan sebagai status OVERPAID dan nilai excess; automatic credit allocation ditunda dari MVP.
+* **Konsekuensi:** Integritas transaksi lebih kuat terhadap retry dan koreksi, sementara automatic credit allocation dan accounting adjustment lanjutan tetap menjadi pekerjaan fase berikutnya.
