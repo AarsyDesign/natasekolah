@@ -206,3 +206,18 @@ Sistem memisahkan secara tegas dua jalur identitas:
   * Guru hanya diizinkan melihat, membuka, mengisi, dan menutup sesi untuk `TeacherAssignment` miliknya sendiri (`teacherId == session.userId`).
   * Admin / Kepala Sekolah dengan izin `academic:manage` atau `attendance:manage` dapat mengakses seluruh sesi dalam tenant.
 
+
+
+## 8. Finance Core Domain Model (Phase 3)
+
+Finance flow:
+FeeCategory -> StudentCharge -> Student
+StudentCharge -> PaymentTransaction -> Receipt
+PaymentTransaction -> CashbookEntry
+
+* FeeCategory mendefinisikan jenis kewajiban.
+* StudentCharge adalah kewajiban finansial yang melekat pada satu siswa dan tahun ajaran.
+* PaymentTransaction adalah kejadian uang masuk yang immutable setelah posted.
+* Receipt adalah bukti penerimaan yang unik per transaksi.
+* CashbookEntry adalah ledger kas; reversal dicatat sebagai transaksi baru.
+* Status charge diturunkan dari pembayaran aktif dan nilai bersih setelah diskon.
