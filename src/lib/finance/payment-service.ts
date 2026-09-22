@@ -7,6 +7,10 @@ import { validateCreatePaymentInput, validatePaymentQuery, validateVoidPaymentIn
 import { FinanceConflictError, FinanceNotFoundError, PaymentAlreadyVoidedError } from "./types";
 import { getNetChargeAmount, refreshChargeStatus } from "./charge-service";
 
+function calculateStatus(netAmount: number, totalPaid: number) {
+  return totalPaid <= 0 ? "UNPAID" : totalPaid < netAmount ? "PARTIAL" : totalPaid === netAmount ? "PAID" : "OVERPAID";
+}
+
 function makeReceiptNumber(paymentId: string, paidAt: Date): string {
   const y = paidAt.getUTCFullYear();
   const m = String(paidAt.getUTCMonth() + 1).padStart(2, "0");
@@ -54,10 +58,15 @@ export async function createPayment(ctx: TenantContext, rawInput: unknown) {
       include: { receipt: true, charge: { include: { feeCategory: true, student: true } }, cashbookEntry: true },
     });
     if (existing) {
-      if (existing.studentChargeId !== input.studentChargeId || existing.amount !== input.amount || existing.method !== input.method) {
+      const existingPaidAt = existing.paidAt.getTime();
+      const requestedPaidAt = (input.paidAt ?? existing.paidAt).getTime();
+      if (existing.studentChargeId !== input.studentChargeId || existing.amount !== input.amount || existing.method !== input.method || existingPaidAt !== requestedPaidAt || (existing.notes || null) !== (input.notes || null)) {
         throw new FinanceConflictError("Idempotency key sudah digunakan untuk transaksi pembayaran yang berbeda.");
       }
-      return existing;
+      const netAmount = getNetChargeAmount(existing.charge);
+      const activePayments = await tx.paymentTransaction.findMany({ where: { studentChargeId: existing.studentChargeId, institutionId: ctx.institutionId, status: "POSTED" }, select: { amount: true } });
+      const totalPaid = activePayments.reduce((sum, p) => sum + p.amount, 0);
+      return { payment: existing, receipt: existing.receipt, cashbook: existing.cashbookEntry, chargeStatus: calculateStatus(netAmount, totalPaid), totalPaid, outstanding: Math.max(netAmount - totalPaid, 0), excess: Math.max(totalPaid - netAmount, 0) };
     }
 
     const charge = await tx.studentCharge.findUnique({
