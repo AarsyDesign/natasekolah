@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import type { TenantContext } from "../tenant/context";
 import { prisma } from "../prisma";
 import { requirePermission } from "../auth/permissions";
@@ -9,28 +9,30 @@ import { FinanceNotFoundError } from "./types";
 export async function createCashbookExpense(ctx: TenantContext, rawInput: unknown) {
   requirePermission(ctx, "finance:manage");
   const input = sanitizeClientInput(validateCreateCashbookExpenseInput(rawInput), ctx);
-  const entry = await prisma.cashbookEntry.create({
-    data: {
-      institutionId: ctx.institutionId,
-      entryType: "EXPENSE",
-      amount: input.amount,
-      category: input.category,
-      note: input.note || null,
-      occurredAt: input.occurredAt ?? new Date(),
-      createdById: ctx.userId,
-    },
-  });
-  await prisma.auditLog.create({
-    data: {
-      institutionId: ctx.institutionId,
-      userId: ctx.userId,
-      action: "CREATE",
-      entityType: "CashbookEntry",
-      entityId: entry.id,
-      detailsJson: JSON.stringify({ entryType: entry.entryType, amount: entry.amount, category: entry.category }),
-    },
-  });
-  return entry;
+  return prisma.$transaction(async (tx) => {
+    const entry = await tx.cashbookEntry.create({
+      data: {
+        institutionId: ctx.institutionId,
+        entryType: "EXPENSE",
+        amount: input.amount,
+        category: input.category,
+        note: input.note || null,
+        occurredAt: input.occurredAt ?? new Date(),
+        createdById: ctx.userId,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        institutionId: ctx.institutionId,
+        userId: ctx.userId,
+        action: "CREATE",
+        entityType: "CashbookEntry",
+        entityId: entry.id,
+        detailsJson: JSON.stringify({ entryType: entry.entryType, amount: entry.amount, category: entry.category }),
+      },
+    });
+    return entry;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function listCashbook(ctx: TenantContext, page = 1, pageSize = 50) {
