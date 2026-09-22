@@ -95,3 +95,58 @@ Setiap mutasi bisnis penting (pembayaran SPP, absensi harian) mencatat event ke 
    * Guru hanya diizinkan melihat, membuka, mengisi, dan menutup sesi untuk `TeacherAssignment` miliknya sendiri. Akses ke penugasan guru lain ditolak instan (403 Forbidden).
    * Admin dan Kepala Sekolah dengan hak administratif dapat mengelola sesi lintas guru dalam institusi yang sama.
 
+
+
+## 8. Operational Dashboard Architecture (Phase 3)
+
+Dashboard operasional adalah read-only application use case yang memusatkan kondisi yang perlu ditindaklanjuti, bukan menggantikan domain source of truth.
+
+### 8.1 Request Flow
+
+```text
+Authenticated Session
+        ↓
+TenantContext
+        ↓
+RBAC (student:view)
+        ↓
+Dashboard Overview Service
+        ↓
+Tenant-scoped Prisma Queries
+        ↓
+Read-only Dashboard UI
+```
+
+### 8.2 Data Contract
+
+Dashboard hanya membaca entity yang sudah tersedia:
+
+- Institution
+- AcademicYear
+- Student
+- User / Teacher
+- Classroom
+- Subject
+- TeacherAssignment
+- AttendanceSession / AttendanceRecord
+
+Tidak ada tabel baru dan tidak ada mutasi database yang berasal dari dashboard.
+
+### 8.3 Role / Scope
+
+- Akun dengan `student:view` dapat membuka dashboard.
+- Data presensi hanya ditampilkan bila akun memiliki `attendance:view`.
+- Guru tanpa `academic:manage` hanya melihat TeacherAssignment miliknya sendiri.
+- Administrator dengan `academic:manage` dapat melihat cakupan penugasan seluruh tenant.
+- `institutionId` selalu berasal dari session TenantContext, bukan input klien.
+
+### 8.4 Operational Attention
+
+Indikator dashboard bersifat deskriptif:
+
+- tidak ada tahun ajaran aktif;
+- siswa aktif belum memiliki enrollment pada tahun ajaran aktif;
+- sesi presensi masih OPEN;
+- penugasan belum memiliki sesi presensi hari ini.
+
+Status `NOT_STARTED` tidak dianggap sebagai keterlambatan karena model saat ini belum memiliki jadwal mengajar. Dashboard tidak mengarang jadwal yang belum ada di domain.
