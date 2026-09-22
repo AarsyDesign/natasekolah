@@ -81,6 +81,7 @@ export async function createStudentCharge(ctx: TenantContext, rawInput: unknown)
   });
   return charge;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
 
 export async function getStudentCharge(ctx: TenantContext, id: string) {
   requirePermission(ctx, "finance:view");
