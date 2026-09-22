@@ -186,15 +186,3 @@ export async function voidPayment(ctx: TenantContext, rawInput: unknown) {
   });
 }
 
-export async function listCashbook(ctx: TenantContext, rawQuery?: unknown) {
-  requirePermission(ctx, "finance:view");
-  const query = validatePaymentQuery(rawQuery || {});
-  const entries = await prisma.cashbookEntry.findMany({
-    where: { institutionId: ctx.institutionId },
-    orderBy: { occurredAt: "desc" },
-    take: query.pageSize,
-    include: { paymentTransaction: { include: { receipt: true } }, createdBy: { select: { id: true, name: true } } },
-  });
-  const balance = entries.reduce((sum, entry) => sum + (entry.entryType === "INCOME" ? entry.amount : -entry.amount), 0);
-  return { data: entries, balance };
-}
