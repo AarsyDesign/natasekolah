@@ -159,3 +159,14 @@
   - [x] Next.js Turbopack build PASS (`next build`, 11 routes).
   - [x] Prisma validation PASS (`prisma validate`).
 
+
+
+## Phase 3 — Operational Dashboard
+
+- [x] **3.7 Operational Dashboard (IMPLEMENTED / VERIFICATION PENDING):**
+  - [x] Read-only dashboard use case berbasis TenantContext + RBAC.
+  - [x] Ringkasan siswa/guru/rombel/mapel dari data tenant aktif.
+  - [x] Deteksi kondisi operasional yang dapat ditindaklanjuti.
+  - [x] Ringkasan presensi hari ini dengan scope guru/admin.
+  - [x] Route `/dashboard` dan navigasi terpadu.
+  - [ ] Runtime verification, TypeScript, test execution, dan production build.
