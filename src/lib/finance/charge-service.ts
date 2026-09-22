@@ -3,12 +3,12 @@ import type { TenantContext } from "../tenant/context";
 import { prisma } from "../prisma";
 import { requirePermission } from "../auth/permissions";
 import { sanitizeClientInput } from "../tenant/guard";
-import { validateCreateStudentChargeInput, validateChargeQuery } from "../validation/finance";
+import { validateCreateStudentChargeInput, validateChargeQuery, validateVoidStudentChargeInput } from "../validation/finance";
 import { calculateChargeStatus, ChargeHasPaymentsError, FinanceConflictError, FinanceNotFoundError } from "./types";
 
 async function getChargeWithPayments(ctx: TenantContext, id: string) {
   return prisma.studentCharge.findUnique({
-    where: { id_institutionId: { id, institutionId: ctx.institutionId } },
+    where: { id_institutionId: { id: input.studentChargeId, institutionId: ctx.institutionId } },
     include: { student: true, feeCategory: true, academicYear: true, payments: { orderBy: { paidAt: "asc" } } },
   });
 }
@@ -86,7 +86,7 @@ export async function createStudentCharge(ctx: TenantContext, rawInput: unknown)
 export async function getStudentCharge(ctx: TenantContext, id: string) {
   requirePermission(ctx, "finance:view");
   const charge = await getChargeWithPayments(ctx, id);
-  if (!charge) throw new FinanceNotFoundError("Tagihan", id);
+  if (!charge) throw new FinanceNotFoundError("Tagihan", input.studentChargeId);
   const activePayments = charge.payments.filter((p) => p.status === "POSTED");
   const totalPaid = activePayments.reduce((sum, p) => sum + p.amount, 0);
   const netAmount = getNetChargeAmount(charge);
@@ -123,6 +123,7 @@ export async function listStudentCharges(ctx: TenantContext, rawQuery?: unknown)
 
 export async function voidStudentCharge(ctx: TenantContext, id: string, reason: string) {
   requirePermission(ctx, "finance:manage");
+  const input = validateVoidStudentChargeInput({ studentChargeId: id, reason });
   return prisma.$transaction(async (tx) => {
   const charge = await tx.studentCharge.findUnique({
     where: { id_institutionId: { id, institutionId: ctx.institutionId } },
@@ -131,7 +132,7 @@ export async function voidStudentCharge(ctx: TenantContext, id: string, reason: 
   if (!charge) throw new FinanceNotFoundError("Tagihan", id);
   if (charge.status === "VOID") return charge;
   if (charge.payments.some((p) => p.status === "POSTED")) throw new ChargeHasPaymentsError();
-  const updated = await tx.studentCharge.update({ where: { id_institutionId: { id, institutionId: ctx.institutionId } }, data: { status: "VOID" } });
-  await tx.auditLog.create({ data: { institutionId: ctx.institutionId, userId: ctx.userId, action: "VOID", entityType: "StudentCharge", entityId: id, detailsJson: JSON.stringify({ reason }) } });
+  const updated = await tx.studentCharge.update({ where: { id_institutionId: { id: input.studentChargeId, institutionId: ctx.institutionId } }, data: { status: "VOID" } });
+  await tx.auditLog.create({ data: { institutionId: ctx.institutionId, userId: ctx.userId, action: "VOID", entityType: "StudentCharge", entityId: input.studentChargeId, detailsJson: JSON.stringify({ reason: input.reason }) } });
   return updated;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
