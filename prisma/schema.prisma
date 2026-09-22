@@ -40,6 +40,11 @@ model Institution {
   auditLogs           AuditLog[]
   attendanceSessions  AttendanceSession[]
   attendanceRecords   AttendanceRecord[]
+  feeCategories       FeeCategory[]
+  studentCharges      StudentCharge[]
+  paymentTransactions PaymentTransaction[]
+  receipts            Receipt[]
+  cashbookEntries     CashbookEntry[]
 
   @@index([slug])
   @@index([type])
@@ -63,6 +68,9 @@ model User {
   sessions            Session[]
   auditLogs           AuditLog[]
   teacherAssignments  TeacherAssignment[]
+  receivedPayments    PaymentTransaction[] @relation("PaymentReceivedBy")
+  issuedReceipts      Receipt[] @relation("ReceiptIssuedBy")
+  createdCashbookEntries CashbookEntry[] @relation("CashbookCreatedBy")
 
   @@unique([id, institutionId])
   @@unique([institutionId, email])
@@ -84,6 +92,7 @@ model AcademicYear {
   classrooms          Classroom[]
   enrollments         Enrollment[]
   teacherAssignments  TeacherAssignment[]
+  charges             StudentCharge[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, name])
@@ -137,6 +146,7 @@ model Student {
   enrollments     Enrollment[]
   guardians       GuardianStudent[]
   attendanceRecords AttendanceRecord[]
+  charges         StudentCharge[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, nis])
@@ -388,3 +398,137 @@ model AttendanceRecord {
   @@map("attendance_records")
 }
 
+
+// -------------------------------------------------------------
+// PHASE 3 — FINANCE CORE
+// -------------------------------------------------------------
+
+// Master kategori tagihan per lembaga. Historical charges retain the category reference.
+model FeeCategory {
+  id            String         @id @default(cuid())
+  institutionId String
+  code          String
+  name          String
+  description   String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  institution   Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  charges       StudentCharge[]
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, code])
+  @@index([institutionId, isActive])
+  @@index([institutionId, name])
+  @@map("fee_categories")
+}
+
+// Tagihan siswa. Nilai nominal dan histori pembayaran diperlakukan sebagai financial history.
+model StudentCharge {
+  id             String         @id @default(cuid())
+  institutionId  String
+  studentId      String
+  feeCategoryId  String
+  academicYearId String?
+  periodMonth    Int?
+  periodYear     Int?
+  amount         Int
+  discountAmount Int              @default(0)
+  status         String           @default("UNPAID") // UNPAID | PARTIAL | PAID | OVERPAID | VOID
+  dueDate        DateTime?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  institution    Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student        Student          @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  feeCategory    FeeCategory      @relation(fields: [feeCategoryId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  academicYear   AcademicYear?    @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  payments       PaymentTransaction[]
+
+  @@unique([id, institutionId])
+  @@index([institutionId, studentId, status])
+  @@index([institutionId, feeCategoryId, periodYear, periodMonth])
+  @@index([institutionId, academicYearId])
+  @@map("student_charges")
+}
+
+// Pembayaran aktual. Tidak boleh di-hard-delete; koreksi melalui VOID/REVERSAL + audit.
+model PaymentTransaction {
+  id                String         @id @default(cuid())
+  institutionId     String
+  studentChargeId   String
+  amount            Int
+  method            String         // CASH | TRANSFER | QRIS | OTHER
+  status            String         @default("POSTED") // POSTED | VOID | REVERSAL
+  idempotencyKey    String
+  paidAt            DateTime       @default(now())
+  receivedById      String
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  institution       Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  charge            StudentCharge @relation(fields: [studentChargeId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  receivedBy        User           @relation("PaymentReceivedBy", fields: [receivedById, institutionId], references: [id, institutionId], onDelete: Restrict)
+  receipt           Receipt?
+  cashbookEntry     CashbookEntry?
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, idempotencyKey])
+  @@index([institutionId, studentChargeId, status])
+  @@index([institutionId, paidAt])
+  @@index([institutionId, receivedById])
+  @@map("payment_transactions")
+}
+
+// Bukti pembayaran satu-per-satu yang immutable setelah diterbitkan.
+model Receipt {
+  id                   String              @id @default(cuid())
+  institutionId        String
+  paymentTransactionId String              @unique
+  receiptNumber        String
+  issuedAt             DateTime            @default(now())
+  issuedById           String
+  notes                String?
+  createdAt            DateTime            @default(now())
+
+  institution           Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  paymentTransaction    PaymentTransaction  @relation(fields: [paymentTransactionId], references: [id], onDelete: Restrict)
+  issuedBy              User                @relation("ReceiptIssuedBy", fields: [issuedById, institutionId], references: [id, institutionId], onDelete: Restrict)
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, receiptNumber])
+  @@index([institutionId, issuedAt])
+  @@map("receipts")
+}
+
+// Buku kas immutable. Reversal dicatat sebagai entri baru, bukan menghapus entri lama.
+model CashbookEntry {
+  id                   String              @id @default(cuid())
+  institutionId        String
+  entryType            String              // INCOME | EXPENSE
+  amount               Int
+  category             String
+  referenceType        String?
+  referenceId          String?
+  paymentTransactionId String?             @unique
+  reversalOfId         String?             @unique
+  note                 String?
+  occurredAt           DateTime            @default(now())
+  createdById           String
+  createdAt             DateTime            @default(now())
+
+  institution           Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  paymentTransaction    PaymentTransaction? @relation(fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  reversalOf            CashbookEntry?      @relation("CashbookReversal", fields: [reversalOfId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  reversal              CashbookEntry?      @relation("CashbookReversal")
+  createdBy             User                @relation("CashbookCreatedBy", fields: [createdById, institutionId], references: [id, institutionId], onDelete: Restrict)
+
+  @@unique([id, institutionId])
+  @@index([institutionId, occurredAt])
+  @@index([institutionId, entryType])
+  @@index([institutionId, category])
+  @@map("cashbook_entries")
+}
