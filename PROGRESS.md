@@ -28,6 +28,17 @@
 
 ---
 
+## [2026-09-23] - Operational Dashboard (IMPLEMENTED / VERIFICATION PENDING)
+* **Tujuan:** Menyediakan dashboard operasional yang berorientasi aksi, sesuai PRD 42, tanpa menjadi sumber kebenaran baru.
+* **Implementasi:**
+  1. `src/lib/dashboard/overview-service.ts`: snapshot read-only tenant-scoped untuk master data, kualitas enrollment, dan presensi.
+  2. `src/actions/dashboard.ts`: application boundary melalui authenticated TenantContext.
+  3. `src/app/dashboard/page.tsx`: UI mobile-first dengan Perlu Perhatian, Aksi Cepat, metrik konteks, dan status presensi.
+  4. `src/components/nav-header.tsx`: tautan Dashboard.
+  5. `test/dashboard-core.test.ts`: test kontrak status dashboard.
+* **Scope:** Tidak ada perubahan schema atau migration. Finance tidak ditambahkan ke dashboard karena Finance Core masih merupakan PR terpisah dan belum menjadi bagian dari `staging`.
+* **Verifikasi:** Runtime TypeScript/test/build belum dijalankan pada environment ini; status tetap **VERIFICATION PENDING**.
+
 ## 2. Catatan Log Aktivitas Kronologis
 
 ### [2026-09-20] - Phase 2: Academic Teaching Core (Subject, Teacher & Teaching Assignment) (IMPLEMENTED & VERIFIED)
@@ -107,7 +118,6 @@
 
 ## 3. Langkah Selanjutnya (Next Immediate Gate)
 1. **Phase 3 Gate — Daily Operations:**
-   * Attendance Engine (< 60 detik) & offline cache idempotency.
-   * Finance 3-Tier Layer (FeeCategory, StudentCharge, PaymentTransaction).
-   * Cashbook & Unique Receipt Generator (`KW-...`).
-   * Operational Dashboard berbasis aksi pengguna.
+   * Verifikasi runtime Dashboard branch (TypeScript, tests, build).
+   * Integrasi/verification Finance Core dari PR terpisah.
+   * Penyelesaian offline sync Attendance dan gate integrasi akhir.
