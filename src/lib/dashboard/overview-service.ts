@@ -2,6 +2,7 @@ import { prisma } from "../prisma";
 import type { TenantContext } from "../tenant/context";
 import { hasPermission, requirePermission } from "../auth/permissions";
 import { normalizeAttendanceDate, formatAttendanceDate } from "../attendance";
+import { validateDashboardDate } from "../validation/dashboard";
 
 export interface DashboardAttendanceItem {
   assignmentId: string;
@@ -43,10 +44,10 @@ function parseRoles(raw: string): string[] {
   }
 }
 
-export async function getDashboardSnapshot(ctx: TenantContext): Promise<DashboardSnapshot> {
+export async function getDashboardSnapshot(ctx: TenantContext, dateInput?: unknown): Promise<DashboardSnapshot> {
   requirePermission(ctx, "student:view");
 
-  const today = normalizeAttendanceDate(new Date());
+  const today = dateInput === undefined ? normalizeAttendanceDate(new Date()) : normalizeAttendanceDate(validateDashboardDate(dateInput));
   const todayStr = formatAttendanceDate(today);
   const canViewAttendance = hasPermission(ctx, "attendance:view");
   const canViewAcademic = hasPermission(ctx, "academic:view");
@@ -80,7 +81,7 @@ export async function getDashboardSnapshot(ctx: TenantContext): Promise<Dashboar
       canViewAcademic
         ? prisma.subject.count({ where: { institutionId: ctx.institutionId, isActive: true } })
         : Promise.resolve(null),
-      activeAcademicYear
+      activeAcademicYear && canManageAcademic
         ? prisma.student.count({
             where: {
               institutionId: ctx.institutionId,
@@ -122,7 +123,6 @@ export async function getDashboardSnapshot(ctx: TenantContext): Promise<Dashboar
         classroom: { select: { name: true } },
       },
       orderBy: [{ classroom: { name: "asc" } }, { subject: { name: "asc" } }],
-      take: 100,
     });
 
     const assignmentIds = assignments.map((assignment) => assignment.id);
