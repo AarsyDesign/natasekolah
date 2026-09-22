@@ -148,3 +148,19 @@
 * `src/lib/auth/session.ts`: Manajemen token sesi acak 256-bit dengan hashing SHA-256 di basis data, masa kedaluwarsa 7 hari, dan mekanisme pencabutan (*revocation*).
 * `src/lib/auth/cookie.ts`: Penanganan cookie aman (`HttpOnly; Secure; SameSite=Lax; Path=/`) tanpa menyimpan objek pengguna di browser.
 * `src/lib/auth/service.ts`: Pemisahan tanggung jawab otentikasi (`authenticateCredentials`, `createSession`, `validateSessionToken`, `revokeSession`, `getAuthenticatedTenantContext`).
+
+
+## [2026-09-23] - Phase 3: Finance Core (IMPLEMENTED / VERIFICATION PENDING)
+
+### Added
+* Finance domain services for FeeCategory, StudentCharge, PaymentTransaction, Receipt, and CashbookEntry.
+* Zod validation for finance inputs.
+* Atomic payment workflow with idempotency, receipt generation, cashbook income, charge status recalculation, audit log, partial payment, and overpayment tracking.
+* Payment VOID flow with immutable cashbook reversal.
+* Finance Server Actions and initial mobile-responsive finance dashboard.
+* Finance core invariant/RBAC tests.
+* ADR-014 and finance architecture/security/database/domain-model documentation.
+
+### Verification Status
+* Code has been committed to feature/finance-core.
+* Prisma validation, typecheck, automated test suite, database migration, and production build still require execution in the project environment before the feature can be declared COMPLETE.
