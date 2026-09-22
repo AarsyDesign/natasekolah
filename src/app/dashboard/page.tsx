@@ -82,11 +82,11 @@ export default function DashboardPage() {
     );
   }
 
-    const { institution, today, activeAcademicYear, counts, dataQuality, attendance } = data;
+  const { institution, today, activeAcademicYear, counts, dataQuality, attendance } = data;
 
   const actionLinks = [
     { href: "/attendance", label: "Buka Presensi", description: "Catat kehadiran hari ini.", icon: ClipboardCheck, visible: attendance.visible },
-    { href: "/students", label: "Buku Induk", description: "Cari atau kelola data siswa.", icon: Users, visible: counts.activeStudents !== null },
+    { href: "/students", label: "Buku Induk", description: "Cari dan tinjau data siswa.", icon: Users, visible: counts.activeStudents !== null },
     { href: "/teacher-assignments", label: "Penugasan Mengajar", description: "Periksa guru, mapel, dan rombel.", icon: GraduationCap, visible: counts.activeSubjects !== null },
     { href: "/academic-years", label: "Tahun Ajaran", description: "Periksa tahun ajaran aktif.", icon: CalendarDays, visible: counts.activeSubjects !== null },
   ].filter((action) => action.visible);
