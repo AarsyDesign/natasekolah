@@ -164,3 +164,17 @@
 ### Verification Status
 * Code has been committed to feature/finance-core.
 * Prisma validation, typecheck, automated test suite, database migration, and production build still require execution in the project environment before the feature can be declared COMPLETE.
+
+
+## [2026-09-23] - Finance Core VERIFY Audit
+
+### Audit Fixes
+* Hardened finance cross-tenant database relations using compound tenant-scoped foreign keys.
+* Added Serializable isolation and bounded retry for concurrent payment create/void operations.
+* Serialized charge creation/void lifecycle to reduce duplicate/race windows.
+* Preserved UI payment idempotency key across retries instead of generating a new key per submit.
+
+### Verification Result
+* Static repository audit: completed.
+* Runtime Prisma/TypeScript/test/build execution: blocked by current environment; no local command execution was available.
+* Migration verification: blocked; PR #1 contains schema changes but no Prisma migration.
