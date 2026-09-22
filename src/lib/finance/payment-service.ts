@@ -1,4 +1,4 @@
-import type { PaymentTransaction, Prisma } from "@prisma/client";
+import { Prisma, type PaymentTransaction } from "@prisma/client";
 import type { TenantContext } from "../tenant/context";
 import { prisma } from "../prisma";
 import { requirePermission } from "../auth/permissions";
@@ -48,7 +48,7 @@ export async function createPayment(ctx: TenantContext, rawInput: unknown) {
   requirePermission(ctx, "finance:manage");
   const input = sanitizeClientInput(validateCreatePaymentInput(rawInput), ctx);
 
-  return prisma.$transaction(async (tx) => {
+  const runTransaction = () => prisma.$transaction(async (tx) => {
     const existing = await tx.paymentTransaction.findUnique({
       where: { institutionId_idempotencyKey: { institutionId: ctx.institutionId, idempotencyKey: input.idempotencyKey } },
       include: { receipt: true, charge: { include: { feeCategory: true, student: true } }, cashbookEntry: true },
@@ -101,7 +101,16 @@ export async function createPayment(ctx: TenantContext, rawInput: unknown) {
     });
 
     return { payment, receipt, cashbook, chargeStatus: nextStatus, totalPaid: newTotalPaid, outstanding: Math.max(netAmount - newTotalPaid, 0), excess: Math.max(newTotalPaid - netAmount, 0) };
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await runTransaction();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 3) continue;
+      throw error;
+    }
+  }
 }
 
 export async function getPayment(ctx: TenantContext, id: string) {
