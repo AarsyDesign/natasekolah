@@ -1,5 +1,24 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Operational Dashboard (IMPLEMENTED / VERIFICATION PENDING)
+
+### Added
+* `src/lib/dashboard/overview-service.ts`: read-only dashboard overview service dengan tenant isolation, RBAC, ringkasan master data, dan status presensi hari ini.
+* `src/lib/dashboard/index.ts`: barrel export modul dashboard.
+* `src/actions/dashboard.ts`: Server Action untuk mengambil snapshot dashboard dari authenticated TenantContext.
+* `src/app/dashboard/page.tsx`: Dashboard operasional mobile-first dengan fokus "apa yang harus dilakukan hari ini?", indikator perhatian, aksi cepat, dan ringkasan presensi.
+* `test/dashboard-core.test.ts`: test kontrak status presensi dashboard tanpa database mutation.
+
+### Changed
+* `src/components/nav-header.tsx`: menambahkan navigasi `/dashboard`.
+* `01_ARCHITECTURE/ARCHITECTURE.md`: mendokumentasikan flow, data contract, role/scope, dan prinsip Operational Dashboard.
+* `03_EXECUTION/TODO.md`: menambahkan item Operational Dashboard sebagai implemented / verification pending.
+
+### Scope Notes
+* Dashboard hanya membaca entity yang sudah tersedia pada `staging`; tidak menambah tabel atau migration.
+* Status penugasan `NOT_STARTED` pada hari berjalan tidak dianggap terlambat karena model saat ini belum memiliki entitas jadwal mengajar.
+* Finance tidak di-hard-code ke dashboard branch ini karena Finance Core masih berada pada PR terpisah dan belum menjadi bagian dari `staging`.
+
 ## [2026-09-20] - Phase 3: Attendance Core (AttendanceSession, AttendanceRecord, Sacred Enrollment, Immutability) (IMPLEMENTED / VERIFIED)
 
 ### Added
