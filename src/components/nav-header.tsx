@@ -3,12 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Calendar, School, BookOpen, GraduationCap, Briefcase, ClipboardCheck } from "lucide-react";
+import { Users, Calendar, School, BookOpen, GraduationCap, Briefcase, ClipboardCheck, WalletCards } from "lucide-react";
 
 export function NavHeader({ subtitle }: { subtitle?: string }) {
   const pathname = usePathname();
 
   const navLinks = [
+    { href: "/finance", label: "Keuangan", icon: WalletCards },
     { href: "/attendance", label: "Absensi", icon: ClipboardCheck },
     { href: "/students", label: "Buku Induk", icon: Users },
     { href: "/academic-years", label: "Tahun Ajaran", icon: Calendar },
