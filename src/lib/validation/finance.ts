@@ -71,3 +71,11 @@ export function validateVoidPaymentInput(input: unknown) { return validate(voidP
 export function validateFeeCategoryQuery(input: unknown) { return validate(feeCategoryQuerySchema, input); }
 export function validateChargeQuery(input: unknown) { return validate(chargeQuerySchema, input); }
 export function validatePaymentQuery(input: unknown) { return validate(paymentQuerySchema, input); }
+
+export const createCashbookExpenseInputSchema = z.object({
+  amount: positiveMoney,
+  category: nonEmptyString("Kategori", 1, 100),
+  occurredAt: z.coerce.date().optional(),
+  note: z.string().trim().max(500).optional().or(z.literal("")),
+});
+export function validateCreateCashbookExpenseInput(input: unknown) { return validate(createCashbookExpenseInputSchema, input); }
