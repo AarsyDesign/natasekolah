@@ -19,7 +19,7 @@
 | | - Phase 0.3: Input Validation & Domain Plugin Registry | Selesai (IMPLEMENTED & VERIFIED, 105 Tests Pass) | 2026-09-20 |
 | **Phase 1** | **Buku Induk & Academic Core** (Student Master, AcademicYear, Classroom, Sacred History Enrollment) | **COMPLETE** | 2026-09-20 (126 Tests Pass) |
 | **Phase 2** | **Academic Teaching Core** (Subject, Teacher Identity, TeacherAssignment, Teaching Scope) | **COMPLETE** | 2026-09-20 (155 Tests Pass) |
-| **Phase 3** | **Daily Operations** (Presensi < 60s, Kasir SPP 3-Tier, Buku Kas, Dashboard) | Belum Dimulai | - |
+| **Phase 3** | **Daily Operations** (Attendance, Finance 3-Tier, Buku Kas, Dashboard) | **PARTIALLY COMPLETE** | 2026-09-23 — Attendance + Finance Core implemented; verification pending |
 | **Phase 4** | **Communication Engine** (WhatsApp Outbox Pattern, Notification Queue) | Belum Dimulai | - |
 | **Phase 5** | **Formal Academic** (Buku Nilai, Capaian Pembelajaran, Frozen Report Card Snapshot) | Belum Dimulai | - |
 | **Phase 6** | **Pesantren Living** (Diniyah, Asrama, Tasrih Perizinan, Mutaba'ah Tahfidz) | Belum Dimulai | - |
@@ -105,7 +105,7 @@
 
 ---
 
-## 3. Langkah Selanjutnya (Next Immediate Gate)
+## [2026-09-23] - Phase 3: Finance Core (IMPLEMENTED / VERIFICATION PENDING)\n* **Implementasi:** FeeCategory, StudentCharge, PaymentTransaction, Receipt, CashbookEntry; payment atomic transaction; idempotency; partial payment; overpayment; VOID + cashbook reversal; audit trail; finance RBAC; dashboard finance awal.\n* **Status:** PARTIALLY COMPLETE sampai Prisma validation, typecheck, test suite, build, dan database migration/verification dijalankan pada environment proyek.\n\n## 3. Langkah Selanjutnya (Next Immediate Gate)
 1. **Phase 3 Gate — Daily Operations:**
    * Attendance Engine (< 60 detik) & offline cache idempotency.
    * Finance 3-Tier Layer (FeeCategory, StudentCharge, PaymentTransaction).
