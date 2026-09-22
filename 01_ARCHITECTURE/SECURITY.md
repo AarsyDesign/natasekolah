@@ -116,3 +116,13 @@
 * **Immutability of Closed Sessions (Perlindungan Retroaktif):**
   Setelah sesi diubah statusnya menjadi `CLOSED`, seluruh pembaruan atau penambahan kehadiran ditolak secara permanen (`AttendanceSessionClosedError` HTTP 400). Sesi hanya dapat ditutup jika seluruh siswa eligible dalam rombel telah memiliki catatan kehadiran (`AttendanceIncompleteError` HTTP 400). Rekaman kehadiran pada sesi yang ditutup tetap dapat dibaca untuk kebutuhan audit dan pelaporan.
 
+
+
+## 12. Finance Security & Financial Integrity (Phase 3)
+
+* **RBAC:** Mutasi finance membutuhkan finance:manage; pembacaan membutuhkan finance:view. TEACHER tidak mendapat akses finance, PRINCIPAL hanya memiliki akses lihat, dan FINANCE_STAFF dapat mengelola finance sesuai matriks RBAC yang sudah ada.
+* **Tenant Isolation:** Student, FeeCategory, AcademicYear, Charge, Payment, Receipt, dan Cashbook selalu dicari dengan institutionId dari authenticated server context.
+* **Client Anti-Tampering:** institutionId, userId, roles, permissions, dan security fields tidak dipercaya dari payload klien.
+* **Idempotency:** Payment create menggunakan unique tenant-scoped idempotency key. Request retry dengan payload sama mengembalikan transaksi yang sama; key yang sama dengan payload berbeda ditolak.
+* **Immutable Ledger:** Payment posted tidak diubah/hapus. Void membuat reversal cashbook entry dan audit log.
+* **Overpayment:** Nilai kelebihan pembayaran dicatat sebagai excess; MVP belum otomatis mengalokasikannya ke tagihan lain.
