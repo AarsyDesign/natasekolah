@@ -129,3 +129,7 @@
 * Added `01_ARCHITECTURE/FRONTEND-ARCHITECTURE.md` as the frontend contract for App Router, tenant-aware UX, dynamic terminology, plugin-aware navigation, mutation state, mobile-first behavior, and domain boundaries.
 * Updated `01_ARCHITECTURE/ARCHITECTURE.md` and `03_EXECUTION/TODO.md` to reference the blueprints.
 * No existing working domain was structurally refactored for this preparation step.
+
+## [2026-09-23] - Application Contract Preparation
+* Added `01_ARCHITECTURE/APPLICATION-CONTRACT.md` to define stable boundaries between Frontend, Server Actions, Domain Services, Validation, Authorization, Pagination, Errors, and Integration Gates.
+* No existing runtime code was refactored for this preparation step.
