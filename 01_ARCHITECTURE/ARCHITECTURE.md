@@ -119,3 +119,11 @@ Setiap mutasi bisnis penting (pembayaran SPP, absensi harian) mencatat event ke 
    * VOID -> charge is cancelled without deleting history.
 5. **Tenant Boundary:**
    All domain services receive TenantContext, derive institutionId from the authenticated server session, and use tenant-scoped lookups before mutation.
+
+## 9. Backend & Frontend Implementation Blueprints
+Untuk menjaga konsistensi antara PRD, architecture, domain service, Server Actions, dan UI, detail kontrak implementasi dipisahkan menjadi:
+
+- [Backend Architecture Blueprint](./BACKEND-ARCHITECTURE.md)
+- [Frontend Architecture Blueprint](./FRONTEND-ARCHITECTURE.md)
+
+Dokumen tersebut bersifat **pre-integration design**. Tidak memindahkan struktur existing secara massal dan tidak mengubah source of truth yang sudah berjalan.
