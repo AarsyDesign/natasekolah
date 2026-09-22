@@ -178,3 +178,12 @@
 * Static repository audit: completed.
 * Runtime Prisma/TypeScript/test/build execution: blocked by current environment; no local command execution was available.
 * Migration verification: blocked; PR #1 contains schema changes but no Prisma migration.
+
+## [2026-09-23] - Finance Core VERIFY Hardening
+* FeeCategory create/update/activate and standalone Cashbook expense now keep mutation + AuditLog atomic.
+* Charge VOID reason is validated through Zod.
+* Paginated Cashbook returns tenant-wide aggregate balance rather than page-local balance.
+* Idempotent payment retries return a consistent response shape and compare material payload fields.
+* Added `npm test` script and GitHub Actions verification workflow for Prisma validate/generate, TypeScript, tests, and build.
+* Runtime CI result remains pending; no run was reported for the latest feature commit during this session.
+
