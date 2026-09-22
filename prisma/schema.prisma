@@ -430,7 +430,7 @@ model StudentCharge {
   institutionId  String
   studentId      String
   feeCategoryId  String
-  academicYearId String?
+  academicYearId String
   periodMonth    Int?
   periodYear     Int?
   amount         Int
@@ -444,7 +444,7 @@ model StudentCharge {
   institution    Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   student        Student          @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
   feeCategory    FeeCategory      @relation(fields: [feeCategoryId, institutionId], references: [id, institutionId], onDelete: Restrict)
-  academicYear   AcademicYear?    @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  academicYear   AcademicYear     @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Restrict)
   payments       PaymentTransaction[]
 
   @@unique([id, institutionId])
