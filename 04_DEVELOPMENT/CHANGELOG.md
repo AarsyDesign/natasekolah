@@ -187,3 +187,13 @@
 * Added `npm test` script and GitHub Actions verification workflow for Prisma validate/generate, TypeScript, tests, and build.
 * Runtime CI result remains pending; no run was reported for the latest feature commit during this session.
 
+
+## [2026-09-23] - Backend & Frontend Architecture Preparation
+### Added
+* `01_ARCHITECTURE/BACKEND-ARCHITECTURE.md`
+* `01_ARCHITECTURE/FRONTEND-ARCHITECTURE.md`
+### Changed
+* Linked both implementation blueprints from `01_ARCHITECTURE/ARCHITECTURE.md`.
+* Recorded architecture-preparation gate in `03_EXECUTION/TODO.md`.
+### Scope
+* Design/documentation only. Existing working domain implementations were not mass-refactored.
