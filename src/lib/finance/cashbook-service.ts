@@ -41,7 +41,7 @@ export async function listCashbook(ctx: TenantContext, page = 1, pageSize = 50) 
   const safeSize = Math.min(100, Math.max(1, Math.floor(pageSize)));
   const where: Prisma.CashbookEntryWhereInput = { institutionId: ctx.institutionId };
   const skip = (safePage - 1) * safeSize;
-  const [data, total] = await Promise.all([
+  const [data, total, totals] = await Promise.all([
     prisma.cashbookEntry.findMany({
       where,
       skip,
@@ -54,9 +54,15 @@ export async function listCashbook(ctx: TenantContext, page = 1, pageSize = 50) 
       },
     }),
     prisma.cashbookEntry.count({ where }),
+    prisma.cashbookEntry.groupBy({
+      by: ["entryType"],
+      where,
+      _sum: { amount: true },
+    }),
   ]);
-  const balance = data.reduce((sum, entry) => sum + (entry.entryType === "INCOME" ? entry.amount : -entry.amount), 0);
-  return { data, total, page: safePage, pageSize: safeSize, balance };
+  const income = totals.find((x) => x.entryType === "INCOME")?._sum.amount ?? 0;
+  const expense = totals.find((x) => x.entryType === "EXPENSE")?._sum.amount ?? 0;
+  return { data, total, page: safePage, pageSize: safeSize, balance: income - expense };
 }
 
 export async function getCashbookBalance(ctx: TenantContext) {
