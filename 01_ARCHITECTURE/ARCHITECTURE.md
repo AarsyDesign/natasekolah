@@ -127,3 +127,5 @@ Untuk menjaga konsistensi antara PRD, architecture, domain service, Server Actio
 - [Frontend Architecture Blueprint](./FRONTEND-ARCHITECTURE.md)
 
 Dokumen tersebut bersifat **pre-integration design**. Tidak memindahkan struktur existing secara massal dan tidak mengubah source of truth yang sudah berjalan.
+
+- [Application Contract](./APPLICATION-CONTRACT.md) — kontrak antar Frontend, Server Actions, Domain, validation, authorization, error, pagination, mutation state, dan integration gate.
