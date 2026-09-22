@@ -8,7 +8,7 @@ import { calculateChargeStatus, ChargeHasPaymentsError, FinanceConflictError, Fi
 
 async function getChargeWithPayments(ctx: TenantContext, id: string) {
   return prisma.studentCharge.findUnique({
-    where: { id_institutionId: { id: input.studentChargeId, institutionId: ctx.institutionId } },
+    where: { id_institutionId: { id, institutionId: ctx.institutionId } },
     include: { student: true, feeCategory: true, academicYear: true, payments: { orderBy: { paidAt: "asc" } } },
   });
 }
@@ -86,7 +86,7 @@ export async function createStudentCharge(ctx: TenantContext, rawInput: unknown)
 export async function getStudentCharge(ctx: TenantContext, id: string) {
   requirePermission(ctx, "finance:view");
   const charge = await getChargeWithPayments(ctx, id);
-  if (!charge) throw new FinanceNotFoundError("Tagihan", input.studentChargeId);
+  if (!charge) throw new FinanceNotFoundError("Tagihan", id);
   const activePayments = charge.payments.filter((p) => p.status === "POSTED");
   const totalPaid = activePayments.reduce((sum, p) => sum + p.amount, 0);
   const netAmount = getNetChargeAmount(charge);
@@ -126,10 +126,10 @@ export async function voidStudentCharge(ctx: TenantContext, id: string, reason: 
   const input = validateVoidStudentChargeInput({ studentChargeId: id, reason });
   return prisma.$transaction(async (tx) => {
   const charge = await tx.studentCharge.findUnique({
-    where: { id_institutionId: { id, institutionId: ctx.institutionId } },
+    where: { id_institutionId: { id: input.studentChargeId, institutionId: ctx.institutionId } },
     include: { payments: { orderBy: { paidAt: "asc" } } },
   });
-  if (!charge) throw new FinanceNotFoundError("Tagihan", id);
+  if (!charge) throw new FinanceNotFoundError("Tagihan", input.studentChargeId);
   if (charge.status === "VOID") return charge;
   if (charge.payments.some((p) => p.status === "POSTED")) throw new ChargeHasPaymentsError();
   const updated = await tx.studentCharge.update({ where: { id_institutionId: { id: input.studentChargeId, institutionId: ctx.institutionId } }, data: { status: "VOID" } });
