@@ -153,7 +153,7 @@ export async function voidPayment(ctx: TenantContext, rawInput: unknown) {
   requirePermission(ctx, "finance:manage");
   const input = sanitizeClientInput(validateVoidPaymentInput(rawInput), ctx);
 
-  return prisma.$transaction(async (tx) => {
+  const runTransaction = () => prisma.$transaction(async (tx) => {
     const payment = await tx.paymentTransaction.findUnique({
       where: { id_institutionId: { id: input.paymentTransactionId, institutionId: ctx.institutionId } },
       include: { charge: { include: { feeCategory: true } }, cashbookEntry: true, receipt: true },
