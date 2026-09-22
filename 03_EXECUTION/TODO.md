@@ -159,3 +159,11 @@
   - [x] Next.js Turbopack build PASS (`next build`, 11 routes).
   - [x] Prisma validation PASS (`prisma validate`).
 
+
+
+## Architecture Preparation — Backend & Frontend
+- [x] Re-read PRD v5.0 and existing Architecture / Domain Model / Database / Security / ADR / Roadmap / TODO before extending architecture.
+- [x] Add backend implementation blueprint without refactoring existing working domains.
+- [x] Add frontend implementation blueprint for App Router, Server Actions, tenant-aware UX, dynamic terminology, plugin-aware navigation, mobile-first states, and domain boundaries.
+- [x] Define integration sequence: backend contract → Server Action → page/form/state → responsive/accessibility → domain integration → tests.
+- [ ] Runtime verification and approved Prisma migration remain separate integration gates.
