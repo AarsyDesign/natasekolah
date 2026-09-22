@@ -1,4 +1,4 @@
-import type { Prisma, StudentCharge } from "@prisma/client";
+import { Prisma, type StudentCharge } from "@prisma/client";
 import type { TenantContext } from "../tenant/context";
 import { prisma } from "../prisma";
 import { requirePermission } from "../auth/permissions";
@@ -41,7 +41,8 @@ export async function createStudentCharge(ctx: TenantContext, rawInput: unknown)
   if (!category.isActive) throw new FinanceConflictError("Kategori tagihan sedang nonaktif.");
   if (!academicYear) throw new FinanceNotFoundError("Tahun ajaran", input.academicYearId);
 
-  const duplicate = await prisma.studentCharge.findFirst({
+  return prisma.$transaction(async (tx) => {
+  const duplicate = await tx.studentCharge.findFirst({
     where: {
       institutionId: ctx.institutionId,
       studentId: input.studentId,
@@ -54,7 +55,7 @@ export async function createStudentCharge(ctx: TenantContext, rawInput: unknown)
   });
   if (duplicate) throw new FinanceConflictError("Tagihan aktif dengan kombinasi siswa, kategori, tahun ajaran, dan periode yang sama sudah ada.");
 
-  const charge = await prisma.studentCharge.create({
+  const charge = await tx.studentCharge.create({
     data: {
       institutionId: ctx.institutionId,
       studentId: input.studentId,
@@ -68,7 +69,7 @@ export async function createStudentCharge(ctx: TenantContext, rawInput: unknown)
       notes: input.notes || null,
     },
   });
-  await prisma.auditLog.create({
+  await tx.auditLog.create({
     data: {
       institutionId: ctx.institutionId,
       userId: ctx.userId,
@@ -79,7 +80,7 @@ export async function createStudentCharge(ctx: TenantContext, rawInput: unknown)
     },
   });
   return charge;
-}
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
 export async function getStudentCharge(ctx: TenantContext, id: string) {
   requirePermission(ctx, "finance:view");
@@ -121,11 +122,15 @@ export async function listStudentCharges(ctx: TenantContext, rawQuery?: unknown)
 
 export async function voidStudentCharge(ctx: TenantContext, id: string, reason: string) {
   requirePermission(ctx, "finance:manage");
-  const charge = await getChargeWithPayments(ctx, id);
+  return prisma.$transaction(async (tx) => {
+  const charge = await tx.studentCharge.findUnique({
+    where: { id_institutionId: { id, institutionId: ctx.institutionId } },
+    include: { payments: { orderBy: { paidAt: "asc" } } },
+  });
   if (!charge) throw new FinanceNotFoundError("Tagihan", id);
   if (charge.status === "VOID") return charge;
   if (charge.payments.some((p) => p.status === "POSTED")) throw new ChargeHasPaymentsError();
-  const updated = await prisma.studentCharge.update({ where: { id_institutionId: { id, institutionId: ctx.institutionId } }, data: { status: "VOID" } });
-  await prisma.auditLog.create({ data: { institutionId: ctx.institutionId, userId: ctx.userId, action: "VOID", entityType: "StudentCharge", entityId: id, detailsJson: JSON.stringify({ reason }) } });
+  const updated = await tx.studentCharge.update({ where: { id_institutionId: { id, institutionId: ctx.institutionId } }, data: { status: "VOID" } });
+  await tx.auditLog.create({ data: { institutionId: ctx.institutionId, userId: ctx.userId, action: "VOID", entityType: "StudentCharge", entityId: id, detailsJson: JSON.stringify({ reason }) } });
   return updated;
-}
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
