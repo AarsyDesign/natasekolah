@@ -100,3 +100,21 @@
   ```
 * **Immutability of Closed Sessions:** Sesi berstatus `CLOSED` bersifat kekal (immutable). Operasi `markAttendance` ditolak secara permanen setelah sesi ditutup.
 
+
+
+## 8. Finance Core Database Model (Phase 3)
+
+| Entity | Fungsi | Constraint / Integrity |
+| :--- | :--- | :--- |
+| FeeCategory | Katalog kategori tagihan | unique institutionId + code, tenant-scoped |
+| StudentCharge | Tagihan siswa | unique id + institutionId; relasi student/category/year tenant-scoped |
+| PaymentTransaction | Pembayaran aktual | unique institutionId + idempotencyKey; immutable lifecycle |
+| Receipt | Bukti pembayaran | unique institutionId + receiptNumber; satu receipt per payment |
+| CashbookEntry | Buku kas | income/expense immutable; reversal via new entry |
+
+### Finance integrity rules
+* Nominal uang disimpan sebagai Int rupiah, bukan floating point.
+* Pembayaran aktif dihitung hanya dari transaksi berstatus POSTED.
+* VOID payment tidak dihapus; saldo kas dikoreksi melalui entri EXPENSE dengan reversalOfId.
+* Receipt number memakai format KW-YYYYMM-XXXXXXXX berbasis ID transaksi sehingga tidak bergantung pada counter MAX()+1 yang rentan race condition.
+* idempotencyKey wajib unik per institusi untuk mencegah retry menghasilkan pembayaran ganda.
