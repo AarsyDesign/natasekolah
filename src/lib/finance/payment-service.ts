@@ -192,6 +192,15 @@ export async function voidPayment(ctx: TenantContext, rawInput: unknown) {
       },
     });
     return { payment: updated, charge, reversalCashbookEntry: reversal };
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await runTransaction();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 3) continue;
+      throw error;
+    }
+  }
 }
 
