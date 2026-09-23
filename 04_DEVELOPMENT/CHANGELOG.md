@@ -1,5 +1,34 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Milestone: Finance Workspace UX Migration (Unified Finance Workspace Layout & Navigation, Charges, Payments Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV Export) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/components/finance/finance-workspace-nav.tsx`: Komponen navigasi workspace keuangan terpadu dengan 6 tab operasional (*Ringkasan*, *Tagihan Siswa*, *Kasir Pembayaran*, *Buku Kas (BKU)*, *Kategori Biaya*, *Laporan*), indikator status aktif berbasis `bg-teal-700`, dan target sentuh ramah jempol min 44px.
+* `src/app/finance/layout.tsx`: Layout shell persisten untuk modul keuangan yang membungkus sub-rute dengan `NavHeader` dan `FinanceWorkspaceNav` guna mencegah remount layout dan header saat berpindah rute keuangan.
+* `test/finance-ui-workspace.test.ts`: Rangkaian 10 pengujian kontrak otomatis untuk verifikasi integritas navigasi workspace, aturan anti-slop (0 `rounded-full`, 0 `active:scale-95`, 0 duplicate `NavHeader`, 0 old spinner), format Rupiah dan penjajaran `tabular-nums font-mono`, serta aturan keselamatan VOID.
+
+### Changed
+* `src/app/finance/page.tsx`:
+  * Migrasi ke Design System: mengadopsi 5 `CardSkeleton` saat loading, membersihkan duplikasi `NavHeader` dan wrapper `bg-slate-50`, menampilkan 5 metrik kontekstual dengan format `tabular-nums font-mono`, dan kartu navigasi cepat menuju sub-modul keuangan.
+* `src/app/finance/charges/page.tsx`:
+  * Migrasi tabel tagihan kesiswaan ke `DataTableView` (tampilan tabular multi-kolom di desktop dan transformasi kartu *ResourceList* di ponsel).
+  * Mengganti seluruh badge pill `rounded-full` menjadi `Badge` bersudut tumpul `rounded-md` dengan varian semantik (`success`, `warning`, `danger`, `info`, `neutral`).
+  * Mengadopsi primitif `Dialog`, `Input`, `Select`, `Button` untuk modal Tagihan Tunggal, Tagihan Massal per rombel (dengan live candidate preview), dan modal konfirmasi VOID.
+* `src/app/finance/payments/page.tsx`:
+  * Migrasi kasir pembayaran: form pencarian santri pembayar, daftar tagihan tertunggak dengan opsi "Pilih Semua", input alokasi nominal rata kanan `font-mono`, dan layar konfirmasi sebelum eksekusi.
+  * Modal kwitansi resmi siap cetak (`window.print()`) dan riwayat kasir berbasis `DataTableView`.
+* `src/app/finance/cashbook/page.tsx`:
+  * Migrasi Buku Kas Umum (BKU) dengan `DataTableView` berdensitas tinggi (compact 36px) dan reflow kartu pada ponsel.
+  * Pembedaan sumber mutasi via Badge semantik: `Kasir Pembayaran` (otomatis) vs `Manual Operasional`.
+  * Modal pencatatan kas manual dengan tombol pilihan jenis mutasi dan form kontrol standar UI Foundation.
+* `src/app/finance/fees/page.tsx`:
+  * Migrasi master kategori biaya ke `DataTableView`, status `Badge` aktif/nonaktif `rounded-md`, serta modal pembuatan dan edit kategori terpadu.
+* `src/app/finance/reports/page.tsx`:
+  * Migrasi tampilan 3 laporan operasional (*Rekap Pembayaran*, *Tagihan & Tunggakan*, *Arus Kas BKU*) dengan tombol tab interaktif dan filter tanggal transaksi.
+  * Mempertahankan 100% fungsionalitas unduh CSV/Excel (`generatePaymentsCSV`, `generateChargesCSV`, `generateCashbookCSV`).
+
+---
+
 ## [2026-09-23] - Milestone: UI Foundation & Persistent App Shell (Design Tokens, UI Primitives, Persistent AppShell, Mobile Navigation, Zero-CLS Skeletons, DataTableView & Dashboard Reference Implementation) (IMPLEMENTED / VERIFIED)
 
 ### Added

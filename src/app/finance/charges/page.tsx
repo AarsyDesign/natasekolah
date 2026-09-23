@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { NavHeader } from "@/components/nav-header";
 import {
   listStudentChargesAction,
   createStudentChargeAction,
@@ -21,16 +20,27 @@ import {
   AlertCircle,
   Clock,
   XCircle,
-  RefreshCw,
-  X,
-  Ban,
   Download,
   Users2,
   Calendar,
   AlertTriangle,
+  Ban,
   ArrowRight,
-  Filter,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { DataTableView, ColumnDef } from "@/components/data-dense/data-table-view";
+import { TableSkeleton } from "@/components/loading/skeletons";
 
 interface ChargeItem {
   id: string;
@@ -102,7 +112,7 @@ export default function StudentChargesPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   // Void confirmation state
-  const [voidingId, setVoidingId] = useState<string | null>(null);
+  const [voidingItem, setVoidingItem] = useState<ChargeItem | null>(null);
 
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -289,15 +299,15 @@ export default function StudentChargesPage() {
   };
 
   const handleVoidConfirm = () => {
-    if (!voidingId) return;
+    if (!voidingItem) return;
 
     setMessage(null);
     startTransition(async () => {
       try {
-        const res = await voidStudentChargeAction(voidingId);
+        const res = await voidStudentChargeAction(voidingItem.id);
         if (res.success) {
           setMessage({ type: "success", text: "Tagihan berhasil dibatalkan (VOID)." });
-          setVoidingId(null);
+          setVoidingItem(null);
           loadData();
         }
       } catch (err: unknown) {
@@ -325,642 +335,643 @@ export default function StudentChargesPage() {
     downloadCSV(`Tagihan_Siswa_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
   };
 
-  const getStatusBadge = (status: string, isOverdue?: boolean) => {
+  const renderStatusBadge = (status: string, isOverdue?: boolean) => {
     if (status === "PAID") {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-          <CheckCircle2 className="w-3.5 h-3.5" /> Lunas
-        </span>
+        <Badge variant="success">
+          <CheckCircle2 className="w-3 h-3" /> Lunas
+        </Badge>
       );
     }
     if (status === "PARTIAL") {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-          <Clock className="w-3.5 h-3.5" /> Sebagian
-        </span>
+        <Badge variant="info">
+          <Clock className="w-3 h-3" /> Sebagian
+        </Badge>
       );
     }
     if (status === "VOID") {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-          <XCircle className="w-3.5 h-3.5" /> Batal (VOID)
-        </span>
+        <Badge variant="neutral">
+          <XCircle className="w-3 h-3" /> Batal (VOID)
+        </Badge>
       );
     }
     if (isOverdue) {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">
-          <AlertCircle className="w-3.5 h-3.5" /> Jatuh Tempo
-        </span>
+        <Badge variant="danger">
+          <AlertCircle className="w-3 h-3" /> Lewat Batas
+        </Badge>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-        <Clock className="w-3.5 h-3.5" /> Belum Dibayar
-      </span>
+      <Badge variant="warning">
+        <Clock className="w-3 h-3" /> Belum Dibayar
+      </Badge>
     );
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      <NavHeader />
-
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Receipt className="w-6 h-6 text-purple-600" /> Operasional Tagihan Siswa
-            </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Kewajiban tagihan kesiswaan per periode dengan nominal snapshot dan proteksi duplikasi
-            </p>
+  const columns: ColumnDef<ChargeItem>[] = [
+    {
+      header: "Santri / Siswa",
+      align: "left",
+      cell: (item) => (
+        <div>
+          <div className="font-semibold text-stone-900 text-sm leading-tight">
+            {item.student.fullName}
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleExportCSV}
-              disabled={items.length === 0}
-              className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl shadow-xs hover:bg-slate-50 transition-all min-h-[44px]"
-            >
-              <Download className="w-4 h-4" /> Export CSV
-            </button>
-            <button
-              onClick={handleOpenCreate}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-800 font-medium rounded-xl shadow-xs hover:bg-slate-50 transition-all min-h-[44px]"
-            >
-              <Plus className="w-4 h-4" /> Tagihan Tunggal
-            </button>
-            <button
-              onClick={handleOpenBulk}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white font-medium rounded-xl shadow-xs hover:bg-purple-700 transition-all min-h-[44px]"
-            >
-              <Users2 className="w-4 h-4" /> Terbitkan Massal
-            </button>
+          <div className="text-xs text-stone-500 font-mono mt-0.5">NIS: {item.student.nis}</div>
+        </div>
+      ),
+    },
+    {
+      header: "Kategori & Periode",
+      align: "left",
+      cell: (item) => (
+        <div>
+          <div className="font-medium text-stone-900 text-xs">{item.feeCategory.name}</div>
+          <div className="text-[11px] text-stone-500">
+            {item.period ? `Periode ${item.period}` : "Non-bulanan"}
           </div>
         </div>
+      ),
+    },
+    {
+      header: "Jatuh Tempo",
+      align: "left",
+      cell: (item) => (
+        <div className="text-xs">
+          {item.dueDate ? (
+            <span className={item.isOverdue ? "text-rose-700 font-medium" : "text-stone-700"}>
+              {new Date(item.dueDate).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          ) : (
+            <span className="text-stone-400">-</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: "Nominal",
+      align: "right",
+      cell: (item) => (
+        <span className="font-mono text-stone-900 font-medium">
+          Rp {item.amount.toLocaleString("id-ID")}
+        </span>
+      ),
+    },
+    {
+      header: "Terbayar",
+      align: "right",
+      cell: (item) => (
+        <span className="font-mono text-emerald-800">
+          Rp {item.allocatedAmount.toLocaleString("id-ID")}
+        </span>
+      ),
+    },
+    {
+      header: "Sisa Tagihan",
+      align: "right",
+      cell: (item) => (
+        <span
+          className={`font-mono font-semibold ${
+            item.remainingAmount > 0 ? "text-stone-900" : "text-stone-400"
+          }`}
+        >
+          Rp {item.remainingAmount.toLocaleString("id-ID")}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      align: "center",
+      cell: (item) => renderStatusBadge(item.status, item.isOverdue),
+    },
+    {
+      header: "Aksi",
+      align: "center",
+      cell: (item) => {
+        const canVoid =
+          item.status !== "VOID" &&
+          item.status !== "PAID" &&
+          item.allocatedAmount === 0 &&
+          item.remainingAmount === item.amount;
 
-        {/* Message Banner */}
-        {message && (
-          <div
-            className={`mb-6 p-4 rounded-xl border text-sm flex items-center justify-between ${
-              message.type === "success"
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : "bg-rose-50 border-rose-200 text-rose-800"
-            }`}
+        if (!canVoid) {
+          return <span className="text-xs text-stone-300">-</span>;
+        }
+
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setVoidingItem(item)}
+            className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 h-8 px-2 text-xs"
           >
-            <span>{message.text}</span>
-            <button onClick={() => setMessage(null)} className="text-xs font-bold underline">
-              Tutup
-            </button>
+            <Ban className="w-3.5 h-3.5 mr-1" /> VOID
+          </Button>
+        );
+      },
+    },
+  ];
+
+  const renderMobileCard = (item: ChargeItem) => (
+    <div className="space-y-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-semibold text-stone-900 text-sm">{item.student.fullName}</div>
+          <div className="text-xs text-stone-500 font-mono">
+            NIS: {item.student.nis} · {item.feeCategory.name}
+          </div>
+        </div>
+        <div className="shrink-0">{renderStatusBadge(item.status, item.isOverdue)}</div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-stone-100">
+        <div>
+          <span className="text-[10px] uppercase font-semibold text-stone-400 block">Nominal</span>
+          <span className="font-mono font-medium text-stone-800">
+            Rp {item.amount.toLocaleString("id-ID")}
+          </span>
+        </div>
+        <div>
+          <span className="text-[10px] uppercase font-semibold text-stone-400 block">Sisa Tagihan</span>
+          <span className="font-mono font-bold text-stone-900">
+            Rp {item.remainingAmount.toLocaleString("id-ID")}
+          </span>
+        </div>
+        <div>
+          <span className="text-[10px] uppercase font-semibold text-stone-400 block">Jatuh Tempo</span>
+          <span className="text-stone-700">
+            {item.dueDate ? new Date(item.dueDate).toLocaleDateString("id-ID") : "-"}
+          </span>
+        </div>
+        <div>
+          <span className="text-[10px] uppercase font-semibold text-stone-400 block">Periode</span>
+          <span className="text-stone-700">{item.period || "-"}</span>
+        </div>
+      </div>
+
+      {item.status !== "VOID" &&
+        item.status !== "PAID" &&
+        item.allocatedAmount === 0 &&
+        item.remainingAmount === item.amount && (
+          <div className="pt-2 border-t border-stone-100 flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setVoidingItem(item)}
+              className="text-rose-600 border-rose-200 hover:bg-rose-50 text-xs h-8"
+            >
+              <Ban className="w-3.5 h-3.5 mr-1" /> Batalkan (VOID)
+            </Button>
           </div>
         )}
+    </div>
+  );
 
-        {/* Operational Metrics Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1">
-              Total Tagihan
-            </span>
-            <div className="text-lg font-bold text-slate-900">
-              Rp {summary.totalChargesAmount.toLocaleString("id-ID")}
-            </div>
-            <span className="text-xs text-slate-400">{summary.totalChargesCount} kewajiban</span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1">
-              Sudah Terbayar
-            </span>
-            <div className="text-lg font-bold text-emerald-700">
-              Rp {summary.totalPaidAmount.toLocaleString("id-ID")}
-            </div>
-            <span className="text-xs text-slate-400">{summary.paidCount} lunas</span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1">
-              Sebagian (Cicil)
-            </span>
-            <div className="text-lg font-bold text-blue-700">{summary.partialCount} tagihan</div>
-            <span className="text-xs text-slate-400">Pembayaran parsial</span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1">
-              Belum Dibayar
-            </span>
-            <div className="text-lg font-bold text-amber-700">
-              Rp {summary.totalOutstandingAmount.toLocaleString("id-ID")}
-            </div>
-            <span className="text-xs text-slate-400">{summary.unpaidCount} tagihan</span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-rose-200 shadow-xs col-span-2 lg:col-span-1 bg-rose-50/30">
-            <span className="text-xs font-medium text-rose-600 uppercase tracking-wider block mb-1">
-              Jatuh Tempo (Overdue)
-            </span>
-            <div className="text-lg font-bold text-rose-700">
-              Rp {summary.overdueAmount.toLocaleString("id-ID")}
-            </div>
-            <span className="text-xs text-rose-500 font-medium">{summary.overdueCount} tagihan terlambat</span>
-          </div>
+  return (
+    <div className="space-y-6">
+      {/* Control / Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-lg border border-stone-200 shadow-2xs">
+        <div>
+          <h2 className="text-base font-semibold text-stone-900 tracking-tight flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-teal-700" /> Operasional Tagihan Siswa
+          </h2>
+          <p className="text-xs text-stone-500 mt-0.5">
+            Penerbitan kewajiban syahriah snapshot per santri atau rombel dengan proteksi duplikasi.
+          </p>
         </div>
 
-        {/* Filter and Search Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs mb-6 flex flex-col sm:flex-row gap-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              loadData();
-            }}
-            className="flex-1 relative"
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            disabled={items.length === 0}
+            className="gap-1.5"
           >
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Cari nama siswa, NIS, atau nama biaya..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white min-h-[44px]"
-            />
-          </form>
+            <Download className="w-4 h-4 text-stone-600" /> Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenCreate}
+            className="gap-1.5"
+          >
+            <Plus className="w-4 h-4 text-stone-600" /> Tagihan Tunggal
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleOpenBulk}
+            className="gap-1.5"
+          >
+            <Users2 className="w-4 h-4" /> Terbitkan Massal
+          </Button>
+        </div>
+      </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <select
+      {/* Feedback Message */}
+      {message && (
+        <div
+          role="alert"
+          className={`p-3.5 rounded-lg border text-xs sm:text-sm flex items-center justify-between gap-3 ${
+            message.type === "success"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
+          }`}
+        >
+          <span>{message.text}</span>
+          <button
+            type="button"
+            onClick={() => setMessage(null)}
+            className="text-xs font-semibold underline shrink-0 cursor-pointer"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
+      {/* Operational Metrics Cards (Context Bar) */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider block mb-1">
+            Total Tagihan
+          </span>
+          <div className="text-base sm:text-lg font-bold text-stone-900 font-mono tabular-nums">
+            Rp {summary.totalChargesAmount.toLocaleString("id-ID")}
+          </div>
+          <span className="text-xs text-stone-500">{summary.totalChargesCount} kewajiban</span>
+        </Card>
+
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider block mb-1">
+            Sudah Terbayar
+          </span>
+          <div className="text-base sm:text-lg font-bold text-emerald-800 font-mono tabular-nums">
+            Rp {summary.totalPaidAmount.toLocaleString("id-ID")}
+          </div>
+          <span className="text-xs text-stone-500">{summary.paidCount} lunas</span>
+        </Card>
+
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider block mb-1">
+            Sebagian (Cicil)
+          </span>
+          <div className="text-base sm:text-lg font-bold text-blue-800 font-mono tabular-nums">
+            {summary.partialCount} tagihan
+          </div>
+          <span className="text-xs text-stone-500">Pembayaran parsial</span>
+        </Card>
+
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider block mb-1">
+            Sisa Tunggakan
+          </span>
+          <div className="text-base sm:text-lg font-bold text-amber-800 font-mono tabular-nums">
+            Rp {summary.totalOutstandingAmount.toLocaleString("id-ID")}
+          </div>
+          <span className="text-xs text-stone-500">
+            {summary.unpaidCount + summary.partialCount} tagihan
+          </span>
+        </Card>
+
+        <Card className="p-3.5 border-rose-200 bg-rose-50/20 col-span-2 lg:col-span-1">
+          <span className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider block mb-1">
+            Jatuh Tempo
+          </span>
+          <div className="text-base sm:text-lg font-bold text-rose-800 font-mono tabular-nums">
+            Rp {summary.overdueAmount.toLocaleString("id-ID")}
+          </div>
+          <span className="text-xs text-rose-600 font-medium">
+            {summary.overdueCount} tagihan lewat batas
+          </span>
+        </Card>
+      </div>
+
+      {/* Control Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-stone-200 shadow-2xs">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Cari nama santri atau NIS..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") loadData();
+            }}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-stone-50 border border-stone-200 rounded-md focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-teal-700 focus:border-teal-700 text-stone-900 min-h-[44px]"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="w-44">
+            <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
+              className="text-xs py-2 min-h-[44px]"
             >
               <option value="ALL">Semua Status</option>
               <option value="UNPAID">Belum Dibayar</option>
-              <option value="PARTIAL">Dibayar Sebagian</option>
+              <option value="PARTIAL">Cicilan / Sebagian</option>
               <option value="PAID">Lunas</option>
-              <option value="OVERDUE">Jatuh Tempo (Terlambat)</option>
               <option value="VOID">Batal (VOID)</option>
-            </select>
+            </Select>
           </div>
+          <Button variant="secondary" size="default" onClick={loadData}>
+            Cari
+          </Button>
         </div>
+      </div>
 
-        {/* Charges Table */}
-        {loading ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-purple-600" />
-            Memuat data tagihan siswa...
+      {/* Data Table / Content Area */}
+      {loading ? (
+        <TableSkeleton rows={6} columns={7} />
+      ) : (
+        <DataTableView
+          data={items}
+          columns={columns}
+          keyExtractor={(item) => item.id}
+          mobileCardRenderer={renderMobileCard}
+          emptyState={
+            <div className="py-6 text-center">
+              <Receipt className="w-10 h-10 text-stone-300 mx-auto mb-2" />
+              <h4 className="font-semibold text-stone-800 text-sm">Tidak Ada Tagihan Ditemukan</h4>
+              <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+                {search || statusFilter !== "ALL"
+                  ? "Tidak ada tagihan yang sesuai dengan filter pencarian saat ini."
+                  : "Belum ada tagihan kesiswaan yang diterbitkan. Klik 'Tagihan Tunggal' atau 'Terbitkan Massal'."}
+              </p>
+            </div>
+          }
+        />
+      )}
+
+      {/* Modal Single Charge */}
+      <Dialog isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+        <DialogHeader>
+          <DialogTitle>Terbitkan Tagihan Tunggal</DialogTitle>
+          <DialogDescription>
+            Pilih santri dan pos kewajiban yang akan dibebankan.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Select
+            label="Pilih Santri *"
+            value={selectedStudentId}
+            onChange={(e) => setSelectedStudentId(e.target.value)}
+            required
+          >
+            <option value="">-- Pilih Santri --</option>
+            {students.map((st) => (
+              <option key={st.id} value={st.id}>
+                {st.fullName} (NIS: {st.nis})
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            label="Kategori Biaya *"
+            value={selectedFeeCategoryId}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            required
+          >
+            <option value="">-- Pilih Kategori --</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} - Rp {c.amount.toLocaleString("id-ID")}
+              </option>
+            ))}
+          </Select>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Periode Tagihan"
+              type="text"
+              placeholder="Contoh: 2026-09"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              helperText="Format YYYY-MM untuk tagihan rutin"
+            />
+            <Input
+              label="Jatuh Tempo"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
           </div>
-        ) : items.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
-            <Receipt className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="font-bold text-slate-700">Belum Ada Tagihan</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              Gunakan tombol di atas untuk menerbitkan tagihan tunggal atau massal ke siswa.
-            </p>
+
+          <Input
+            label="Nominal Tagihan (Rp) *"
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
+            placeholder="0"
+            required
+            helperText="Nominal akan dibekukan (snapshot) pada tagihan ini"
+          />
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              disabled={isPending}
+            >
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" isLoading={isPending}>
+              Terbitkan Tagihan
+            </Button>
+          </DialogFooter>
+        </form>
+      </Dialog>
+
+      {/* Modal Bulk Charges */}
+      <Dialog isOpen={bulkModalOpen} onClose={() => setBulkModalOpen(false)} className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Penerbitan Tagihan Massal</DialogTitle>
+          <DialogDescription>
+            Terbitkan tagihan serentak per rombel atau seluruh santri dengan proteksi duplikasi otomatis.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleBulkSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Select
+              label="Kategori Biaya *"
+              value={bulkCategory}
+              onChange={(e) => handleBulkCategoryChange(e.target.value)}
+              required
+            >
+              <option value="">-- Pilih Kategori Biaya --</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+
+            <Input
+              label="Nominal Tagihan (Rp) *"
+              type="number"
+              value={bulkAmount}
+              onChange={(e) => setBulkAmount(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder="0"
+              required
+            />
           </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="bg-slate-50 text-xs font-semibold text-slate-700 border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3">Siswa</th>
-                    <th className="px-4 py-3">Komponen Biaya</th>
-                    <th className="px-4 py-3">Periode</th>
-                    <th className="px-4 py-3">Jatuh Tempo</th>
-                    <th className="px-4 py-3">Total</th>
-                    <th className="px-4 py-3">Terbayar</th>
-                    <th className="px-4 py-3">Sisa</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {items.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3.5">
-                        <div className="font-semibold text-slate-900">{item.student.fullName}</div>
-                        <div className="text-xs font-mono text-slate-400">NIS: {item.student.nis}</div>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className="font-medium text-slate-800">{item.feeCategory.name}</span>
-                        <span className="block text-xs font-mono text-slate-400">{item.feeCategory.code}</span>
-                      </td>
-                      <td className="px-4 py-3.5 font-mono text-xs text-slate-500">
-                        {item.period || "-"}
-                      </td>
-                      <td className="px-4 py-3.5 text-xs">
-                        {item.dueDate ? (
-                          <span className={item.isOverdue ? "text-rose-600 font-semibold" : "text-slate-600"}>
-                            {new Date(item.dueDate).toLocaleDateString("id-ID")}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 font-semibold text-slate-900">
-                        Rp {item.amount.toLocaleString("id-ID")}
-                      </td>
-                      <td className="px-4 py-3.5 text-blue-700 font-medium">
-                        Rp {item.allocatedAmount.toLocaleString("id-ID")}
-                      </td>
-                      <td className="px-4 py-3.5 font-bold">
-                        <span className={item.remainingAmount > 0 ? "text-rose-600" : "text-emerald-700"}>
-                          Rp {item.remainingAmount.toLocaleString("id-ID")}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">{getStatusBadge(item.status, item.isOverdue)}</td>
-                      <td className="px-4 py-3.5 text-right">
-                        {item.status !== "VOID" && item.allocatedAmount === 0 && (
-                          <button
-                            onClick={() => setVoidingId(item.id)}
-                            title="Batalkan (Void) Tagihan Ini"
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
-                          >
-                            <Ban className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Select
+              label="Target Penerbitan"
+              value={bulkTargetMode}
+              onChange={(e) => setBulkTargetMode(e.target.value as any)}
+            >
+              <option value="ALL">Semua Santri Aktif</option>
+              <option value="CLASSROOM">Rombel / Kelas Tertentu</option>
+            </Select>
+
+            {bulkTargetMode === "CLASSROOM" && (
+              <Select
+                label="Pilih Kelas *"
+                value={bulkClassroomId}
+                onChange={(e) => setBulkClassroomId(e.target.value)}
+                required
+              >
+                <option value="">-- Pilih Kelas --</option>
+                {classrooms.map((cl) => (
+                  <option key={cl.id} value={cl.id}>
+                    {cl.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+
+            <Input
+              label="Periode Tagihan"
+              type="text"
+              placeholder="YYYY-MM (2026-09)"
+              value={bulkPeriod}
+              onChange={(e) => setBulkPeriod(e.target.value)}
+            />
+          </div>
+
+          <Input
+            label="Tanggal Jatuh Tempo"
+            type="date"
+            value={bulkDueDate}
+            onChange={(e) => setBulkDueDate(e.target.value)}
+          />
+
+          {/* Live Candidate Preview */}
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-stone-600">
+              <span>Hasil Verifikasi Kandidat</span>
+              {previewLoading && <span className="text-teal-700 lowercase font-normal">memeriksa...</span>}
+            </div>
+
+            {bulkPreview ? (
+              <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                <div className="bg-white p-2.5 rounded-md border border-stone-200">
+                  <div className="text-xs text-stone-500">Total Santri</div>
+                  <div className="text-base font-bold text-stone-900 font-mono">
+                    {bulkPreview.totalStudents}
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-md border border-emerald-200">
+                  <div className="text-xs text-emerald-700 font-medium">Akan Diterbitkan</div>
+                  <div className="text-base font-bold text-emerald-800 font-mono">
+                    {bulkPreview.eligibleCount}
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-md border border-amber-200">
+                  <div className="text-xs text-amber-700 font-medium">Sudah Ada (Lewati)</div>
+                  <div className="text-base font-bold text-amber-800 font-mono">
+                    {bulkPreview.alreadyChargedCount}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-stone-500">Pilih kategori biaya untuk melihat estimasi calon penerima.</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setBulkModalOpen(false)}
+              disabled={isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!bulkPreview || bulkPreview.eligibleCount === 0}
+              isLoading={isPending}
+            >
+              Terbitkan {bulkPreview?.eligibleCount || 0} Tagihan
+            </Button>
+          </DialogFooter>
+        </form>
+      </Dialog>
+
+      {/* Confirmation Modal VOID */}
+      <Dialog isOpen={!!voidingItem} onClose={() => setVoidingItem(null)}>
+        <DialogHeader>
+          <DialogTitle className="text-rose-700 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-rose-600" /> Konfirmasi Pembatalan (VOID)
+          </DialogTitle>
+          <DialogDescription>
+            Apakah Anda yakin ingin membatalkan kewajiban tagihan ini? Tindakan ini bersifat permanen
+            dan akan tercatat di log audit.
+          </DialogDescription>
+        </DialogHeader>
+
+        {voidingItem && (
+          <div className="rounded-md border border-rose-200 bg-rose-50/50 p-3.5 text-xs text-stone-800 space-y-1.5 my-2">
+            <div>
+              <span className="font-semibold">Santri:</span> {voidingItem.student.fullName} (NIS:{" "}
+              {voidingItem.student.nis})
+            </div>
+            <div>
+              <span className="font-semibold">Kategori:</span> {voidingItem.feeCategory.name}
+            </div>
+            <div>
+              <span className="font-semibold">Nominal:</span> Rp{" "}
+              {voidingItem.amount.toLocaleString("id-ID")}
             </div>
           </div>
         )}
-      </main>
 
-      {/* Modal Single Charge */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Terbitkan Tagihan Tunggal</h3>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Siswa</label>
-                <select
-                  required
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                >
-                  <option value="">-- Pilih Siswa --</option>
-                  {students.map((st) => (
-                    <option key={st.id} value={st.id}>
-                      {st.fullName} (NIS: {st.nis})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Kategori Biaya</label>
-                <select
-                  required
-                  value={selectedFeeCategoryId}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                >
-                  <option value="">-- Pilih Kategori Biaya --</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} (Acuan: Rp {c.amount.toLocaleString("id-ID")})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Periode (YYYY-MM)</label>
-                  <input
-                    type="text"
-                    value={period}
-                    onChange={(e) => setPeriod(e.target.value)}
-                    placeholder="2026-09"
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl font-mono min-h-[44px]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Nominal Snapshot (Rp)</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : "")}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                    placeholder="150000"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran (Opsional)</label>
-                  <select
-                    value={selectedAcademicYearId}
-                    onChange={(e) => setSelectedAcademicYearId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  >
-                    <option value="">-- Umum --</option>
-                    {academicYears.map((ay) => (
-                      <option key={ay.id} value={ay.id}>
-                        {ay.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Jatuh Tempo</label>
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl min-h-[44px]"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="px-5 py-2 text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 rounded-xl shadow-xs disabled:opacity-50 min-h-[44px]"
-                >
-                  {isPending ? "Menerbitkan..." : "Terbitkan Tagihan"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Bulk Charge Generation */}
-      {bulkModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
-              <div>
-                <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <Users2 className="w-5 h-5 text-purple-600" /> Terbitkan Tagihan Massal
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Buat kewajiban tagihan sekaligus untuk banyak siswa dengan proteksi tagihan ganda
-                </p>
-              </div>
-              <button
-                onClick={() => setBulkModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleBulkSubmit} className="p-4 space-y-4 overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Kategori Biaya <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={bulkCategory}
-                    onChange={(e) => handleBulkCategoryChange(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  >
-                    <option value="">-- Pilih Komponen Biaya --</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} (Rp {c.amount.toLocaleString("id-ID")})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Nominal per Siswa (Rp) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={bulkAmount}
-                    onChange={(e) => setBulkAmount(e.target.value ? Number(e.target.value) : "")}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Periode (YYYY-MM)</label>
-                  <input
-                    type="text"
-                    value={bulkPeriod}
-                    onChange={(e) => setBulkPeriod(e.target.value)}
-                    placeholder="2026-09"
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl font-mono min-h-[44px]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran</label>
-                  <select
-                    value={bulkAcademicYear}
-                    onChange={(e) => setBulkAcademicYear(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  >
-                    <option value="">-- Semua Tahun --</option>
-                    {academicYears.map((ay) => (
-                      <option key={ay.id} value={ay.id}>
-                        {ay.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Batas Jatuh Tempo</label>
-                  <input
-                    type="date"
-                    value={bulkDueDate}
-                    onChange={(e) => setBulkDueDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  />
-                </div>
-              </div>
-
-              {/* Target Selection */}
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
-                <label className="block text-xs font-bold text-slate-800">Target Siswa Penerima</label>
-                <div className="flex gap-4 text-sm">
-                  <label className="inline-flex items-center gap-2 cursor-pointer min-h-[44px]">
-                    <input
-                      type="radio"
-                      name="targetMode"
-                      value="ALL"
-                      checked={bulkTargetMode === "ALL"}
-                      onChange={() => setBulkTargetMode("ALL")}
-                      className="text-purple-600 focus:ring-purple-500 w-4 h-4"
-                    />
-                    <span>Semua Siswa Aktif</span>
-                  </label>
-                  <label className="inline-flex items-center gap-2 cursor-pointer min-h-[44px]">
-                    <input
-                      type="radio"
-                      name="targetMode"
-                      value="CLASSROOM"
-                      checked={bulkTargetMode === "CLASSROOM"}
-                      onChange={() => setBulkTargetMode("CLASSROOM")}
-                      className="text-purple-600 focus:ring-purple-500 w-4 h-4"
-                    />
-                    <span>Per Rombel / Kelas Tertentu</span>
-                  </label>
-                </div>
-
-                {bulkTargetMode === "CLASSROOM" && (
-                  <div>
-                    <select
-                      value={bulkClassroomId}
-                      onChange={(e) => setBulkClassroomId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-xl min-h-[44px]"
-                    >
-                      <option value="">-- Pilih Rombel / Kelas --</option>
-                      {classrooms.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Preview Box */}
-              <div className="border border-slate-200 rounded-xl p-4 bg-white">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Hasil Pratinjau Siswa
-                  </h4>
-                  {previewLoading && (
-                    <span className="text-xs text-purple-600 flex items-center gap-1 font-medium">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Memeriksa status...
-                    </span>
-                  )}
-                </div>
-
-                {bulkPreview ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-slate-500 block">Total Target</span>
-                        <span className="font-bold text-slate-800 text-sm">{bulkPreview.totalStudents}</span>
-                      </div>
-                      <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                        <span className="text-emerald-700 block">Siap Diterbitkan</span>
-                        <span className="font-bold text-emerald-800 text-sm">{bulkPreview.eligibleCount}</span>
-                      </div>
-                      <div className="p-2 bg-amber-50 rounded-lg border border-amber-100">
-                        <span className="text-amber-700 block">Sudah Ada (Dilewati)</span>
-                        <span className="font-bold text-amber-800 text-sm">{bulkPreview.alreadyChargedCount}</span>
-                      </div>
-                    </div>
-
-                    {bulkPreview.alreadyChargedCount > 0 && (
-                      <p className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
-                        Sistem mendeteksi {bulkPreview.alreadyChargedCount} siswa sudah memiliki tagihan aktif pada periode ini dan otomatis akan dilewati agar tidak terjadi tagihan ganda.
-                      </p>
-                    )}
-
-                    {bulkPreview.eligibleCount === 0 && (
-                      <p className="text-xs text-rose-600 font-medium text-center py-2">
-                        Seluruh siswa target sudah memiliki tagihan ini untuk periode {bulkPeriod}.
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 text-center py-3">
-                    Pilih kategori biaya untuk menampilkan pratinjau target siswa.
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setBulkModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl min-h-[44px]"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isPending || !bulkPreview || bulkPreview.eligibleCount === 0}
-                  className="px-5 py-2 text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 rounded-xl shadow-xs disabled:opacity-50 min-h-[44px]"
-                >
-                  {isPending
-                    ? "Menerbitkan Tagihan..."
-                    : `Terbitkan ${bulkPreview?.eligibleCount || 0} Tagihan Baru`}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation Modal Void */}
-      {voidingId && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
-              <Ban className="w-6 h-6" />
-            </div>
-            <div className="text-center">
-              <h3 className="font-bold text-slate-900 text-base">Batalkan (VOID) Tagihan?</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Tagihan ini belum memiliki pembayaran dan akan dibatalkan secara permanen dalam catatan audit. Tindakan ini tidak dapat diurungkan.
-              </p>
-            </div>
-            <div className="flex justify-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setVoidingId(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl min-h-[44px]"
-              >
-                Kembali
-              </button>
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={handleVoidConfirm}
-                className="px-4 py-2 text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 rounded-xl shadow-xs min-h-[44px]"
-              >
-                {isPending ? "Membatalkan..." : "Ya, Batalkan Tagihan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setVoidingItem(null)}
+            disabled={isPending}
+          >
+            Kembali
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleVoidConfirm}
+            isLoading={isPending}
+          >
+            Ya, Batalkan Tagihan (VOID)
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

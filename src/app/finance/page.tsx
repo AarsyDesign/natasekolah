@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { NavHeader } from "@/components/nav-header";
 import { getCashbookSummaryAction, getBillingSummaryAction } from "@/actions/finance";
 import {
   CreditCard,
@@ -12,12 +11,14 @@ import {
   TrendingUp,
   AlertCircle,
   CheckCircle2,
-  RefreshCw,
   PlusCircle,
   FileSpreadsheet,
   Clock,
   ArrowRight,
 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CardSkeleton } from "@/components/loading/skeletons";
 
 export default function FinanceDashboardPage() {
   const [cashSummary, setCashSummary] = useState({
@@ -66,212 +67,217 @@ export default function FinanceDashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      <NavHeader />
-
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* Title Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <CreditCard className="w-6 h-6 text-emerald-600" /> Dashboard Keuangan & Syahriah
-            </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Pusat kendali transaksi pembayaran, penagihan kesiswaan, dan kasir lembaga
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            <Link
-              href="/finance/charges"
-              className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl shadow-xs hover:bg-slate-50 active:scale-[0.98] transition-all min-h-[44px]"
-            >
-              <Receipt className="w-4 h-4 text-purple-600" /> Buat Tagihan
-            </Link>
-            <Link
-              href="/finance/payments"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-xl shadow-xs hover:bg-emerald-700 active:scale-[0.98] transition-all min-h-[44px]"
-            >
-              <PlusCircle className="w-4 h-4" /> Kasir Pembayaran
-            </Link>
-          </div>
+    <div className="space-y-6">
+      {/* Workspace Quick Actions Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-lg border border-stone-200 shadow-2xs">
+        <div>
+          <h2 className="text-base font-semibold text-stone-900 tracking-tight flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-teal-700" /> Ringkasan Keuangan & Syahriah
+          </h2>
+          <p className="text-xs text-stone-500 mt-0.5">
+            Monitoring penerimaan harian kasir, status pelunasan kewajiban santri, dan saldo BKU.
+          </p>
         </div>
 
-        {/* Financial Stat Cards */}
-        {loading ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 mb-8">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
-            Menghitung ringkasan keuangan realtime...
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
-            {/* Card 1: Today Income */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Penerimaan Hari Ini
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
+        <div className="flex items-center gap-2">
+          <Link href="/finance/charges">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Receipt className="w-4 h-4 text-stone-600" /> Buat Tagihan
+            </Button>
+          </Link>
+          <Link href="/finance/payments">
+            <Button variant="primary" size="sm" className="gap-1.5">
+              <PlusCircle className="w-4 h-4" /> Kasir Pembayaran
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Financial Stat Cards (Context / Metric Bar) */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* Card 1: Today Income */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                Penerimaan Hari Ini
+              </span>
+              <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5" />
               </div>
-              <div className="text-xl font-bold text-slate-900">
-                Rp {cashSummary.todayIncome.toLocaleString("id-ID")}
-              </div>
-              <span className="text-xs text-slate-400 mt-0.5 block">Kasir pembayaran</span>
             </div>
-
-            {/* Card 2: Total Paid */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Sudah Terbayar
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-xl font-bold text-blue-700">
-                Rp {billingSummary.totalPaidAmount.toLocaleString("id-ID")}
-              </div>
-              <span className="text-xs text-slate-400 mt-0.5 block">{billingSummary.paidCount} tagihan lunas</span>
+            <div className="text-lg font-bold text-stone-900 tabular-nums font-mono">
+              Rp {cashSummary.todayIncome.toLocaleString("id-ID")}
             </div>
+            <span className="text-xs text-stone-500 mt-0.5 block">Kasir pembayaran</span>
+          </Card>
 
-            {/* Card 3: Remaining Outstanding */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Sisa Tunggakan
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Clock className="w-4 h-4" />
-                </div>
+          {/* Card 2: Total Paid */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                Sudah Terbayar
+              </span>
+              <div className="w-7 h-7 rounded-md bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center">
+                <CheckCircle2 className="w-3.5 h-3.5" />
               </div>
-              <div className="text-xl font-bold text-amber-700">
-                Rp {billingSummary.totalOutstandingAmount.toLocaleString("id-ID")}
-              </div>
-              <span className="text-xs text-slate-400 mt-0.5 block">{billingSummary.unpaidCount + billingSummary.partialCount} belum beres</span>
             </div>
-
-            {/* Card 4: Overdue */}
-            <div className="bg-white p-4 rounded-2xl border border-rose-200 shadow-xs bg-rose-50/20">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-rose-600">
-                  Jatuh Tempo (Overdue)
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
-                  <AlertCircle className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="text-xl font-bold text-rose-700">
-                Rp {billingSummary.overdueAmount.toLocaleString("id-ID")}
-              </div>
-              <span className="text-xs text-rose-500 font-medium mt-0.5 block">{billingSummary.overdueCount} tagihan lewat batas</span>
+            <div className="text-lg font-bold text-blue-800 tabular-nums font-mono">
+              Rp {billingSummary.totalPaidAmount.toLocaleString("id-ID")}
             </div>
+            <span className="text-xs text-stone-500 mt-0.5 block">{billingSummary.paidCount} tagihan lunas</span>
+          </Card>
 
-            {/* Card 5: Net Cashbook Balance */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs col-span-1 sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Saldo Buku Kas Umum
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
-                  <DollarSign className="w-4 h-4" />
-                </div>
+          {/* Card 3: Remaining Outstanding */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                Sisa Tunggakan
+              </span>
+              <div className="w-7 h-7 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
+                <Clock className="w-3.5 h-3.5" />
               </div>
-              <div className="text-xl font-bold text-slate-900">
-                Rp {cashSummary.netBalance.toLocaleString("id-ID")}
-              </div>
-              <span className="text-xs text-slate-400 mt-0.5 block">Total Masuk - Keluar</span>
             </div>
-          </div>
-        )}
+            <div className="text-lg font-bold text-amber-800 tabular-nums font-mono">
+              Rp {billingSummary.totalOutstandingAmount.toLocaleString("id-ID")}
+            </div>
+            <span className="text-xs text-stone-500 mt-0.5 block">
+              {billingSummary.unpaidCount + billingSummary.partialCount} belum beres
+            </span>
+          </Card>
 
-        {/* Sub-module Navigation Grid */}
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Modul Keuangan & Operasional</h2>
+          {/* Card 4: Overdue */}
+          <Card className="p-4 border-rose-200 bg-rose-50/20">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-700">
+                Jatuh Tempo (Overdue)
+              </span>
+              <div className="w-7 h-7 rounded-md bg-rose-100 text-rose-700 border border-rose-200 flex items-center justify-center">
+                <AlertCircle className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-lg font-bold text-rose-800 tabular-nums font-mono">
+              Rp {billingSummary.overdueAmount.toLocaleString("id-ID")}
+            </div>
+            <span className="text-xs text-rose-600 font-medium mt-0.5 block">
+              {billingSummary.overdueCount} tagihan lewat batas
+            </span>
+          </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Card 5: Net Cashbook Balance */}
+          <Card className="p-4 col-span-1 sm:col-span-2 lg:col-span-1">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                Saldo Buku Kas Umum
+              </span>
+              <div className="w-7 h-7 rounded-md bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center">
+                <DollarSign className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-lg font-bold text-stone-900 tabular-nums font-mono">
+              Rp {cashSummary.netBalance.toLocaleString("id-ID")}
+            </div>
+            <span className="text-xs text-stone-500 mt-0.5 block">Total Masuk - Keluar</span>
+          </Card>
+        </div>
+      )}
+
+      {/* Sub-module Navigation Grid */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-600">
+          Modul & Alur Operasional Keuangan
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           <Link
             href="/finance/payments"
-            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-500 hover:shadow-md transition-all group"
+            className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs hover:border-teal-600 hover:shadow-xs transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <CreditCard className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center mb-3">
+              <CreditCard className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center justify-between">
+            <h4 className="font-semibold text-stone-900 group-hover:text-teal-800 transition-colors flex items-center justify-between text-sm">
               <span>Kasir & Transaksi Pembayaran</span>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
+              <ArrowRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 group-hover:text-teal-700 transition-transform" />
+            </h4>
+            <p className="text-xs text-stone-500 mt-1">
               Penerimaan pembayaran SPP/syahriah, multi-alokasi atomik, dan bukti kwitansi resmi.
             </p>
           </Link>
 
           <Link
             href="/finance/charges"
-            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-purple-500 hover:shadow-md transition-all group"
+            className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs hover:border-teal-600 hover:shadow-xs transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Receipt className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-md bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center mb-3">
+              <Receipt className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-purple-600 transition-colors flex items-center justify-between">
+            <h4 className="font-semibold text-stone-900 group-hover:text-teal-800 transition-colors flex items-center justify-between text-sm">
               <span>Kewajiban Tagihan Siswa</span>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Penerbitan tagihan tunggal atau massal per rombel dengan proteksi tagihan ganda.
-            </p>
-          </Link>
-
-          <Link
-            href="/finance/reports"
-            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-teal-500 hover:shadow-md transition-all group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <FileSpreadsheet className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-teal-600 transition-colors flex items-center justify-between">
-              <span>Laporan & Export Excel</span>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Rekap pembayaran berkala, monitoring tunggakan, arus kas, dan unduh CSV.
+              <ArrowRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 group-hover:text-teal-700 transition-transform" />
+            </h4>
+            <p className="text-xs text-stone-500 mt-1">
+              Penerbitan tagihan tunggal atau massal per rombel dengan proteksi duplikasi.
             </p>
           </Link>
 
           <Link
             href="/finance/cashbook"
-            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-teal-500 hover:shadow-md transition-all group"
+            className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs hover:border-teal-600 hover:shadow-xs transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <DollarSign className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-md bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center mb-3">
+              <DollarSign className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-cyan-600 transition-colors flex items-center justify-between">
+            <h4 className="font-semibold text-stone-900 group-hover:text-teal-800 transition-colors flex items-center justify-between text-sm">
               <span>Buku Kas Umum (BKU)</span>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Mutasi kas masuk otomatis dari kasir dan mutasi belanja/operasional lembaga.
+              <ArrowRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 group-hover:text-teal-700 transition-transform" />
+            </h4>
+            <p className="text-xs text-stone-500 mt-1">
+              Mutasi kas masuk otomatis dari kasir dan mutasi belanja operasional lembaga.
             </p>
           </Link>
 
           <Link
             href="/finance/fees"
-            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-amber-500 hover:shadow-md transition-all group"
+            className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs hover:border-teal-600 hover:shadow-xs transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <BookOpen className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center mb-3">
+              <BookOpen className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-amber-600 transition-colors flex items-center justify-between">
+            <h4 className="font-semibold text-stone-900 group-hover:text-teal-800 transition-colors flex items-center justify-between text-sm">
               <span>Master Kategori Biaya</span>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
+              <ArrowRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 group-hover:text-teal-700 transition-transform" />
+            </h4>
+            <p className="text-xs text-stone-500 mt-1">
               Atur acuan nominal SPP bulanan, uang pangkal, seragam, dan pos syahriah.
             </p>
           </Link>
+
+          <Link
+            href="/finance/reports"
+            className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs hover:border-teal-600 hover:shadow-xs transition-colors"
+          >
+            <div className="w-9 h-9 rounded-md bg-stone-100 text-stone-700 border border-stone-200 flex items-center justify-center mb-3">
+              <FileSpreadsheet className="w-4 h-4" />
+            </div>
+            <h4 className="font-semibold text-stone-900 group-hover:text-teal-800 transition-colors flex items-center justify-between text-sm">
+              <span>Laporan & Export Excel</span>
+              <ArrowRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 group-hover:text-teal-700 transition-transform" />
+            </h4>
+            <p className="text-xs text-stone-500 mt-1">
+              Rekap pembayaran berkala, monitoring tunggakan, arus kas, dan unduh CSV.
+            </p>
+          </Link>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

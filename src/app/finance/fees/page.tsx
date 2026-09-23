@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { NavHeader } from "@/components/nav-header";
 import {
   listFeeCategoriesAction,
   createFeeCategoryAction,
@@ -13,10 +12,21 @@ import {
   Search,
   CheckCircle2,
   XCircle,
-  RefreshCw,
   Edit2,
-  X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { DataTableView, ColumnDef } from "@/components/data-dense/data-table-view";
+import { TableSkeleton } from "@/components/loading/skeletons";
 
 interface FeeCategoryItem {
   id: string;
@@ -129,258 +139,293 @@ export default function FeeCategoriesPage() {
     });
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      <NavHeader />
+  const columns: ColumnDef<FeeCategoryItem>[] = [
+    {
+      header: "Kode",
+      align: "left",
+      cell: (item) => (
+        <span className="font-mono font-bold text-xs text-stone-900 bg-stone-100 px-2 py-0.5 rounded border border-stone-200">
+          {item.code}
+        </span>
+      ),
+    },
+    {
+      header: "Nama Kategori",
+      align: "left",
+      cell: (item) => (
+        <div>
+          <div className="font-semibold text-stone-900 text-sm leading-tight">{item.name}</div>
+          {item.description && (
+            <div className="text-xs text-stone-500 mt-0.5">{item.description}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: "Frekuensi",
+      align: "left",
+      cell: (item) => (
+        <span className="text-xs font-medium text-stone-700">{item.frequency}</span>
+      ),
+    },
+    {
+      header: "Nominal Acuan",
+      align: "right",
+      cell: (item) => (
+        <span className="font-mono font-bold text-stone-900">
+          Rp {item.amount.toLocaleString("id-ID")}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      align: "center",
+      cell: (item) =>
+        item.isActive ? (
+          <Badge variant="success">
+            <CheckCircle2 className="w-3 h-3" /> Aktif
+          </Badge>
+        ) : (
+          <Badge variant="neutral">
+            <XCircle className="w-3 h-3" /> Nonaktif
+          </Badge>
+        ),
+    },
+    {
+      header: "Aksi",
+      align: "right",
+      cell: (item) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleOpenEdit(item)}
+          className="text-stone-600 hover:text-stone-900 h-8 px-2 text-xs"
+        >
+          <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit
+        </Button>
+      ),
+    },
+  ];
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-amber-600" /> Master Kategori Biaya
-            </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Atur komponen biaya dan syahriah lembaga (Perubahan acuan tidak mengubah tagihan historis)
-            </p>
+  const renderMobileCard = (item: FeeCategoryItem) => (
+    <div className="space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-xs font-bold bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200">
+              {item.code}
+            </span>
+            <span className="font-semibold text-stone-900 text-sm">{item.name}</span>
           </div>
+          {item.description && <p className="text-xs text-stone-500 mt-0.5">{item.description}</p>}
+        </div>
+        <div className="shrink-0">
+          {item.isActive ? (
+            <Badge variant="success" className="text-[10px] py-0">
+              Aktif
+            </Badge>
+          ) : (
+            <Badge variant="neutral" className="text-[10px] py-0">
+              Nonaktif
+            </Badge>
+          )}
+        </div>
+      </div>
 
-          <button
-            onClick={handleOpenCreate}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-xl shadow-sm hover:bg-emerald-700 transition-all min-h-[44px]"
+      <div className="flex items-center justify-between pt-1 border-t border-stone-100 text-xs text-stone-600">
+        <span>Frekuensi: {item.frequency}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono font-bold text-stone-900">
+            Rp {item.amount.toLocaleString("id-ID")}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleOpenEdit(item)}
+            className="h-7 px-2 text-xs"
           >
-            <Plus className="w-4 h-4" /> Kategori Baru
+            <Edit2 className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Workspace Control Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-lg border border-stone-200 shadow-2xs">
+        <div>
+          <h2 className="text-base font-semibold text-stone-900 tracking-tight flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-teal-700" /> Master Kategori Biaya
+          </h2>
+          <p className="text-xs text-stone-500 mt-0.5">
+            Atur komponen biaya dan syahriah lembaga. Perubahan acuan tidak mengubah tagihan yang telah
+            diterbitkan.
+          </p>
+        </div>
+
+        <Button variant="primary" size="sm" onClick={handleOpenCreate} className="gap-1.5">
+          <Plus className="w-4 h-4" /> Kategori Baru
+        </Button>
+      </div>
+
+      {/* Message Feedback */}
+      {message && (
+        <div
+          role="alert"
+          className={`p-3.5 rounded-lg border text-xs sm:text-sm flex items-center justify-between gap-3 ${
+            message.type === "success"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
+          }`}
+        >
+          <span>{message.text}</span>
+          <button
+            type="button"
+            onClick={() => setMessage(null)}
+            className="text-xs font-semibold underline shrink-0 cursor-pointer"
+          >
+            Tutup
           </button>
         </div>
+      )}
 
-        {message && (
-          <div
-            className={`mb-6 p-4 rounded-xl border text-sm flex items-center justify-between ${
-              message.type === "success"
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : "bg-rose-50 border-rose-200 text-rose-800"
-            }`}
-          >
-            <span>{message.text}</span>
-            <button onClick={() => setMessage(null)} className="text-xs font-bold underline">
-              Tutup
-            </button>
-          </div>
-        )}
+      {/* Search Bar */}
+      <div className="bg-white p-3 rounded-lg border border-stone-200 shadow-2xs">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            loadData();
+          }}
+          className="relative"
+        >
+          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Cari kode atau nama kategori biaya..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-stone-50 border border-stone-200 rounded-md focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-teal-700 focus:border-teal-700 text-stone-900 min-h-[44px]"
+          />
+        </form>
+      </div>
 
-        {/* Search */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm mb-6 flex gap-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              loadData();
-            }}
-            className="flex-1 relative"
-          >
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Cari kode atau nama kategori biaya..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 min-h-[44px]"
-            />
-          </form>
-        </div>
-
-        {/* Table */}
-        {loading ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
-            Memuat master kategori biaya...
-          </div>
-        ) : items.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-            Belum ada kategori biaya yang terdaftar.
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                  <tr>
-                    <th className="px-4 py-3.5">Kode</th>
-                    <th className="px-4 py-3.5">Nama Kategori</th>
-                    <th className="px-4 py-3.5">Frekuensi</th>
-                    <th className="px-4 py-3.5">Nominal Acuan</th>
-                    <th className="px-4 py-3.5">Status</th>
-                    <th className="px-4 py-3.5 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200/70">
-                  {items.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-4 py-3.5 font-mono font-bold text-slate-900">
-                        {item.code}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="font-semibold text-slate-900">{item.name}</div>
-                        {item.description && (
-                          <div className="text-xs text-slate-400">{item.description}</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className="inline-flex px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-700 rounded-md">
-                          {item.frequency}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 font-semibold text-slate-900">
-                        Rp {item.amount.toLocaleString("id-ID")}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        {item.isActive ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Aktif
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                            <XCircle className="w-3.5 h-3.5" /> Nonaktif
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Data Table */}
+      {loading ? (
+        <TableSkeleton rows={5} columns={6} />
+      ) : (
+        <DataTableView
+          data={items}
+          columns={columns}
+          keyExtractor={(item) => item.id}
+          mobileCardRenderer={renderMobileCard}
+          emptyState={
+            <div className="py-6 text-center">
+              <BookOpen className="w-10 h-10 text-stone-300 mx-auto mb-2" />
+              <h4 className="font-semibold text-stone-800 text-sm">Belum Ada Kategori Biaya</h4>
+              <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+                {search
+                  ? "Tidak ada kategori biaya yang sesuai pencarian."
+                  : "Buat kategori biaya baru untuk mulai menerbitkan tagihan syahriah santri."}
+              </p>
             </div>
-          </div>
-        )}
-      </main>
+          }
+        />
+      )}
 
       {/* Modal Form */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">
-                {editId ? "Edit Kategori Biaya" : "Tambah Kategori Biaya Baru"}
-              </h3>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <Dialog isOpen={modalOpen} onClose={() => setModalOpen(false)} className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {editId ? "Edit Kategori Biaya" : "Tambah Kategori Biaya Baru"}
+          </DialogTitle>
+          <DialogDescription>
+            Tentukan kode unik, nama, nominal acuan, dan siklus frekuensi tagihan.
+          </DialogDescription>
+        </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Kode Kategori (misal SPP, PANGKAL)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formCode}
-                  onChange={(e) => setFormCode(e.target.value.toUpperCase())}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl uppercase font-mono min-h-[44px]"
-                  placeholder="SPP"
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Kode Kategori *"
+            type="text"
+            required
+            value={formCode}
+            onChange={(e) => setFormCode(e.target.value.toUpperCase())}
+            placeholder="Contoh: SPP, PANGKAL, SERAGAM"
+            helperText="Gunakan huruf besar tanpa spasi"
+          />
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nama Kategori Biaya
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  placeholder="SPP Syahriah Bulanan"
-                />
-              </div>
+          <Input
+            label="Nama Kategori Biaya *"
+            type="text"
+            required
+            value={formName}
+            onChange={(e) => setFormName(e.target.value)}
+            placeholder="Contoh: SPP Syahriah Bulanan"
+          />
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Deskripsi</label>
-                <input
-                  type="text"
-                  value={formDesc}
-                  onChange={(e) => setFormDesc(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  placeholder="Catatan tambahan (opsional)"
-                />
-              </div>
+          <Input
+            label="Deskripsi"
+            type="text"
+            value={formDesc}
+            onChange={(e) => setFormDesc(e.target.value)}
+            placeholder="Catatan tambahan (opsional)"
+          />
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Nominal Acuan (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={formAmount}
-                    onChange={(e) =>
-                      setFormAmount(e.target.value ? Number(e.target.value) : "")
-                    }
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                    placeholder="150000"
-                  />
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Nominal Acuan (Rp) *"
+              type="number"
+              required
+              min={1}
+              value={formAmount}
+              onChange={(e) =>
+                setFormAmount(e.target.value ? Number(e.target.value) : "")
+              }
+              placeholder="150000"
+            />
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Frekuensi</label>
-                  <select
-                    value={formFrequency}
-                    onChange={(e) => setFormFrequency(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"
-                  >
-                    <option value="MONTHLY">Bulanan (MONTHLY)</option>
-                    <option value="ONE_TIME">Satu Kali (ONE_TIME)</option>
-                    <option value="ANNUAL">Tahunan (ANNUAL)</option>
-                    <option value="CUSTOM">Khusus (CUSTOM)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formIsActive}
-                  onChange={(e) => setFormIsActive(e.target.checked)}
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                />
-                <label htmlFor="isActive" className="text-sm font-medium text-slate-700">
-                  Kategori Aktif
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl min-h-[44px]"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="px-5 py-2 text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl shadow-sm disabled:opacity-50 min-h-[44px]"
-                >
-                  {isPending ? "Menyimpan..." : "Simpan Kategori"}
-                </button>
-              </div>
-            </form>
+            <Select
+              label="Frekuensi"
+              value={formFrequency}
+              onChange={(e) => setFormFrequency(e.target.value)}
+            >
+              <option value="MONTHLY">Bulanan (MONTHLY)</option>
+              <option value="ONE_TIME">Satu Kali (ONE_TIME)</option>
+              <option value="ANNUAL">Tahunan (ANNUAL)</option>
+              <option value="CUSTOM">Khusus (CUSTOM)</option>
+            </Select>
           </div>
-        </div>
-      )}
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={formIsActive}
+              onChange={(e) => setFormIsActive(e.target.checked)}
+              className="w-4 h-4 rounded text-teal-700 focus:ring-teal-700 border-stone-300"
+            />
+            <label htmlFor="isActive" className="text-xs font-semibold text-stone-700 cursor-pointer">
+              Kategori Aktif (Dapat dipilih saat menerbitkan tagihan)
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              disabled={isPending}
+            >
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" isLoading={isPending}>
+              {editId ? "Simpan Perubahan" : "Simpan Kategori"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Dialog>
     </div>
   );
 }

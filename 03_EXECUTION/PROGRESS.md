@@ -30,11 +30,53 @@
 | **Milestone** | **Teacher Workspace / Academic Operations** (Teacher Workspace `/teacher`, Class View `/teacher/classes/[id]`, Student Academic Summary, Attendance & Assessment Integration, Plugin Guard) | **COMPLETE** | 2026-09-23 (303 Tests Pass) |
 | **Milestone** | **NataSekolah Design System & Product UX Reset** (DESIGN.md v2, Design Tokens, Navigation Contract, Data Density, A11y & Anti-Patterns) | **COMPLETE** | 2026-09-23 (303 Tests Pass) |
 | **Milestone** | **UI Foundation & Persistent App Shell** (Design Tokens, 15 Primitives, Persistent AppShell, Mobile Nav, Loading Skeletons, DataTableView, Dashboard Reference) | **COMPLETE** | 2026-09-23 (315 Tests Pass) |
+| **Milestone** | **Finance Workspace UX Migration** (Unified Workspace Navigation, Charges, Payments & Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV, Design Tokens, Anti-Slop Mode 1) | **COMPLETE** | 2026-09-23 (325 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-23] - Milestone: Finance Workspace UX Migration (Unified Finance Workspace Layout & Navigation, Charges, Payments Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV Export) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Memigrasikan seluruh ruang kerja keuangan (`/finance`, `/finance/charges`, `/finance/payments`, `/finance/cashbook`, `/finance/fees`, `/finance/reports`) ke fondasi visual dan UX Design System baru (`DESIGN.md v2.0` & UI Foundation). Mentransformasi modul keuangan menjadi **SATU WORKSPACE TERPADU** yang konsisten, tenang (*calm*), berkecepatan tinggi (*fast*), terstruktur (*organized*), data-dense, dan responsif tanpa merombak logika bisnis, skema Prisma, ataupun aturan transaksi atomik backend yang telah terkunci.
+* **Implementasi:**
+  1. **Struktur Workspace & Persistent Sub-Navigasi (`src/app/finance/layout.tsx` & `src/components/finance/finance-workspace-nav.tsx`):**
+     * Membungkus seluruh sub-halaman keuangan dalam persistent layout terpadu dengan judul *"Workspace Keuangan"*, deskripsi operasional ringkas, dan bilah navigasi tab internal (6 rute: *Ringkasan*, *Tagihan Siswa*, *Kasir Pembayaran*, *Buku Kas (BKU)*, *Kategori Biaya*, *Laporan*).
+     * Mencegah remount shell aplikasi ataupun header saat bernavigasi antar-submodul keuangan (`Charges` → `Payments` → `Cashbook` → `Reports`).
+     * Tab interaktif ramah sentuh jempol (target sentuh $\ge 44\text{px}$) dengan indikator rute aktif `bg-teal-700 text-white font-semibold shadow-2xs` dan reflow horizontal mulus pada layar ponsel.
+  2. **Dashboard Keuangan & Syahriah (`src/app/finance/page.tsx`):**
+     * Mengeliminasi duplikasi `NavHeader` dan wrapper `bg-slate-50`.
+     * Mengganti spinner fullscreen dengan kisi 5 `CardSkeleton` saat memuat ringkasan realtime (*zero-CLS*).
+     * Metrik kontekstual terformat tabular monospaced (`tabular-nums font-mono`): Penerimaan Hari Ini, Sudah Terbayar, Sisa Tunggakan, Jatuh Tempo (Overdue), dan Saldo Bersih BKU.
+     * Navigasi pintas terarah menuju modul-modul operasional kasir dan penagihan.
+  3. **Operasional Tagihan Santri (`src/app/finance/charges/page.tsx`):**
+     * Mengganti seluruh badge pill `rounded-full` menjadi `Badge` primitif bersudut tumpul `rounded-md` dengan varian semantik (`success`, `warning`, `danger`, `info`, `neutral`).
+     * Mengadopsi `DataTableView` responsif: tabel multi-kolom rapi di desktop (`md:table`) dengan penjajaran teks kiri dan angka mata uang kanan (`tabular-nums font-mono`), serta transformasi otomatis menjadi kartu *ResourceList* vertikal terstruktur di layar ponsel (`md:hidden`) tanpa overflow horizontal.
+     * Dialog modal terstandar (`Dialog`, `Input`, `Select`, `Button`) untuk penerbitan Tagihan Tunggal dan Tagihan Massal per rombel dengan live candidate preview.
+     * Modal dialog konfirmasi pembatalan (VOID) dengan proteksi permanen dan feedback yang jelas.
+  4. **Kasir Pembayaran & Kwitansi Resmi (`src/app/finance/payments/page.tsx`):**
+     * Workflow kasir terpadu yang cepat: (1) Cari santri pembayar, (2) Daftar tagihan tertunggak terurut jatuh tempo tertua dengan opsi "Pilih Semua", (3) Input nominal alokasi rata kanan berjarak tetap, (4) Layar konfirmasi penerimaan kas, (5) Eksekusi atomik transaksi dengan dialog kwitansi sah siap cetak (`window.print()`).
+     * Menjaga 100% integritas aturan transaksi domain: `PaymentTransaction`, `PaymentAllocation`, mutasi otomatis `CashbookEntry`, dan penomoran `Receipt`.
+     * Riwayat kasir multi-kolom di desktop dan kartu di ponsel dengan aksi cetak ulang kwitansi instan.
+  5. **Buku Kas Umum / BKU (`src/app/finance/cashbook/page.tsx`):**
+     * Tabel mutasi kas berdensitas tinggi (36px compact desktop, reflow kartu mobile).
+     * Pembedaan sumber mutasi yang jelas via Badge semantik: `Kasir Pembayaran` (otomatis, terkunci) vs `Manual Operasional`.
+     * Angka nominal bertanda (`+ Rp ...` emerald untuk INCOME, `- Rp ...` rose untuk EXPENSE) dengan `tabular-nums font-mono`.
+     * Modal pencatatan kas manual dengan tombol switch jenis pengeluaran/pemasukan ber-target sentuh min 44px.
+  6. **Master Kategori Biaya (`src/app/finance/fees/page.tsx`):**
+     * Manajemen pos syahriah dan biaya kesiswaan terintegrasi `DataTableView` dan modal dialog formulir baru/edit.
+     * Status aktif/nonaktif menggunakan semantic `Badge` persegi tumpul `rounded-md`.
+  7. **Laporan Keuangan & Operasional (`src/app/finance/reports/page.tsx`):**
+     * Tiga sub-laporan terpadu via tab interaktif: *Rekap Pembayaran*, *Tagihan & Tunggakan*, dan *Arus Kas (BKU)*.
+     * Filter rentang tanggal transaksi dengan integrasi unduh CSV/Excel (`generatePaymentsCSV`, `generateChargesCSV`, `generateCashbookCSV`).
+     * Visualisasi data-dense berbasis tabel dan metrik ringkas tanpa grafik dekoratif berlebihan.
+  8. **Pengujian & Quality Gate (`test/finance-ui-workspace.test.ts`):**
+     * Menambahkan 10 test assertion baru untuk validasi navigasi workspace, verifikasi 0 penggunaan `rounded-full` pada seluruh halaman keuangan, verifikasi 0 animasi bouncing `active:scale-95`, penjajaran angka/mata uang `tabular-nums font-mono`, target sentuh $\ge 44\text{px}$, dan aturan keselamatan VOID.
+* **Hasil Verifikasi:**
+  * Unit & Contract Test Suite: **325 tests pass** (113 test suites, 0 fail).
+  * TypeScript Compiler (`npx tsc --noEmit`): **0 errors**.
+  * Prisma Schema Validation (`npx prisma validate`): **Valid**.
+  * Production Build (`npm run build`): **100% sukses** (41 rute statically optimized).
 
 ### [2026-09-23] - Milestone: UI Foundation & Persistent App Shell (Design Tokens, UI Primitives, Persistent AppShell, Mobile Navigation, Zero-CLS Skeletons, DataTableView & Dashboard Reference Implementation) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Mengimplementasikan fondasi antarmuka pengguna (UI Foundation) dan shell aplikasi persisten (*Persistent Application Shell*) berbasis `DESIGN.md v2.0` untuk menjamin seluruh halaman operasional NataSekolah konsisten, responsif, berkecepatan tinggi (*fast perceived navigation*), dan bebas dari kedipan remount navigasi tanpa merombak logika domain backend yang telah terkunci.
