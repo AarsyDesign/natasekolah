@@ -346,9 +346,11 @@ export async function getTeacherAssignments(
  */
 export async function assertTeacherAssignmentAccess(
   ctx: TenantContext,
-  assignmentId: string
+  assignmentId: string,
+  txPrisma?: typeof prisma
 ): Promise<TeacherAssignment> {
-  const assignment = await prisma.teacherAssignment.findUnique({
+  const db = txPrisma || prisma;
+  const assignment = await db.teacherAssignment.findUnique({
     where: {
       id_institutionId: {
         id: assignmentId,

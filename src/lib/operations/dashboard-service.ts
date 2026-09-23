@@ -370,6 +370,17 @@ export async function getOperationalDashboard(
   // 9. QUICK ACTIONS: Dihasilkan secara dinamis berdasarkan RBAC dan Plugin aktif
   const quickActions: QuickActionItem[] = [];
 
+  if (ctx.roles.includes("TEACHER") || hasPermission(ctx, "academic:view")) {
+    quickActions.push({
+      id: "qa-teacher-workspace",
+      label: "Workspace Guru",
+      description: "Pusat kerja mengajar: pantau rombel, presensi, & nilai",
+      href: "/teacher",
+      category: "ACADEMIC",
+      iconName: "GraduationCap",
+    });
+  }
+
   if (hasPermission(ctx, "student:create")) {
     quickActions.push({
       id: "qa-student-create",

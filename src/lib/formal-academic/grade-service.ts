@@ -16,6 +16,7 @@ import {
   InvalidScoreRangeError,
   InvalidEnrollmentScopeError,
 } from "./types";
+import { assertFormalAcademicPlugin } from "./assessment-service";
 
 export interface RosterStudentItem {
   studentId: string;
@@ -48,6 +49,7 @@ export async function getAssessmentRoster(
 }> {
   const db = txPrisma || prisma;
   requirePermission(ctx, "academic:view");
+  await assertFormalAcademicPlugin(ctx, db);
 
   const assessment = await db.assessment.findUnique({
     where: {
@@ -155,6 +157,7 @@ export async function recordScore(
 ): Promise<AssessmentScore> {
   const db = txPrisma || prisma;
   requirePermission(ctx, "academic:view");
+  await assertFormalAcademicPlugin(ctx, db);
 
   const validated = recordScoreInputSchema.parse(rawInput);
 
@@ -243,6 +246,7 @@ export async function recordBatchScores(
 ): Promise<{ updatedCount: number; assessmentId: string }> {
   const db = txPrisma || prisma;
   requirePermission(ctx, "academic:view");
+  await assertFormalAcademicPlugin(ctx, db);
 
   const validated = recordBatchScoresInputSchema.parse(rawInput);
 

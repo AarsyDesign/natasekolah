@@ -27,11 +27,50 @@
 | **Milestone** | **Operational Admin Experience / Daily Operations** (Command Center, Perlu Perhatian, RBAC Quick Actions & Global Search) | **COMPLETE** | 2026-09-23 (256 Tests Pass) |
 | **Milestone** | **Institution Configuration & Settings** (Profile, Plugins, Dynamic Terminology, Operational Rules, User Management) | **COMPLETE** | 2026-09-23 (273 Tests Pass) |
 | **Milestone** | **Finance & Billing Operations** (Fee Categories, Bulk Billing with Duplicate Prevention, Cashier Multi-Charge Counter, Atomic Allocations, Printable Receipts, Cashbook Immutability, Operational Reports & CSV Export) | **COMPLETE** | 2026-09-23 (288 Tests Pass) |
+| **Milestone** | **Teacher Workspace / Academic Operations** (Teacher Workspace `/teacher`, Class View `/teacher/classes/[id]`, Student Academic Summary, Attendance & Assessment Integration, Plugin Guard) | **COMPLETE** | 2026-09-23 (303 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-23] - Milestone: Teacher Workspace / Academic Operations (Teacher Workspace, Class View, Student Academic Summary, Attendance & Assessment Integration, Plugin Guard) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Menghadirkan ruang kerja terpadu bagi guru (`/teacher`) untuk menjawab: *"Kelas apa yang saya ajar, apa yang harus saya kerjakan, dan bagaimana perkembangan siswa saya?"* di atas Teaching Core, Attendance Core, dan Formal Academic Core tanpa membuat model database atau engine duplikat.
+* **Implementasi:**
+  1. **Experience Layer Over Locked Domains (Zero-Migration):**
+     * Mempertahankan seluruh skema Prisma locked: `TeacherAssignment`, `Subject`, `Classroom`, `AcademicYear`, `Enrollment`, `AttendanceSession`, `AttendanceRecord`, `Assessment`, `AssessmentScore`.
+     * Menggunakan `TeacherAssignment` sebagai single source of scope untuk seluruh akses operasional guru.
+  2. **Teacher Workspace Dashboard (`/teacher`):**
+     * Menampilkan salam kontekstual guru, tahun ajaran aktif, metrik ringkasan (jumlah kelas yang diajar, jumlah mapel, sesi presensi hari ini, dan assessment yang perlu dikerjakan/belum lengkap).
+     * Kartu penugasan mengajar dengan informasi mapel, kelas, tahun ajaran, jumlah siswa ter-enroll, status presensi hari ini, serta shortcut 1-klik: *Presensi*, *Penilaian*, dan *Rekap Kelas*.
+     * Menangani kondisi empty state elegan jika guru belum memiliki penugasan aktif.
+  3. **Student Class View (`/teacher/classes/[assignmentId]`):**
+     * Menampilkan daftar siswa riil berdasarkan `Enrollment` (`classroomId` dan `academicYearId` dari penugasan).
+     * Agregasi statistik kelas: total siswa, rata-rata kehadiran kelas (%), rata-rata nilai kelas, dan jumlah tugas/ujian.
+     * Pencarian instan siswa berdasarkan nama atau NISN/NIS.
+     * Tabel daftar siswa dengan rincian persentase kehadiran, rata-rata nilai, dan tautan ke profil akademik siswa.
+  4. **Student Academic Summary & Privacy Invariant (`/teacher/classes/[assignmentId]/students/[studentId]`):**
+     * Tampilan profil akademik terfokus: riwayat presensi siswa pada sesi penugasan dan seluruh nilai assessment pada mapel tersebut.
+     * *Strict Privacy Invariant:* Data keuangan (tagihan, pembayaran, kwitansi) dan data wali santri (nomor WhatsApp orang tua) sama sekali TIDAK diekspos kepada guru, menjamin prinsip hak akses minimum.
+  5. **Attendance Integration & Immutability:**
+     * Integrasi langsung dengan Attendance Core (`/attendance`). Guru hanya dapat membuka dan mencatat sesi presensi untuk penugasan miliknya.
+     * Sesi yang telah berstatus `CLOSED` bersifat kekal (immutable) dan tidak dapat dimanipulasi.
+  6. **Assessment Integration & Formal Academic Plugin Enforcement:**
+     * Guru dapat mengelola assessment dan menginput nilai secara batch pada penugasan miliknya.
+     * Penegakan otorisasi kepemilikan: guru tidak dapat membuat/mengubah assessment pada penugasan guru lain.
+     * *Plugin Awareness:* Jika plugin `FORMAL_ACADEMIC` dinonaktifkan pada lembaga, server melempar `DomainFeatureDisabledError` (403) dan UI secara graceful menyembunyikan shortcut penilaian.
+  7. **Strict Multi-Tenant & Teacher Resource Scoping:**
+     * Validasi kepemilikan penugasan dilakukan di sisi server (`assertTeacherAssignmentAccess`).
+     * Guru ditolak keras (`TeacherAssignmentAccessDeniedError` / `ResourceNotFoundError`) jika mencoba mengakses assignment guru lain, roster kelas yang tidak diajar, atau manipulasi URL.
+  8. **Navigation & Quick Actions:**
+     * Menambahkan tautan "Workspace Guru" (`/teacher`) pada header navigasi utama (`src/components/nav-header.tsx`).
+     * Menambahkan tombol aksi cepat *Workspace Guru* pada Operational Dashboard (`src/app/dashboard/page.tsx`).
+* **Hasil Verifikasi:**
+  * 15 Unit/Integration Tests baru pada `test/teacher-workspace.test.ts` lulus 100%.
+  * Total 303 tests lulus 100% tanpa regresi.
+  * TypeScript typecheck (`npx tsc --noEmit`) bersih (0 error).
+  * Prisma schema validasi (`npx prisma validate`) valid.
+  * Next.js production build (`npm run build`) sukses untuk seluruh 41 routes.
 
 ### [2026-09-23] - Milestone: Finance & Billing Operations (Fee Categories, Bulk Billing, Cashier Multi-Charge Counter, Atomic Allocations, Printable Receipts, Cashbook Immutability, Operational Reports & CSV Export) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Mengubah Finance Core yang sudah terkunci menjadi alur kerja operasional nyata bagi bendahara/kasir sekolah dan pesantren dengan integritas finansial mutlak, isolasi tenant ketat, transaksi atomik, kwitansi cetak instan, dan pelaporan operasional terintegrasi portal wali.

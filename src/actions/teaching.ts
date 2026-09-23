@@ -14,6 +14,9 @@ import {
   updateTeacherAssignment,
   deleteTeacherAssignment,
   listTeacherAssignments,
+  getTeacherWorkspaceSummary,
+  getTeacherClassDetail,
+  getTeacherStudentAcademicSummary,
 } from "../lib/teaching";
 
 async function getContext(): Promise<TenantContext> {
@@ -138,5 +141,51 @@ export async function deleteTeacherAssignmentAction(id: string) {
     return { success: true, data: deleted };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : "Gagal menghapus penugasan mengajar." };
+  }
+}
+
+// -------------------------------------------------------------
+// TEACHER WORKSPACE ACTIONS
+// -------------------------------------------------------------
+
+export async function getTeacherWorkspaceSummaryAction() {
+  try {
+    const ctx = await getContext();
+    const data = await getTeacherWorkspaceSummary(ctx);
+    return { success: true, data };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal memuat workspace guru.",
+    };
+  }
+}
+
+export async function getTeacherClassDetailAction(assignmentId: string) {
+  try {
+    const ctx = await getContext();
+    const data = await getTeacherClassDetail(ctx, assignmentId);
+    return { success: true, data };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal memuat rincian kelas penugasan.",
+    };
+  }
+}
+
+export async function getTeacherStudentAcademicSummaryAction(
+  assignmentId: string,
+  studentId: string
+) {
+  try {
+    const ctx = await getContext();
+    const data = await getTeacherStudentAcademicSummary(ctx, assignmentId, studentId);
+    return { success: true, data };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal memuat ringkasan akademik siswa.",
+    };
   }
 }

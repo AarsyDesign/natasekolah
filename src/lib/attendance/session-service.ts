@@ -34,8 +34,11 @@ import {
 
 export async function createAttendanceSession(
   ctx: TenantContext,
-  rawInput: unknown
+  rawInput: unknown,
+  txPrisma?: typeof prisma
 ): Promise<AttendanceSession> {
+  const db = txPrisma || prisma;
+
   // 1. RBAC Guard: Memerlukan izin attendance:manage
   requirePermission(ctx, "attendance:manage");
 
@@ -46,7 +49,7 @@ export async function createAttendanceSession(
   const sanitized = sanitizeClientInput(validated, ctx);
 
   // 4. Verifikasi TeacherAssignment ada dan milik tenant
-  const assignment = await prisma.teacherAssignment.findUnique({
+  const assignment = await db.teacherAssignment.findUnique({
     where: {
       id_institutionId: {
         id: sanitized.teacherAssignmentId,
@@ -74,7 +77,7 @@ export async function createAttendanceSession(
   }
 
   // 6. Invariant: 1 Sesi per Assignment per Hari Kalender
-  const existingSession = await prisma.attendanceSession.findUnique({
+  const existingSession = await db.attendanceSession.findUnique({
     where: {
       teacherAssignmentId_attendanceDate: {
         teacherAssignmentId: sanitized.teacherAssignmentId,
@@ -91,7 +94,7 @@ export async function createAttendanceSession(
   }
 
   // 7. Eksekusi Pembuatan Sesi
-  return prisma.attendanceSession.create({
+  return db.attendanceSession.create({
     data: {
       institutionId: ctx.institutionId,
       teacherAssignmentId: sanitized.teacherAssignmentId,

@@ -1,5 +1,41 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Milestone: Teacher Workspace / Academic Operations (Teacher Workspace, Class View, Student Academic Summary, Attendance & Assessment Integration, Plugin Guard) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/teaching/workspace-service.ts`: Layanan backend komprehensif untuk ruang kerja guru (`getTeacherWorkspaceSummary`, `getTeacherClassDetail`, `getTeacherStudentAcademicSummary`) dengan penegakan batasan penugasan guru, agregasi kehadiran, kalkulasi rata-rata nilai, dan perlindungan privasi siswa (0 exposure data finansial & wali).
+* `src/app/teacher/page.tsx`: Halaman utama Teacher Workspace (`/teacher`) dengan greeting kontekstual guru, kartu metrik harian, daftar penugasan aktif dengan indikator presensi hari ini, serta shortcut 1-klik menuju Presensi, Penilaian, dan Rekap Kelas.
+* `src/app/teacher/classes/[assignmentId]/page.tsx`: Halaman daftar dan rekap siswa per kelas (`/teacher/classes/[assignmentId]`) berbasis `Enrollment` dengan filter pencarian nama/NISN, agregasi kehadiran, rata-rata nilai, dan tautan detail siswa.
+* `src/app/teacher/classes/[assignmentId]/students/[studentId]/page.tsx`: Halaman detail akademik siswa read-only (`/teacher/classes/[assignmentId]/students/[studentId]`) menyajikan tab riwayat kehadiran dan rincian nilai assessment per mapel penugasan.
+* `test/teacher-workspace.test.ts`: Rangkaian 15 unit/integration test baru mencakup:
+  * Workspace summary untuk guru dengan penugasan dan isolasi data guru lain.
+  * Empty state jika guru belum memiliki penugasan aktif.
+  * Tampilan siswa kelas berbasis `Enrollment` dan penolakan jika mengakses penugasan guru lain.
+  * Ringkasan akademik siswa read-only tanpa kebocoran data finansial atau data kontak wali.
+  * Integrasi presensi dengan Attendance Core dan penolakan cross-assignment.
+  * Alur penilaian (assessment) dengan kepemilikan guru dan penegakan plugin `FORMAL_ACADEMIC`.
+  * Isolasi tenant dan penolakan cross-tenant.
+
+### Changed
+* `src/lib/teaching/assignment-service.ts`:
+  * Menambahkan parameter opsional `txPrisma?: typeof prisma` pada `assertTeacherAssignmentAccess` untuk mendukung pemanggilan mock/transaksional.
+* `src/lib/teaching/index.ts`:
+  * Mengekspor `workspace-service` sebagai bagian dari modul teaching.
+* `src/actions/teaching.ts`:
+  * Mengekspos Server Actions baru: `getTeacherWorkspaceSummaryAction`, `getTeacherClassDetailAction`, `getTeacherStudentAcademicSummaryAction`.
+* `src/lib/formal-academic/assessment-service.ts`:
+  * Menambahkan penegakan plugin lembaga `assertFormalAcademicPlugin(ctx, db)` pada seluruh operasi CRUD assessment (`createAssessment`, `updateAssessment`, `deleteAssessment`, `getAssessment`, `listAssessments`).
+* `src/lib/formal-academic/grade-service.ts`:
+  * Menambahkan penegakan plugin lembaga `assertFormalAcademicPlugin(ctx, db)` pada operasi penilaian (`getAssessmentRoster`, `recordScore`, `recordBatchScores`).
+* `src/lib/attendance/session-service.ts`:
+  * Menambahkan dukungan `txPrisma?: typeof prisma` pada `createAttendanceSession` untuk konsistensi pengujian transaksional.
+* `src/components/nav-header.tsx`:
+  * Menambahkan menu "Workspace Guru" (`/teacher`) pada bilah navigasi utama untuk peran guru dan staf terkait.
+* `src/lib/operations/dashboard-service.ts` & `src/app/dashboard/page.tsx`:
+  * Menambahkan quick action `Workspace Guru` (`/teacher`) dengan ikon topi toga pada dashboard operasional harian.
+
+---
+
 ## [2026-09-23] - Milestone: Finance & Billing Operations (Fee Categories, Bulk Billing, Cashier Multi-Charge Counter, Atomic Allocations, Printable Receipts, Cashbook Immutability, Operational Reports & CSV Export) (IMPLEMENTED / VERIFIED)
 
 ### Added

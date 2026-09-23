@@ -41,6 +41,7 @@ export function NavHeader({ subtitle }: { subtitle?: string }) {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/teacher", label: "Workspace Guru", icon: GraduationCap },
     { href: "/settings", label: "Pengaturan", icon: Settings },
     { href: "/tahfidz", label: "Tahfidz", icon: BookMarked },
     { href: "/dormitories", label: "Asrama", icon: Home },

@@ -15,6 +15,20 @@ import {
   AssessmentOwnershipError,
   FormalAcademicError,
 } from "./types";
+import { requirePlugin } from "../plugins/guard";
+import { PLUGINS } from "../plugins/registry";
+
+export async function assertFormalAcademicPlugin(ctx: TenantContext, db: any) {
+  if (db.institution?.findUnique) {
+    const institution = await db.institution.findUnique({
+      where: { id: ctx.institutionId },
+      select: { enabledPlugins: true },
+    });
+    if (institution) {
+      requirePlugin(institution, PLUGINS.FORMAL_ACADEMIC);
+    }
+  }
+}
 
 export type AssessmentWithDetails = Assessment & {
   teacherAssignment: {
@@ -40,6 +54,7 @@ export async function createAssessment(
 ): Promise<Assessment> {
   const db = txPrisma || prisma;
   requirePermission(ctx, "academic:view");
+  await assertFormalAcademicPlugin(ctx, db);
 
   const validated = createAssessmentInputSchema.parse(rawInput);
 
@@ -103,6 +118,7 @@ export async function updateAssessment(
 ): Promise<Assessment> {
   const db = txPrisma || prisma;
   requirePermission(ctx, "academic:view");
+  await assertFormalAcademicPlugin(ctx, db);
 
   const validated = updateAssessmentInputSchema.parse(rawInput);
 
@@ -159,6 +175,7 @@ export async function deleteAssessment(
 ): Promise<Assessment> {
   const db = txPrisma || prisma;
   requirePermission(ctx, "academic:view");
+  await assertFormalAcademicPlugin(ctx, db);
 
   const existing = await db.assessment.findUnique({
     where: {
@@ -203,6 +220,7 @@ export async function getAssessment(
 ): Promise<AssessmentWithDetails> {
   const db = txPrisma || prisma;
   requirePermission(ctx, "academic:view");
+  await assertFormalAcademicPlugin(ctx, db);
 
   const assessment = await db.assessment.findUnique({
     where: {
@@ -250,6 +268,7 @@ export async function listAssessments(
 ): Promise<{ items: AssessmentWithDetails[]; total: number; page: number; limit: number; totalPages: number }> {
   const db = txPrisma || prisma;
   requirePermission(ctx, "academic:view");
+  await assertFormalAcademicPlugin(ctx, db);
 
   const validated = assessmentFilterSchema.parse(query || {});
   const page = validated.page ?? 1;

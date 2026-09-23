@@ -30,6 +30,7 @@ import {
   UserPlus,
   ShieldCheck,
   ExternalLink,
+  GraduationCap,
 } from "lucide-react";
 import { GlobalSearchDialog } from "../../components/global-search-dialog";
 
@@ -85,6 +86,8 @@ export default function OperationalDashboardPage() {
         return <BookMarked className="h-5 w-5 text-cyan-700" />;
       case "Home":
         return <Home className="h-5 w-5 text-rose-700" />;
+      case "GraduationCap":
+        return <GraduationCap className="h-5 w-5 text-teal-700" />;
       default:
         return <ArrowRight className="h-5 w-5 text-stone-700" />;
     }
