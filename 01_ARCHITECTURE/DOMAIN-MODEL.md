@@ -206,3 +206,186 @@ Sistem memisahkan secara tegas dua jalur identitas:
   * Guru hanya diizinkan melihat, membuka, mengisi, dan menutup sesi untuk `TeacherAssignment` miliknya sendiri (`teacherId == session.userId`).
   * Admin / Kepala Sekolah dengan izin `academic:manage` atau `attendance:manage` dapat mengakses seluruh sesi dalam tenant.
 
+---
+
+## 8. Finance Core Model & Transactions (Phase 4)
+
+```text
+                     ┌─────────────────────────┐
+                     │       FeeCategory       │
+                     │  (Master Katalog Biaya) │
+                     └────────────┬────────────┘
+                                  │ 1
+                                  │
+                                  │ * (Snapshot amount saat pembuatan)
+                     ┌────────────▼────────────┐
+                     │      StudentCharge      │
+                     │  (Obligasi Pembayaran)  │
+                     └────────────┬────────────┘
+                                  │ 1
+                                  │
+                                  │ *
+                     ┌────────────▼────────────┐
+                     │    PaymentAllocation    │
+                     │   (Distribusi Nominal)  │
+                     └────────────▲────────────┘
+                                  │ *
+                                  │
+                                  │ 1
+                     ┌────────────┴────────────┐
+                     │   PaymentTransaction    │
+                     │   (Penerimaan Kas Riil) │
+                     └──────┬────────────┬─────┘
+                            │ 1          │ 1
+                            │            │
+                  1-to-1    │            │  1-to-1
+                            │            │
+                 ┌──────────▼──┐      ┌──▼──────────┐
+                 │CashbookEntry│      │   Receipt   │
+                 │ (INCOME/EXP)│      │ (Kwitansi)  │
+                 └─────────────┘      └─────────────┘
+```
+
+* **Saldo Bukan Source of Truth:**
+  Saldo/tagihan tidak disimpan sebagai nilai mutable pada `Student` atau `Institution`. Saldo dihitung dinamis dari kalkulasi seluruh `StudentCharge` dikurangi `PaymentAllocation`.
+* **FeeCategory (Master Katalog Biaya):**
+  * Katalog tarif biaya lembaga (`SPP`, `UANG_PANGKAL`, `KEGIATAN`, `SERAGAM`, `ASRAMA`, `LAINNYA`).
+  * Memiliki frekuensi (`ONE_TIME`, `MONTHLY`, `ANNUAL`, `CUSTOM`).
+  * Perubahan `amount` master tidak pernah menimpa `StudentCharge` historis.
+* **StudentCharge (Historical Obligation Snapshot):**
+  * Mewakili kewajiban bayar siswa. `amount` dibekukan sebagai *historical snapshot* saat charge dibuat.
+  * Status tagihan: `UNPAID`, `PARTIAL`, `PAID`, `VOID`.
+  * Status `VOID` tidak dapat menerima alokasi pembayaran baru.
+* **PaymentTransaction (Penerimaan Kas Riil):**
+  * Pencatatan uang tunai/transfer yang benar-benar diterima lembaga dari pembayar.
+  * Bersifat *immutable* (tidak dapat diubah/dihapus).
+* **PaymentAllocation (Distribusi Pembayaran):**
+  * Menghubungkan 1 transaksi pembayaran ke 1 atau beberapa `StudentCharge`.
+  * Enforces invariant: $\sum \text{Allocations} \le \text{PaymentTransaction.amount}$ dan $\sum \text{Allocations for Charge} \le \text{StudentCharge.amount}$.
+* **CashbookEntry (Buku Kas Umum / BKU):**
+  * Pencatatan pergerakan kas masuk (`INCOME`) atau keluar (`EXPENSE`).
+  * Setiap `PaymentTransaction` otomatis menghasilkan `CashbookEntry` bertipe `INCOME`.
+* **Receipt (Bukti Pembayaran / Kwitansi):**
+  * Bukti transaksi pembayaran resmi dengan nomor unik atomis format `KW-YYYYMM-XXXXXX`.
+* **Atomic Payment Orchestration:**
+  * Seluruh pembuatan `PaymentTransaction`, `PaymentAllocation`, `CashbookEntry`, update status `StudentCharge`, dan `Receipt` dieksekusi dalam satu transaksi terisolasi Prisma (`$transaction`). Jika ada kegagalan, seluruh perubahan akan di-rollback tanpa sisa (*atomic failure protection*).
+
+---
+
+## 9. Formal Academic Core & Frozen Report Card Model (Phase 5)
+
+```text
+                     ┌─────────────────────────┐
+                     │    TeacherAssignment    │
+                     │  (Penugasan Mengajar)   │
+                     └────────────┬────────────┘
+                                  │ 1
+                                  │
+                                  │ *
+                     ┌────────────▼────────────┐
+                     │       Assessment        │
+                     │  (Rencana Penilaian)    │
+                     └────────────┬────────────┘
+                                  │ 1
+                                  │
+                                  │ *
+                     ┌────────────▼────────────┐
+                     │     AssessmentScore     │
+                     │  (Nilai Siswa-Roster)   │
+                     └──────┬────────────┬─────┘
+                  studentId │            │ enrollmentId
+                            │            │
+                  ┌─────────▼─┐        ┌─▼─────────┐
+                  │  Student  │        │ Enrollment│
+                  └─────────┬─┘        └─┬─────────┘
+                            │            │
+                            │ *          │ *
+                     ┌──────▼────────────▼─────┐
+                     │       ReportCard        │
+                     │   (Buku Raport Siswa)   │
+                     │ status: DRAFT/PUBLISHED │
+                     │ frozenData: JSON Snap   │
+                     └────────────┬────────────┘
+                                  │ 1
+                                  │
+                                  │ *
+                     ┌────────────▼────────────┐
+                     │    ReportCardSubject    │
+                     │   (Nilai Akhir Mapel)   │
+                     └─────────────────────────┘
+```
+
+* **Penilaian Terikat pada Penugasan:**
+  Setiap `Assessment` selalu terikat pada `TeacherAssignment`. Guru hanya dapat menginput nilai untuk assignment miliknya sendiri.
+* **Enrollment Scope Enforcement:**
+  Setiap `AssessmentScore` mengikat `studentId` dan `enrollmentId`. Siswa dari luar rombel atau tahun ajaran yang bersangkutan ditolak secara ketat.
+* **Nilai Dihitung Secara Dinamis Selama DRAFT:**
+  Saat `status == "DRAFT"`, raport menghitung rerata nilai berjalan dari seluruh assessment yang telah diinput.
+* **Frozen Report Card Snapshot (PUBLISHED = Kekal):**
+  Saat `publishReportCard` dieksekusi:
+  1. Status diubah menjadi `PUBLISHED`.
+  2. Data raport dibekukan secara permanen ke dalam kolom `frozenData` (JSON snapshot).
+  3. Perubahan nilai assessment atau enrollment di masa mendatang **tidak akan mengubah snapshot raport yang telah terbit**.
+
+---
+
+## 10. Pesantren & Tahfidz Living Core (Phase 6)
+
+### A. Diniyah / Pesantren Subject Integration
+Mata pelajaran kepesantrenan (`DINIAH`, `KITAB`, `TAHSIN`, `TAJWID`, `AKHLAQ`, `FIQIH`, `AQIDAH`, `HADITS`, `LAINNYA`) diintegrasikan langsung pada model `Subject` yang ada tanpa membuat model paralel:
+$$\text{Subject.category} \in \{\text{UMUM}, \text{AGAMA}, \dots, \text{KITAB}, \text{TAHSIN}, \dots\}$$
+
+### B. Tahfidz Mutaba'ah Core
+```text
+┌─────────────────┐       ┌─────────────────┐
+│     Student     │       │   Enrollment    │
+│(Identitas Santri│       │(Konteks TA/Kls) │
+└────────┬────────┘       └────────┬────────┘
+         │ 1                       │ 1
+         │                         │
+         │ *                     * │
+       ┌─▼─────────────────────────▼─┐
+       │        TahfidzRecord        │
+       │  surah, startAyah, endAyah  │
+       │   type: SETORAN/MURAJAAH    │
+       │   quality: MUMTAZ/JAYYID/.. │
+       │   recordedBy: Session User  │
+       └─────────────────────────────┘
+```
+* **Integritas Historis:** Catatan hafalan menunjuk `enrollmentId` saat setoran dilakukan sehingga rekam jejak tetap valid saat santri naik kelas atau berganti tahun ajaran.
+* **Validasi Ayat Al-Qur'an:** Validasi 114 surah dan batasan ayat (`startAyah >= 1`, `endAyah >= startAyah`, `endAyah <= totalAyahSurah`).
+* **Identitas Perekam:** `recordedBy` diambil secara mutlak dari sesi guru/ustadz pembimbing yang terotentikasi.
+
+### C. Dormitory & Living Attendance Core
+```text
+┌─────────────────┐
+│    Dormitory    │
+│ (Gedung Asrama) │
+└────────┬────────┘
+         │ 1
+         │ *
+┌────────▼────────┐
+│  DormitoryRoom  │
+│ (Kamar Santri)  │
+└────────┬────────┘
+         │ 1
+         │
+         ├─────────────────────────────────────────┐
+         │ *                                       │ *
+┌────────▼──────────────────┐             ┌────────▼──────────────────┐
+│ StudentDormitoryAssignment│             │     AttendanceSession     │
+│ status: ACTIVE / ENDED    │             │ context: "LIVING"         │
+│ startDate, endDate        │             │ dormitoryRoomId: FK       │
+└────────┬──────────────────┘             └────────┬──────────────────┘
+         │ *                                       │ 1
+         │ 1                                       │ *
+┌────────▼────────┐                       ┌────────▼──────────────────┐
+│     Student     │                       │     AttendanceRecord      │
+│ (Penghuni Kamar)│                       │  PRESENT/SICK/EXCUSED/..  │
+└─────────────────┘                       └───────────────────────────┘
+```
+* **Riwayat Kamar Permanen (Sacred History):** Data penempatan kamar tidak disimpan di kolom statis `Student.roomId`, melainkan via `StudentDormitoryAssignment`.
+* **Kapasitas Kamar & Single Active Assignment:** Kamar menolak penempatan jika jumlah penghuni aktif telah mencapai kapasitas. Santri tidak dapat memiliki lebih dari satu penempatan aktif.
+* **Single Attendance Engine:** Absensi asrama menggunakan `AttendanceSession` dengan `context = "LIVING"`, tanpa menciptakan mesin absensi kedua.
+
+

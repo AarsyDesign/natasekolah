@@ -9,3 +9,7 @@ export * from "./student";
 export * from "./academic";
 export * from "./teaching";
 export * from "./attendance";
+export * from "./finance";
+export * from "./formal-academic";
+export * from "./tahfidz";
+export * from "./dormitory";

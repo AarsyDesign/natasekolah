@@ -5,11 +5,13 @@ import { requirePermission, hasPermission } from "../auth/permissions";
 import { sanitizeClientInput } from "../tenant/guard";
 import {
   validateCreateAttendanceSessionInput,
+  validateCreateLivingAttendanceSessionInput,
   validateCloseAttendanceSessionInput,
   validateAttendanceQuery,
 } from "../validation/attendance";
 import {
   AttendanceSessionAlreadyExistsError,
+  LivingAttendanceSessionAlreadyExistsError,
   AttendanceSessionClosedError,
   AttendanceIncompleteError,
   AttendanceAccessDeniedError,
@@ -160,7 +162,7 @@ export async function getAttendanceSession(
 
   // 3. Resource Scope Guard
   const isManager = hasPermission(ctx, "academic:manage");
-  if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
+  if (!isManager && session.teacherAssignment && session.teacherAssignment.teacherId !== ctx.userId) {
     throw new AttendanceAccessDeniedError(
       "Guru tidak diizinkan mengakses sesi absensi rekan guru lain."
     );
@@ -280,11 +282,15 @@ export async function closeAttendanceSession(
   }
 
   // 4. Resource Scope Guard
-  const isManager = hasPermission(ctx, "academic:manage");
-  if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
-    throw new AttendanceAccessDeniedError(
-      "Guru tidak diizinkan menutup sesi absensi milik guru lain."
-    );
+  if (session.context === "LIVING") {
+    // Pengasuh asrama atau admin dengan izin attendance:manage dapat menutup sesi
+  } else if (session.teacherAssignment) {
+    const isManager = hasPermission(ctx, "academic:manage");
+    if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
+      throw new AttendanceAccessDeniedError(
+        "Guru tidak diizinkan menutup sesi absensi milik guru lain."
+      );
+    }
   }
 
   // 5. Invariant: Sesi yang sudah ditutup tidak boleh ditutup lagi
@@ -292,29 +298,45 @@ export async function closeAttendanceSession(
     throw new AttendanceSessionClosedError(attendanceSessionId);
   }
 
-  // 6. Invariant: Semua siswa yang berstatus ENROLLED aktif wajib memiliki catatan kehadiran
-  const eligibleEnrollments = await prisma.enrollment.findMany({
-    where: {
-      institutionId: ctx.institutionId,
-      academicYearId: session.teacherAssignment.academicYearId,
-      classroomId: session.teacherAssignment.classroomId,
-      status: "ENROLLED",
-      student: {
+  // 6. Invariant: Semua siswa yang eligible wajib memiliki catatan kehadiran
+  let eligibleStudentIds: string[] = [];
+  if (session.context === "LIVING" && session.dormitoryRoomId) {
+    const activeAssignments = await prisma.studentDormitoryAssignment.findMany({
+      where: {
+        institutionId: ctx.institutionId,
+        roomId: session.dormitoryRoomId,
         status: "ACTIVE",
       },
-    },
-    select: {
-      studentId: true,
-    },
-  });
+      select: {
+        studentId: true,
+      },
+    });
+    eligibleStudentIds = activeAssignments.map((a) => a.studentId);
+  } else if (session.teacherAssignment) {
+    const eligibleEnrollments = await prisma.enrollment.findMany({
+      where: {
+        institutionId: ctx.institutionId,
+        academicYearId: session.teacherAssignment.academicYearId,
+        classroomId: session.teacherAssignment.classroomId,
+        status: "ENROLLED",
+        student: {
+          status: "ACTIVE",
+        },
+      },
+      select: {
+        studentId: true,
+      },
+    });
+    eligibleStudentIds = eligibleEnrollments.map((e) => e.studentId);
+  }
 
   const recordedStudentIds = new Set(session.records.map((r) => r.studentId));
-  const missingStudents = eligibleEnrollments.filter((e) => !recordedStudentIds.has(e.studentId));
+  const missingStudents = eligibleStudentIds.filter((id) => !recordedStudentIds.has(id));
 
   if (missingStudents.length > 0) {
     throw new AttendanceIncompleteError(
       missingStudents.length,
-      `Sesi absensi tidak dapat ditutup: Masih ada ${missingStudents.length} siswa dalam rombel yang belum dicatat kehadirannya.`
+      `Sesi absensi tidak dapat ditutup: Masih ada ${missingStudents.length} santri/siswa yang belum dicatat kehadirannya.`
     );
   }
 
@@ -337,6 +359,80 @@ export async function closeAttendanceSession(
           subject: true,
           classroom: true,
           academicYear: true,
+        },
+      },
+      dormitoryRoom: {
+        include: {
+          dormitory: true,
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Membuka sesi absensi asrama santri (Living Attendance Session).
+ */
+export async function createLivingAttendanceSession(
+  ctx: TenantContext,
+  rawInput: unknown
+): Promise<AttendanceSession> {
+  // 1. RBAC Guard: Memerlukan izin attendance:manage
+  requirePermission(ctx, "attendance:manage");
+
+  // 2. Zod Validation
+  const validated = validateCreateLivingAttendanceSessionInput(rawInput);
+
+  // 3. Sanitasi Anti-Tampering
+  const sanitized = sanitizeClientInput(validated, ctx);
+
+  // 4. Verifikasi Kamar Asrama ada dan milik tenant
+  const room = await prisma.dormitoryRoom.findUnique({
+    where: {
+      id_institutionId: {
+        id: sanitized.dormitoryRoomId,
+        institutionId: ctx.institutionId,
+      },
+    },
+    include: {
+      dormitory: true,
+    },
+  });
+
+  if (!room) {
+    throw new ResourceNotFoundError("Kamar Asrama", sanitized.dormitoryRoomId);
+  }
+
+  // 5. Invariant: 1 Sesi per Kamar per Hari Kalender
+  const existingSession = await prisma.attendanceSession.findFirst({
+    where: {
+      institutionId: ctx.institutionId,
+      dormitoryRoomId: sanitized.dormitoryRoomId,
+      attendanceDate: sanitized.attendanceDate,
+      context: "LIVING",
+    },
+  });
+
+  if (existingSession) {
+    throw new LivingAttendanceSessionAlreadyExistsError(
+      sanitized.dormitoryRoomId,
+      formatAttendanceDate(sanitized.attendanceDate)
+    );
+  }
+
+  // 6. Eksekusi Pembuatan Sesi
+  return prisma.attendanceSession.create({
+    data: {
+      institutionId: ctx.institutionId,
+      dormitoryRoomId: sanitized.dormitoryRoomId,
+      context: "LIVING",
+      attendanceDate: sanitized.attendanceDate,
+      status: "OPEN",
+    },
+    include: {
+      dormitoryRoom: {
+        include: {
+          dormitory: true,
         },
       },
     },

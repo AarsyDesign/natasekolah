@@ -21,6 +21,29 @@ export const createAttendanceSessionInputSchema = z.object({
 
 export type CreateAttendanceSessionInput = z.infer<typeof createAttendanceSessionInputSchema>;
 
+export function validateCreateAttendanceSessionInput(data: unknown): CreateAttendanceSessionInput {
+  return validate(createAttendanceSessionInputSchema, data);
+}
+
+/**
+ * Skema validasi pembukaan Sesi Absensi Asrama (Living AttendanceSession).
+ */
+export const createLivingAttendanceSessionInputSchema = z.object({
+  dormitoryRoomId: idSchema,
+  attendanceDate: z
+    .union([
+      z.string().trim().regex(/^\d{4}-\d{2}-\d{2}/, "Format tanggal absensi harus YYYY-MM-DD"),
+      z.date(),
+    ])
+    .transform((val) => normalizeAttendanceDate(val)),
+});
+
+export type CreateLivingAttendanceSessionInput = z.infer<typeof createLivingAttendanceSessionInputSchema>;
+
+export function validateCreateLivingAttendanceSessionInput(data: unknown): CreateLivingAttendanceSessionInput {
+  return validate(createLivingAttendanceSessionInputSchema, data);
+}
+
 /**
  * Skema validasi pencatatan kehadiran satu siswa (AttendanceRecord).
  */
@@ -95,9 +118,6 @@ export const attendanceQuerySchema = z.object({
 export type AttendanceQuery = z.infer<typeof attendanceQuerySchema>;
 
 // Helper functions
-export function validateCreateAttendanceSessionInput(input: unknown): CreateAttendanceSessionInput {
-  return validate(createAttendanceSessionInputSchema, input);
-}
 
 export function validateMarkAttendanceInput(input: unknown): MarkAttendanceInput {
   return validate(markAttendanceInputSchema, input);

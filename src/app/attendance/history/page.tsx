@@ -236,7 +236,7 @@ export default function AttendanceHistoryPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-bold text-stone-900">
-                      {selectedSessionDetail.assignment.subjectName}
+                      {selectedSessionDetail.assignment?.subjectName || selectedSessionDetail.dormitoryRoom?.dormitoryName || "Sesi Absensi"}
                     </h3>
                     {selectedSessionDetail.status === "CLOSED" ? (
                       <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold text-stone-700">
@@ -249,7 +249,11 @@ export default function AttendanceHistoryPage() {
                     )}
                   </div>
                   <p className="mt-1 text-xs text-stone-600">
-                    {selectedSessionDetail.assignment.classroomName} • Pengajar: {selectedSessionDetail.assignment.teacherName}
+                    {selectedSessionDetail.assignment
+                      ? `${selectedSessionDetail.assignment.classroomName} • Pengajar: ${selectedSessionDetail.assignment.teacherName}`
+                      : selectedSessionDetail.dormitoryRoom
+                      ? `Kamar: ${selectedSessionDetail.dormitoryRoom.name}`
+                      : ""}
                   </p>
                 </div>
                 <button

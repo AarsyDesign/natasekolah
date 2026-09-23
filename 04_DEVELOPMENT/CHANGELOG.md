@@ -1,5 +1,162 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Phase 7: Parent Experience / Portal Wali (PWA Mobile-First, ReBAC Read Model, Frozen Report & Multi-Child) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/guardian/`: Modul domain portal wali murid terpadu:
+  * `types.ts`: DTO untuk profil wali (`GuardianProfileData`), anak terhubung (`GuardianLinkedStudent`), ringkasan kehadiran (`GuardianAttendanceSummary`), ringkasan keuangan (`GuardianFinanceSummary`), ringkasan akademik (`GuardianAcademicSummary`), ringkasan tahfidz (`GuardianTahfidzSummary`), ringkasan asrama (`GuardianDormitorySummary`), dan notifikasi (`GuardianNotificationItem`).
+  * `auth-helper.ts`: Helper resolusi sesi wali murid `getAuthenticatedGuardianSession()` dari HTTP-only cookie dengan validasi status akun aktif dan penolakan keras sesi staf internal atau unauthenticated.
+  * `portal-service.ts`: Layanan baca domain (Read-Only) khusus wali murid dengan penegakan ReBAC (`assertGuardianStudentAccess`) di setiap query:
+    * `getGuardianProfile`: Profil wali dan daftar santri binaan.
+    * `getGuardianChildren`: Daftar santri binaan.
+    * `getGuardianStudentOverview`: Rekap agregat santri aktif untuk dasbor wali.
+    * `getGuardianStudentAttendance`: Riwayat dan persentase presensi akademik & asrama.
+    * `getGuardianStudentFinance`: Tagihan, sisa kewajiban, riwayat pembayaran, dan bukti kwitansi resmi (Read-Only).
+    * `getGuardianStudentAcademic`: Nilai penilaian terpublikasi dan daftar raport resmi (`status: "PUBLISHED"` saja).
+    * `getGuardianStudentReportCard`: Pembongkaran snapshot `frozenData` raport terbit (menolak keras raport `DRAFT`).
+    * `getGuardianStudentTahfidz`: Capaian ayat ziyadah & muraja'ah beserta riwayat setoran.
+    * `getGuardianStudentDormitory`: Informasi penempatan kamar asrama, kapasitas, dan presensi malam santri mukim.
+    * `getGuardianNotifications`: Log riwayat pesan WhatsApp outbox resmi yang dikirim ke nomor HP wali.
+* `src/actions/guardian.ts`: Server Actions untuk aktivasi akun wali (`activateGuardianAction`) dan keluar sistem (`logoutGuardianAction`).
+* `src/app/manifest.ts` & `public/manifest.json`: Web App Manifest PWA native Next.js untuk Portal Wali (nama: "NataSekolah - Portal Wali Murid", display: "standalone", theme_color: "#0f766e").
+* `src/components/guardian-nav.tsx`: Komponen navigasi terpadu wali murid (Top Bar dengan logo & pemilih santri aktif instan, Mobile Sticky Bottom Bar dengan target sentuh $\ge 44\text{px}$, dan Mobile Drawer Menu).
+* Antarmuka Pengguna Mobile-First (`/wali/*`):
+  * `src/app/wali/(portal)/layout.tsx`: Layout pelindung portal wali terisolasi dari halaman aktivasi publik.
+  * `src/app/wali/(portal)/page.tsx`: Dasbor utama wali murid menyajikan 6 kartu domain terpadu + empty states.
+  * `src/app/wali/(portal)/kehadiran/page.tsx`: Riwayat presensi, persentase kehadiran, dan filter konteks kelas vs asrama.
+  * `src/app/wali/(portal)/keuangan/page.tsx`: Rincian SPP/tagihan, status lunas/cicilan/nunggak, dan bukti kwitansi.
+  * `src/app/wali/(portal)/akademik/page.tsx`: Rekap nilai penilaian dan direktori buku raport resmi.
+  * `src/app/wali/(portal)/akademik/raport/[reportId]/page.tsx`: Halaman pratinjau raport resmi berbasis frozen snapshot abadi yang ramah cetak (`window.print()`).
+  * `src/app/wali/(portal)/tahfidz/page.tsx`: Riwayat setoran mutaba'ah Al-Qur'an (surah, ayat, kualitas, catatan musyrif).
+  * `src/app/wali/(portal)/asrama/page.tsx`: Informasi kamar asrama, kapasitas, dan presensi malam santri mukim (empty state santri non-mukim).
+  * `src/app/wali/(portal)/notifikasi/page.tsx`: Log pesan notifikasi WhatsApp outbox resmi yang ditujukan ke wali.
+  * `src/app/wali/aktivasi/page.tsx`: Halaman aktivasi akun wali murid via tautan atau token undangan 1x pakai.
+* `test/guardian-portal.test.ts`: Rangkaian 16 automated tests mencakup resolusi profil & anak terhubung, penolakan akses santri milik orang lain, penolakan cross-tenant, isolasi total dari RBAC staf internal, proteksi mutlak penyembunyian raport DRAFT, pembacaan frozen snapshot raport PUBLISHED, query terisolasi untuk kehadiran, keuangan, tahfidz, dan asrama, serta validasi form aktivasi akun.
+
+### Changed
+* `src/app/login/page.tsx`: Menambahkan tautan ramah pengguna menuju halaman aktivasi portal wali murid.
+* `03_EXECUTION/PROGRESS.md`: Memperbarui status Phase 7 Parent Experience menjadi COMPLETE (16/16 test baru lulus, total 245/245 tests lulus).
+
+---
+
+## [2026-09-23] - Phase 6: Pesantren & Tahfidz Living Core (Diniyah, Mutaba'ah, Asrama & Living Attendance) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/tahfidz/`: Modul domain mutaba'ah tahfidz santri terpadu:
+  * `types.ts`: Konstanta jenis setoran (`SETORAN`, `MURAJAAH`), predikat kualitas (`MUMTAZ`, `JAYYID`, `MAQBUL`, `REPEAT`), dan kelas galat domain (`TahfidzDomainError`, `TahfidzRecordNotFoundError`, `InvalidAyahRangeError`, `InvalidSurahError`, `StudentEnrollmentMismatchError`).
+  * `quran.ts`: Metadata 114 surah Al-Qur'an (nama, nomor, jumlah ayat) dan validasi matematis rentang ayat (`startAyah >= 1`, `endAyah >= startAyah`, `endAyah <= totalAyahs`).
+  * `tahfidz-service.ts`: Layanan pencatatan mutaba'ah (`createTahfidzRecord`, `getTahfidzRecordById`, `listTahfidzRecords`, `getTahfidzSummary`) dengan pengikatan mutlak ke `Student` dan `Enrollment` historis serta ekstraksi `recordedBy` dari sesi server.
+  * `index.ts`: Barrel export terpadu modul tahfidz.
+* `src/lib/dormitory/`: Modul domain manajemen asrama santri:
+  * `types.ts`: Konstanta status penempatan kamar (`ACTIVE`, `ENDED`) dan kelas galat domain (`DormitoryDomainError`, `DormitoryNotFoundError`, `DormitoryRoomNotFoundError`, `DormitoryRoomCapacityExceededError`, `ActiveDormitoryAssignmentExistsError`, `DormitoryAssignmentNotFoundError`, `DormitoryDuplicateNameError`, `DormitoryRoomDuplicateNameError`).
+  * `dormitory-service.ts`: Manajemen gedung asrama (`createDormitory`, `getDormitoryById`, `listDormitories`), manajemen kamar (`createDormitoryRoom`, `getDormitoryRoomById`), penempatan kamar santri (`assignStudentToRoom`) dengan validasi kapasitas kamar dan larangan penempatan ganda aktif, pengakhiran penempatan (`endDormitoryAssignment`), dan riwayat penempatan (`listDormitoryAssignments`).
+  * `index.ts`: Barrel export terpadu modul asrama.
+* `src/lib/validation/tahfidz.ts`: Skema validasi Zod untuk mutaba'ah tahfidz (`createTahfidzRecordInputSchema`, `tahfidzRecordFilterSchema`).
+* `src/lib/validation/dormitory.ts`: Skema validasi Zod untuk gedung, kamar, dan penempatan asrama (`createDormitoryInputSchema`, `createDormitoryRoomInputSchema`, `assignStudentToRoomInputSchema`, `endDormitoryAssignmentInputSchema`, `dormitoryAssignmentFilterSchema`).
+* `src/actions/tahfidz.ts`: 4 Server Actions terpadu untuk mutaba'ah tahfidz berotorisasi RBAC (`tahfidz:view`, `tahfidz:manage`).
+* `src/actions/dormitory.ts`: 8 Server Actions terpadu untuk asrama dan kamar berotorisasi RBAC (`dormitory:view`, `dormitory:manage`).
+* Antarmuka Pengguna Mobile-First (`/tahfidz/*`, `/dormitories/*`):
+  * `src/app/tahfidz/page.tsx`: Direktori santri mutaba'ah & feed aktivitas setoran terkini.
+  * `src/app/tahfidz/[studentId]/page.tsx`: Detail riwayat hafalan santri, kartu ringkasan ziyadah/muraja'ah, dan formulir setoran baru dengan validasi surah & ayat Al-Qur'an.
+  * `src/app/dormitories/page.tsx`: Direktori gedung asrama, indikator persentase keterisian kamar, serta modal tambah gedung dan kamar.
+  * `src/app/dormitories/[id]/page.tsx`: Roster kamar, daftar penghuni aktif per kamar, modal penempatan santri baru, tombol akhiri penempatan, dan tombol "Buka Absensi Asrama".
+* `test/tahfidz.test.ts`: Rangkaian 9 automated tests mencakup pembuatan setoran dan muraja'ah valid, penolakan rentang ayat salah (`startAyah < 1`, `endAyah < startAyah`, `endAyah > totalAyahs`), penolakan surah di luar 1..114, penolakan mismatch santri-enrollment, isolasi tenant, penegakan identitas perekam dari sesi server, penegakan izin RBAC, integritas historis enrollment saat santri naik kelas, dan penghitungan ringkasan tahfidz.
+* `test/pesantren-living.test.ts`: Rangkaian 17 automated tests mencakup integrasi kategori mata pelajaran kepesantrenan, pembuatan gedung dan kamar asrama, penolakan duplikasi nama, penegakan batas kapasitas kamar, penolakan penempatan aktif ganda untuk santri yang sama, pengakhiran penempatan dengan pelestarian rekam jejak historis, penolakan santri lintas tenant, pembukaan sesi absensi asrama (`context: "LIVING"`), penolakan pembukaan sesi ganda kamar pada hari yang sama, penurunan roster khusus penghuni kamar aktif, pencatatan presensi granular (`PRESENT`, `SICK`, `EXCUSED`, `ABSENT`), penolakan santri luar kamar, dan penolakan penutupan sesi yang belum lengkap.
+* `02_DECISIONS/ADR.md`: Menambahkan ADR-016 (Pesantren & Tahfidz Living Core, Mutaba'ah Enrollment Integrity, and Single Attendance Engine).
+
+### Changed
+* `prisma/schema.prisma`:
+  * Model `Institution`: Menambahkan relasi `tahfidzRecords`, `dormitories`, `dormitoryRooms`, `dormitoryAssignments`.
+  * Model `User`: Menambahkan relasi `recordedTahfidz`.
+  * Model `Student`: Menambahkan relasi `tahfidzRecords`, `dormitoryAssignments`.
+  * Model `Enrollment`: Menambahkan relasi `tahfidzRecords`.
+  * Model `AttendanceSession`: Menambahkan kolom `context String @default("ACADEMIC")`, `dormitoryRoomId String?`, relasi `dormitoryRoom DormitoryRoom?`, dan constraint `@@unique([dormitoryRoomId, attendanceDate])`.
+  * Menambahkan model `TahfidzRecord`, `Dormitory`, `DormitoryRoom`, dan `StudentDormitoryAssignment` dengan compound unique keys `@@unique([id, institutionId])` dan compound foreign keys `[institutionId]`.
+* `src/lib/auth/permissions.ts`: Menambahkan izin `tahfidz:view`, `tahfidz:manage`, `dormitory:view`, `dormitory:manage` ke dalam daftar `PERMISSIONS` dan memetakan ke peran `SUPER_ADMIN`, `FOUNDATION_HEAD`, `PRINCIPAL`, `ADMIN`, dan `TEACHER`.
+* `src/lib/teaching/types.ts`: Memperluas `SUBJECT_CATEGORIES` dengan `DINIAH`, `KITAB`, `TAHSIN`, `TAJWID`, `AKHLAQ`, `FIQIH`, `AQIDAH`, `HADITS`, `LAINNYA`.
+* `src/lib/attendance/session-service.ts`: Menambahkan `createLivingAttendanceSession` dan memperbarui `closeAttendanceSession` untuk memvalidasi kelengkapan absen penghuni kamar aktif ketika `context === "LIVING"`.
+* `src/lib/attendance/record-service.ts`: Memperbarui `getAttendanceRoster`, `markAttendance`, dan `markAttendanceBatch` untuk mendukung sesi asrama secara dinamis.
+* `src/components/nav-header.tsx`: Menambahkan tautan navigasi ke `/tahfidz` ("Tahfidz") dengan ikon `BookMarked` dan `/dormitories` ("Asrama") dengan ikon `Home`.
+* `01_ARCHITECTURE/DATABASE.md`: Menambahkan model Phase 6 ke Matriks Entitas dan Bab 10 Keputusan Integritas Pesantren & Tahfidz Living.
+* `01_ARCHITECTURE/DOMAIN-MODEL.md`: Menambahkan Bab 10 Pesantren & Tahfidz Living Core.
+* `01_ARCHITECTURE/SECURITY.md`: Menambahkan Bab 13 Keamanan Pesantren, Tahfidz Mutaba'ah & Asrama Living.
+* `03_EXECUTION/PROGRESS.md`: Memperbarui status Phase 6 Pesantren & Tahfidz Living Core menjadi COMPLETE (26/26 test baru lulus, total 229/229 tests lulus).
+* `03_EXECUTION/TODO.md`: Memperbarui checklist Phase 6 menjadi selesai.
+
+---
+
+## [2026-09-23] - Phase 5: Formal Academic Core (Assessment, AssessmentScore, Grade Calculation, Frozen Report Card) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/formal-academic/`: Modul domain core akademik formal terpadu:
+  * `types.ts`: Konstanta jenis asesmen (`DAILY`, `QUIZ`, `MIDTERM`, `FINAL`, `PROJECT`, `OTHER`), status raport (`DRAFT`, `PUBLISHED`), predikat nilai (A, B, C, D), dan kelas galat domain (`FormalAcademicDomainError`, `AssessmentNotFoundError`, `AssessmentOwnershipError`, `InvalidScoreRangeError`, `InvalidEnrollmentScopeError`, `DuplicateScoreError`, `ReportCardNotFoundError`, `ReportCardAlreadyPublishedError`).
+  * `assessment-service.ts`: Manajemen instrumen asesmen pembelajaran (`createAssessment`, `updateAssessment`, `deleteAssessment`, `listAssessments`, `getAssessmentById`) dengan penegakan kepemilikan guru atas penugasan ajar miliknya (`teacherAssignment.teacherId === session.userId`) dan isolasi tenant.
+  * `grade-service.ts`: Manajemen penilaian siswa (`getRosterForAssessment`, `saveAssessmentScore`, `batchSaveAssessmentScores`, `getScoresByAssessment`) dengan validasi `0 <= score <= maxScore`, penurunan roster siswa berbasis `Enrollment` aktif rombel dan tahun ajaran asesmen, serta penyimpanan atomis via `$transaction`.
+  * `calculation-service.ts`: Abstraksi penghitungan nilai akhir mata pelajaran berbasis antarmuka `IGradeCalculationStrategy`, normalisasi bobot nilai 0–100, penghitungan predikat (A: >= 85, B: >= 70, C: >= 55, D: < 55) dan deskripsi capaian pembelajaran.
+  * `report-card-service.ts`: Manajemen dokumen raport siswa (`generateDraftReportCard`, `getReportCardById`, `listReportCards`, `publishReportCard`) dengan implementasi **Frozen Historical Snapshot**: raport yang berstatus `PUBLISHED` menyimpan seluruh capaian nilai dalam field `frozenData` (JSON) dan menolak perubahan data nilai di masa mendatang secara mutlak.
+  * `index.ts`: Barrel export terpadu modul formal academic.
+* `src/lib/validation/formal-academic.ts`: Skema validasi Zod terpusat untuk `createAssessmentInputSchema`, `updateAssessmentInputSchema`, `saveAssessmentScoreInputSchema`, `batchSaveAssessmentScoresInputSchema`, `generateDraftReportCardInputSchema`, dan `publishReportCardInputSchema`. Diekspor via `src/lib/validation/index.ts`.
+* `src/actions/formal-academic.ts`: 13 Server Actions terpadu dengan otorisasi RBAC (`academic:view`, `academic:manage`, `report:view`, `report:manage`) dan penegakan *teacher resource-level scope*.
+* Antarmuka Pengguna Mobile-First (`/assessments`, `/grades`, `/reports`):
+  * `src/app/assessments/page.tsx`: Direktori instrumen asesmen pembelajaran dengan filter jenis dan status publikasi, modal pembuatan asesmen baru, serta indikator kepemilikan guru.
+  * `src/app/assessments/[id]/page.tsx`: Lembar kerja input nilai massal siswa (batch roster grading table) per penugasan ajar dengan validasi batas nilai realtime, autosave baris, dan tombol simpan massal transaksi atomis.
+  * `src/app/grades/page.tsx`: Rekapitulasi nilai dan capaian per siswa per mata pelajaran dengan predikat capaian.
+  * `src/app/reports/page.tsx`: Manajemen raport siswa, generator draf raport, pratinjau raport resmi format cetak, dan tombol "Terbitkan & Bekukan (Publish & Freeze)".
+* `test/formal-academic.test.ts`: Rangkaian 13 automated tests mencakup pembuatan asesmen, verifikasi teacher assignment scope, penolakan akses guru lain, isolasi tenant lintas lembaga, validasi batas nilai (`score < 0` dan `score > maxScore`), penolakan enrollment luar rombel dan luar tahun ajaran, batch score atomic save, penghitungan nilai akhir mata pelajaran, pembuatan draft raport, penerbitan raport menjadi frozen snapshot, serta bukti ketidakberubahan (immutability) snapshot saat nilai asesmen diubah di kemudian hari.
+* `02_DECISIONS/ADR.md`: Menambahkan ADR-015 (Formal Academic Core, Assessment Scoring and Frozen Report Card Snapshot).
+
+### Changed
+* `prisma/schema.prisma`:
+  * Model `Institution`: Menambahkan relasi `assessments`, `assessmentScores`, `reportCards`, `reportCardSubjects`.
+  * Model `User`: Menambahkan relasi `createdAssessments`, `publishedReportCards`.
+  * Model `Student`: Menambahkan relasi `assessmentScores`, `reportCards`.
+  * Model `Enrollment`: Menambahkan relasi `assessmentScores`, `reportCards`.
+  * Model `AcademicYear`: Menambahkan relasi `assessments`, `reportCards`.
+  * Model `Classroom`: Menambahkan relasi `assessments`, `reportCards`.
+  * Model `Subject`: Menambahkan relasi `assessments`, `reportCardSubjects`.
+  * Model `TeacherAssignment`: Menambahkan relasi `assessments`.
+  * Menambahkan model `Assessment`, `AssessmentScore`, `ReportCard`, dan `ReportCardSubject` dengan compound unique keys `@@unique([id, institutionId])` dan compound foreign keys `[institutionId]`.
+* `src/components/nav-header.tsx`: Menambahkan tautan navigasi ke `/assessments` ("Penilaian") dengan ikon `FileCheck2` dan `/reports` ("Raport") dengan ikon `Award`.
+* `01_ARCHITECTURE/DATABASE.md`: Menambahkan model Assessment, AssessmentScore, ReportCard, ReportCardSubject ke Matriks Entitas dan Bab 9 Keputusan Integritas Asesmen & Raport Terbekukan.
+* `01_ARCHITECTURE/DOMAIN-MODEL.md`: Menambahkan Bab 9 Formal Academic Core & Diagram Relasi Asesmen ke Raport Terbekukan.
+* `03_EXECUTION/PROGRESS.md`: Memperbarui status Phase 5 Formal Academic Core menjadi COMPLETE (13/13 test lulus, total 203/203 tests lulus).
+* `03_EXECUTION/TODO.md`: Memperbarui checklist Phase 5 menjadi selesai.
+
+---
+
+## [2026-09-23] - Phase 4: Finance Core (FeeCategory, StudentCharge, PaymentTransaction, PaymentAllocation, CashbookEntry, Receipt) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/finance/`: Modul domain core keuangan sekolah/pesantren terpadu:
+  * `types.ts`: Konstanta frekuensi iuran (`ONE_TIME`, `MONTHLY`, `ANNUAL`, `CUSTOM`), status tagihan (`UNPAID`, `PARTIAL`, `PAID`, `VOID`), jenis pembayaran (`CASH`, `TRANSFER`, `OTHER`), jenis BKU (`INCOME`, `EXPENSE`), dan kelas galat domain (`FinanceDomainError`, `FeeCategoryNotFoundError`, `FeeCategoryCodeExistsError`, `StudentChargeNotFoundError`, `ChargeAlreadyVoidError`, `PaymentTransactionNotFoundError`, `InvalidPaymentAllocationError`, `InsufficientPaymentAmountError`).
+  * `fee-category-service.ts`: Manajemen katalog tarif master biaya lembaga (`createFeeCategory`, `updateFeeCategory`, `listFeeCategories`, `getFeeCategory`).
+  * `charge-service.ts`: Manajemen tagihan kewajiban siswa (`createStudentCharge`, `bulkCreateStudentCharges`, `listStudentCharges`, `getStudentCharge`, `voidStudentCharge`, `calculateStudentFinancialSummary`) dengan pembekuan nominal *historical snapshot*.
+  * `cashbook-service.ts`: Manajemen Buku Kas Umum (`createCashbookEntry`, `listCashbookEntries`, `getCashbookSummary`).
+  * `receipt-service.ts`: Generator nomor urut atomis (`KW-YYYYMM-XXXXXX`, `TRX-YYYYMM-XXXXXX`, `CSH-YYYYMM-XXXXXX`) dan kwitansi penerimaan pembayaran (`getReceiptByPayment`, `listReceipts`).
+  * `payment-service.ts`: Orchestrator penerimaan pembayaran atomis Prisma (`$transaction`) yang memproses penerimaan kas, alokasi multi-tagihan, update status `UNPAID` -> `PARTIAL` -> `PAID`, pembuatan kas masuk `INCOME`, dan penerbitan `Receipt`.
+  * `index.ts`: Barrel export terpadu modul finance.
+* `src/lib/validation/finance.ts`: Skema validasi Zod untuk FeeCategory, StudentCharge, BulkCharge, PaymentTransaction, PaymentAllocation, CashbookEntry, dan Receipt queries.
+* `src/actions/finance.ts`: 18 Server Actions terpadu untuk keuangan dengan otorisasi RBAC (`finance:view`, `finance:manage`).
+* Antarmuka Pengguna Mobile-First (`/finance/*`):
+  * `src/app/finance/page.tsx`: Dashboard Keuangan (ringkasan total tagihan, terbayar, sisa tagihan, penerimaan hari ini, saldo BKU).
+  * `src/app/finance/fees/page.tsx`: Master katalog jenis biaya & modal tambah/edit.
+  * `src/app/finance/charges/page.tsx`: Direktori tagihan siswa, status pembayaran, & modal buat tagihan single/bulk.
+  * `src/app/finance/payments/page.tsx`: Antarmuka kasir pembayaran, alokasi otomatis multi-tagihan, & modal kwitansi resmi printable.
+  * `src/app/finance/cashbook/page.tsx`: Buku Kas Umum (BKU) penerimaan & pengeluaran kas.
+* `test/finance-core.test.ts`: Rangkaian 7 test suite menguji snapshot nominal tagihan, alokasi atomis, penolakan over-allocation, perlindungan tagihan VOID, pembentukan otomatis BKU & kwitansi, dan isolasi tenant.
+* `02_DECISIONS/ADR.md`: Menambahkan ADR-014 (Financial Historical Data Integrity and Dynamic Calculated Balances).
+
+### Changed
+* `prisma/schema.prisma`:
+  * Model `Institution`: Menambahkan relasi `feeCategories`, `studentCharges`, `paymentTransactions`, `paymentAllocations`, `cashbookEntries`, `receipts`.
+  * Model `User`: Menambahkan relasi `createdCashbookEntries`, `issuedReceipts`, `receivedPayments`.
+  * Model `Student`: Menambahkan relasi `studentCharges`, `paymentTransactions`.
+  * Model `AcademicYear`: Menambahkan relasi `studentCharges`.
+  * Menambahkan model `FeeCategory`, `StudentCharge`, `PaymentTransaction`, `PaymentAllocation`, `CashbookEntry`, dan `Receipt` dengan compound unique keys `@@unique([paymentTransactionId, institutionId])`.
+* `src/components/nav-header.tsx`: Menambahkan tautan navigasi ke `/finance` ("Keuangan") dengan ikon `CreditCard`.
+
+---
+
 ## [2026-09-20] - Phase 3: Attendance Core (AttendanceSession, AttendanceRecord, Sacred Enrollment, Immutability) (IMPLEMENTED / VERIFIED)
 
 ### Added

@@ -3,13 +3,19 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Calendar, School, BookOpen, GraduationCap, Briefcase, ClipboardCheck } from "lucide-react";
+import { Users, Calendar, School, BookOpen, GraduationCap, Briefcase, ClipboardCheck, MessageSquare, CreditCard, FileCheck2, Award, BookMarked, Home } from "lucide-react";
 
 export function NavHeader({ subtitle }: { subtitle?: string }) {
   const pathname = usePathname();
 
   const navLinks = [
+    { href: "/tahfidz", label: "Tahfidz", icon: BookMarked },
+    { href: "/dormitories", label: "Asrama", icon: Home },
+    { href: "/assessments", label: "Penilaian", icon: FileCheck2 },
+    { href: "/reports", label: "Raport", icon: Award },
+    { href: "/finance", label: "Keuangan", icon: CreditCard },
     { href: "/attendance", label: "Absensi", icon: ClipboardCheck },
+    { href: "/notifications", label: "Outbox WA", icon: MessageSquare },
     { href: "/students", label: "Buku Induk", icon: Users },
     { href: "/academic-years", label: "Tahun Ajaran", icon: Calendar },
     { href: "/classrooms", label: "Rombel", icon: School },

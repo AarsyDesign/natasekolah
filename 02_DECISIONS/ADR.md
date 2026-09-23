@@ -156,3 +156,59 @@
   6. **Teacher Resource-Scope Authorization:**
      Guru (`TEACHER`) hanya berhak melihat, membuka, mengisi, dan menutup sesi untuk `TeacherAssignment` miliknya sendiri (`assignment.teacherId = session.userId`). Guru dilarang keras mengakses atau memodifikasi absensi guru lain (`AttendanceAccessDeniedError`). Admin dan Kepala Sekolah (`academic:manage` / `attendance:manage`) berhak mengakses seluruh sesi dalam tenant.
 * **Konsekuensi:** Histori kehadiran siswa tersimpan abadi dan dapat dipertanggungjawabkan, bebas dari korupsi data historis kenaikan kelas, kebal dari manipulasi retroaktif setelah sesi ditutup, serta tenant isolation dan teacher scope terlindungi di seluruh lapisan sistem.
+
+---
+
+## ADR-014: Financial Historical Data Integrity and Dynamic Calculated Balances
+* **Status:** Diterima (Accepted)
+* **Konteks:** Pada Phase 4 (Finance Core), sistem mengelola iuran sekolah/pesantren, kewajiban pembayaran siswa (`StudentCharge`), transaksi penerimaan kasir (`PaymentTransaction`), alokasi pembayaran (`PaymentAllocation`), Buku Kas Umum (`CashbookEntry`), dan kwitansi (`Receipt`). Seringkali sistem keuangan menyimpan saldo atau total tunggakan secara mutable pada tabel `Student` atau `Institution`. Hal ini berisiko tinggi memicu *race condition*, ketidakcocokan saldo, dan manipulasi data.
+* **Keputusan:**
+  1. **Balance is NOT Source of Truth:** Saldo atau total sisa tagihan **dilarang disimpan sebagai kolom mutable** pada `Student` atau `Institution`. Saldo selalu dihitung secara dinamis dari transaksi:
+     $$\text{Balance} = \sum \text{StudentCharge.amount} - \sum \text{PaymentAllocation.amount}$$
+  2. **Historical Snapshot Amount on StudentCharge:**
+     Ketika `StudentCharge` dibuat dari `FeeCategory`, nominal `amount` pada `StudentCharge` dibekukan sebagai *historical snapshot*. Perubahan nominal pada master `FeeCategory` tidak akan menimpa tagihan historis yang sudah dibuat sebelumnya.
+  3. **Atomic Multi-Entity Payment Orchestration:**
+     Setiap pembayaran kasir dialokasikan secara atomis menggunakan transaksi Prisma (`$transaction`). Pembuatan `PaymentTransaction`, `PaymentAllocation`, pembaruan status `StudentCharge` (`UNPAID` $\rightarrow$ `PARTIAL` $\rightarrow$ `PAID`), pencatatan `CashbookEntry` bertipe `INCOME`, dan penerbitan `Receipt` dieksekusi sebagai unit kerja tunggal. Kegagalan pada salah satu entitas akan membatalkan seluruh rangkaian transaksi (*atomic rollback*).
+  4. **Financial Immutability and No Hard Delete:**
+     Data transaksi pembayaran (`PaymentTransaction`) dan kwitansi (`Receipt`) tidak menyediakan alur `DELETE` atau arbitrary `EDIT`. Koreksi transaksi di masa mendatang dilakukan melalui mekanisme pembatalan `VOID` atau `REVERSAL`.
+  5. **Sequential Atomic Receipt & Number Generation:**
+     Nomor kwitansi (`KW-YYYYMM-XXXXXX`), nomor transaksi (`TRX-YYYYMM-XXXXXX`), dan nomor BKU (`CSH-YYYYMM-XXXXXX`) dihasilkan secara atomis berbasis urutan tanggal dan tenant ID, mencegah *race condition* dan duplikasi nomor.
+* **Konsekuensi:** Integritas keuangan lembaga terjamin 100%, saldo bebas dari korupsi data akibat *race condition*, audit kasir akurat, dan kepatuhan multi-tenant terlindungi ketat.
+
+---
+
+## ADR-015: Formal Academic Core, Assessment Scoring and Frozen Report Card Snapshot
+* **Status:** Diterima (Accepted)
+* **Konteks:** Pada Formal Academic Core, sistem mencatat rencana penilaian akademik (`Assessment`), penilaian berbasis roster kesiswaan (`AssessmentScore`), kalkulasi agregasi nilai akhir per mata pelajaran, dan buku raport siswa (`ReportCard`). Sistem raport konvensional seringkali melakukan live query terhadap nilai yang terus berubah. Masalah timbul ketika raport telah diserahkan kepada orang tua, namun di kemudian hari guru mengubah nilai tugas lampau atau siswa berpindah kelas/tahun ajaran, menyebabkan isi raport berubah secara retroaktif tanpa jejak.
+* **Keputusan:**
+  1. **Assessment Bound to Quartet TeacherAssignment:**
+     Penilaian akademik tidak berdiri bebas, melainkan terikat pada `TeacherAssignment`. Guru (`TEACHER`) hanya berhak membuat assessment dan menginput nilai untuk rombel dan mapel yang ditugaskan kepadanya.
+  2. **Strict Enrollment-Derived Grading:**
+     Pencatatan nilai siswa (`AssessmentScore`) wajib memverifikasi pendaftaran aktif siswa (`Enrollment`) pada rombel dan tahun ajaran penugasan. Upaya menginput nilai siswa luar rombel ditolak keras.
+  3. **Two-Stage Report Card Lifecycle (DRAFT vs PUBLISHED):**
+     - `DRAFT`: Nilai dihitung secara dinamis dari seluruh assessment yang tersedia. Digunakan selama proses review dan koreksi oleh guru/wali kelas.
+     - `PUBLISHED`: Raport diterbitkan resmi dan dibekukan.
+  4. **Frozen Historical Snapshot (Immutable Published Report):**
+     Saat berstatus `PUBLISHED`, seluruh informasi murid, rombel, tahun ajaran, semester, nilai per mata pelajaran, predikat, dan rekap kehadiran dibekukan ke dalam kolom `frozenData` (JSON snapshot). Operasi pembacaan raport terbit selalu mengutamakan `frozenData`. Nilai raport yang sudah terbit dijamin 100% tidak akan pernah berubah meskipun nilai assessment diubah atau dihapus di kemudian hari.
+  5. **No Duplicate Publication:**
+     Raport yang sudah berstatus `PUBLISHED` ditolak secara permanen jika dicoba untuk diterbitkan ulang (`ReportCardAlreadyPublishedError`).
+* **Konsekuensi:** Akuntabilitas nilai akademik dan rekam jejak raport siswa terjamin secara permanen dan sah secara hukum/institusional, bebas dari korupsi data akibat perubahan nilai masa lalu, dan kepatuhan multi-tenant terlindungi di seluruh tingkatan.
+
+---
+
+## ADR-016: Pesantren & Tahfidz Living Core, Mutaba'ah Enrollment Integrity, and Single Attendance Engine
+* **Status:** Diterima (Accepted)
+* **Konteks:** Pada Phase 6 (Pesantren & Tahfidz Living Core), platform membutuhkan modul mata pelajaran kepesantrenan (diniyah, kitab kuning), mutaba'ah tahfidz Al-Qur'an harian, manajemen asrama (gedung, kamar, kapasitas, dan riwayat penempatan), serta presensi asrama santri. Terdapat godaan umum dalam pengembangan software untuk menduplikasi tabel mata pelajaran, menyimpan penempatan kamar langsung di kolom siswa (`Student.roomId`), atau membangun mesin absensi kedua khusus asrama yang terpisah dari absensi sekolah.
+* **Keputusan:**
+  1. **Backward-Compatible Subject Category Extension:**
+     Mata pelajaran diniyah, kitab, tahsin, tajwid, fiqih, dll. diintegrasikan langsung pada model `Subject` yang ada menggunakan nilai kategori baru (`DINIAH`, `KITAB`, `TAHSIN`, `TAJWID`, `AKHLAQ`, `FIQIH`, `AQIDAH`, `HADITS`, `LAINNYA`), tanpa membuat tabel `PesantrenSubject` duplikat.
+  2. **Tahfidz Mutaba'ah Bound to Sacred Enrollment:**
+     Setiap rekaman hafalan (`TahfidzRecord`) wajib menunjuk `enrollmentId` aktif saat santri menyetorkan ziyadah atau muraja'ah. Catatan hafalan historis tetap merujuk secara akurat pada konteks tahun ajaran dan kelas santri saat itu, bahkan setelah santri naik kelas, lulus, atau berganti ustadz pembimbing.
+  3. **Zero Client Authority on Recorder Identity:**
+     Atribut `recordedBy` pada `TahfidzRecord` diekstrak secara mutlak dari sesi server (`ctx.userId`), menjamin santri atau pihak luar tidak dapat memalsukan nama ustadz pengampu.
+  4. **Dormitory Sacred History via Assignment Model:**
+     Penempatan santri ke kamar asrama **dilarang keras disimpan di kolom statis `Student.roomId`**. Sistem menggunakan model `StudentDormitoryAssignment` dengan status `ACTIVE` dan `ENDED`, mencatat tanggal mulai dan tanggal selesai. Kapasitas kamar divalidasi secara ketat dan santri dilarang memiliki lebih dari 1 penempatan aktif secara bersamaan.
+  5. **Single Attendance Engine Reused for Living:**
+     Absensi asrama tidak membangun mesin kedua yang terpisah. Model `AttendanceSession` diperluas dengan diskriminator `context` (`ACADEMIC` atau `LIVING`) dan relasi opsional `dormitoryRoomId` berpasangan dengan `institutionId`. Presensi asrama menggunakan `AttendanceRecord` yang sama dengan penegakan integritas compound foreign keys dan validasi status penghuni kamar aktif.
+* **Konsekuensi:** Arsitektur sistem tetap ramping dan kohesif (*DRY - Don't Repeat Yourself*), seluruh rekam jejak santri di sekolah maupun asrama terintegrasi dalam *One Student, One Identity*, dan batas keamanan multi-tenant terjaga konsisten di semua alur.
+

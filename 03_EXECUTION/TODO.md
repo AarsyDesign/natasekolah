@@ -159,3 +159,151 @@
   - [x] Next.js Turbopack build PASS (`next build`, 11 routes).
   - [x] Prisma validation PASS (`prisma validate`).
 
+---
+
+## Phase 4 — Communication Engine & WhatsApp Outbox Pattern (COMPLETE)
+
+- [x] **4.1 NotificationOutbox Schema & Relational Hardening:**
+  - [x] Model `NotificationOutbox` di `prisma/schema.prisma` terikat pada `institutionId` (`@@unique([id, institutionId])`).
+  - [x] Status lifecycle (`PENDING`, `PROCESSING`, `DELIVERED`, `FAILED`, `CANCELLED`) & tracking `nextRetryAt` / `attempts`.
+
+- [x] **4.2 Zod Validation & Phone Sanitizer:**
+  - [x] Sanitizer nomor telepon seluler Indonesia (`sanitizeIndonesianPhone`: format `628...`).
+  - [x] Skema `queueNotificationInputSchema`, `notificationFilterSchema`, `whatsappProviderConfigSchema` di `src/lib/validation/notification.ts`.
+
+- [x] **4.3 WhatsApp Gateway Abstraction:**
+  - [x] Interface `IWhatsAppProvider`.
+  - [x] Implementasi `DeepLinkWhatsAppProvider` (bebas biaya/offline `https://wa.me/...`).
+  - [x] Implementasi `FonnteWhatsAppProvider` (Fonnte Gateway API).
+  - [x] Implementasi `WahaWhatsAppProvider` (WAHA Gateway API).
+  - [x] Factory `getWhatsAppProvider()`.
+
+- [x] **4.4 Outbox Domain Services & Event Helpers:**
+  - [x] Template renderer `renderNotificationMessage` di `src/lib/notification/templates.ts`.
+  - [x] Domain service `outbox-service.ts` (`queueNotification`, `processOutboxQueue` exponential backoff retry `2^attempts * 60s`, `listOutboxNotifications`, `cancelNotification`).
+  - [x] Event helpers `events.ts` (`notifyPaymentCompleted`, `notifyAttendanceAlert`, `notifyGuardianInvitation`).
+
+- [x] **4.5 Server Actions & Mobile-First Outbox UI:**
+  - [x] Server actions di `src/actions/notification.ts`.
+  - [x] Halaman antarmuka `/notifications`: Dashboard outbox, pencarian nomor/pesan, filter status, pemroses antrean latar belakang, tombol WA DeepLink langsung.
+  - [x] Integrasi navigasi `NavHeader` dengan ikon `MessageSquare`.
+
+- [x] **4.6 Verifikasi & Quality Gate Milestone:**
+  - [x] Automated unit tests baru di `test/communication-engine.test.ts`.
+  - [x] 183 total automated tests PASS (100% across 9 test suites).
+  - [x] TypeScript 0 error (`tsc --noEmit`).
+  - [x] Next.js Turbopack build PASS (`next build`, 13 routes).
+  - [x] Prisma validation PASS (`prisma validate`).
+
+---
+
+## Phase 4 — Finance Core (COMPLETE)
+
+- [x] **4.1 Finance Core Models & Relational Hardening:**
+  - [x] Model `FeeCategory`, `StudentCharge`, `PaymentTransaction`, `PaymentAllocation`, `CashbookEntry`, dan `Receipt` di `prisma/schema.prisma`.
+  - [x] Compound unique index `@@unique([paymentTransactionId, institutionId])` pada 1-to-1 relations (`CashbookEntry` & `Receipt`).
+  - [x] Compound foreign key `[studentId, institutionId]`, `[feeCategoryId, institutionId]`, `[paymentTransactionId, institutionId]`, `[studentChargeId, institutionId]`.
+
+- [x] **4.2 Zod Validation Schemas:**
+  - [x] Validasi input di `src/lib/validation/finance.ts` (`feeCategoryInputSchema`, `studentChargeInputSchema`, `bulkChargeInputSchema`, `paymentTransactionInputSchema`, `paymentAllocationInputSchema`, `cashbookEntryInputSchema`, `receiptQuerySchema`).
+
+- [x] **4.3 Domain Services & Atomic Payment Orchestrator:**
+  - [x] `fee-category-service.ts` (Master tarif & status aktif/nonaktif).
+  - [x] `charge-service.ts` (Kewajiban tagihan snapshot nominal & pembatalan VOID).
+  - [x] `cashbook-service.ts` (Pencatatan Buku Kas Umum INCOME/EXPENSE & saldo terhitung).
+  - [x] `receipt-service.ts` (Penomoran atomis `KW-YYYYMM-XXXXXX` & generator bukti penerimaan).
+  - [x] `payment-service.ts` (Orchestrator atomis Prisma `$transaction` memproses pembayaran, alokasi tagihan, update status `UNPAID` -> `PARTIAL` -> `PAID`, pembuatan kas masuk `INCOME`, dan penerbitan `Receipt`).
+
+- [x] **4.4 Server Actions & Mobile-First UI:**
+  - [x] 18 Server Actions terproteksi di `src/actions/finance.ts`.
+  - [x] `/finance`: Dashboard Keuangan (Ringkasan Realtime Total Tagihan, Terbayar, Sisa Tagihan, Penerimaan Hari Ini, Saldo BKU).
+  - [x] `/finance/fees`: Master Katalog Biaya.
+  - [x] `/finance/charges`: Manajemen & Pembuatan Tagihan Siswa.
+  - [x] `/finance/payments`: Kasir Pembayaran, Alokasi Multi-Tagihan, & Modal Kwitansi Resmi.
+  - [x] `/finance/cashbook`: Buku Kas Umum (BKU) Masuk/Keluar.
+  - [x] Navigasi terpadu di `NavHeader` dengan ikon `CreditCard`.
+
+- [x] **4.5 Verifikasi & Quality Gate Milestone:**
+  - [x] 7 suite test baru di `test/finance-core.test.ts`.
+  - [x] 190 total automated tests PASS (100% across 10 test suites).
+  - [x] TypeScript 0 error (`tsc --noEmit`).
+  - [x] Next.js Turbopack build PASS (`next build`, 18 routes).
+  - [x] Prisma validation PASS (`prisma validate`).
+
+---
+
+## Phase 5 — Formal Academic Core (COMPLETE)
+
+- [x] **5.1 Formal Academic Models & Database Integrity:**
+  - [x] Model `Assessment`, `AssessmentScore`, `ReportCard`, `ReportCardSubject` di `prisma/schema.prisma`.
+  - [x] Relasi kuartet `TeacherAssignment` -> `Assessment` -> `AssessmentScore`.
+  - [x] Compound unique keys `@@unique([id, institutionId])`, `@@unique([assessmentId, studentId])`, dan `@@unique([enrollmentId, semester])`.
+  - [x] Kolom `frozenData` pada `ReportCard` untuk snapshot historis abadi.
+
+- [x] **5.2 Zod Validation Boundary:**
+  - [x] `createAssessmentInputSchema`, `updateAssessmentInputSchema`, `assessmentFilterSchema`.
+  - [x] `recordScoreInputSchema`, `recordBatchScoresInputSchema`, `scoreFilterSchema`.
+  - [x] `generateReportCardInputSchema`, `publishReportCardInputSchema`, `reportCardFilterSchema`.
+
+- [x] **5.3 Domain Services & Calculation Strategy:**
+  - [x] `assessment-service.ts`: Assessment lifecycle & teacher resource scope guard.
+  - [x] `grade-service.ts`: Roster retrieval, score boundary checks (`0 <= score <= maxScore`), enrollment validation, and atomic batch grading.
+  - [x] `calculation-service.ts`: Extensible calculation strategy (`IGradeCalculationStrategy`), normalisasi 0-100, agregasi per subject, dan penentuan predikat huruf A/B/C/D.
+  - [x] `report-card-service.ts`: Draf raport dinamis & pembekuan permanen (Frozen Snapshot) saat `PUBLISHED`. Proteksi terhadap mutasi nilai retroaktif.
+
+- [x] **5.4 Server Actions & Mobile-First UI:**
+  - [x] 13 Server Actions di `src/actions/formal-academic.ts`.
+  - [x] `/assessments`: Direktori penilaian & modal buat penilaian baru.
+  - [x] `/assessments/[id]`: Roster pengisian nilai siswa massal (batch input) & validasi batas skor.
+  - [x] `/grades`: Rekapitulasi nilai per penilaian & per siswa.
+  - [x] `/reports`: Pengelolaan draf raport, pratinjau buku raport resmi, tombol "Terbitkan & Bekukan (Publish & Freeze)", dan tata letak ramah cetak (`window.print()`).
+  - [x] Integrasi navigasi `NavHeader` dengan tautan "Penilaian" (`FileCheck2`) dan "Raport" (`Award`).
+
+- [x] **5.5 Verifikasi & Quality Gate Milestone:**
+  - [x] 13 automated tests baru di `test/formal-academic.test.ts`.
+  - [x] 203 total automated tests PASS (100% across 11 test suites).
+  - [x] TypeScript 0 error (`tsc --noEmit`).
+  - [x] Next.js Turbopack build PASS (`next build`).
+  - [x] Prisma validation PASS (`prisma validate`).
+
+---
+
+## Phase 6 — Pesantren & Tahfidz Living Core (COMPLETE)
+
+- [x] **6.1 Pesantren & Tahfidz Living Database Models:**
+  - [x] Model `TahfidzRecord`, `Dormitory`, `DormitoryRoom`, `StudentDormitoryAssignment` di `prisma/schema.prisma`.
+  - [x] Compound unique keys `@@unique([id, institutionId])`, `@@unique([institutionId, name])` pada Dormitory, `@@unique([dormitoryId, name])` pada DormitoryRoom.
+  - [x] Perluasan `AttendanceSession` dengan `context: "ACADEMIC" | "LIVING"` dan `dormitoryRoomId` nullable dengan `@@unique([dormitoryRoomId, attendanceDate])`.
+  - [x] Compound foreign keys PostgreSQL untuk isolasi multi-tenant mutlak.
+
+- [x] **6.2 Zod Validation Boundary:**
+  - [x] `createTahfidzRecordInputSchema`, `tahfidzRecordFilterSchema` di `src/lib/validation/tahfidz.ts`.
+  - [x] `createDormitoryInputSchema`, `createDormitoryRoomInputSchema`, `assignStudentToRoomInputSchema`, `endDormitoryAssignmentInputSchema`, `dormitoryAssignmentFilterSchema` di `src/lib/validation/dormitory.ts`.
+  - [x] `createLivingAttendanceSessionInputSchema` di `src/lib/validation/attendance.ts`.
+
+- [x] **6.3 Domain Services & Invariants:**
+  - [x] `src/lib/tahfidz/quran.ts`: Metadata 114 surah Al-Qur'an dan validasi rentang ayat (`startAyah >= 1`, `endAyah >= startAyah`, `endAyah <= totalAyahs`).
+  - [x] `src/lib/tahfidz/tahfidz-service.ts`: `createTahfidzRecord` (terikat Student & Enrollment, recordedBy dari session), `getTahfidzRecordById`, `listTahfidzRecords`, `getTahfidzSummary`.
+  - [x] `src/lib/dormitory/dormitory-service.ts`: `createDormitory`, `getDormitoryById`, `listDormitories`, `createDormitoryRoom`, `getDormitoryRoomById`, `assignStudentToRoom` (kapasitas kamar & single active assignment guard), `endDormitoryAssignment`, `listDormitoryAssignments`.
+  - [x] `src/lib/attendance/session-service.ts`: `createLivingAttendanceSession` (context: "LIVING", 1 session per room per day).
+  - [x] `src/lib/attendance/record-service.ts`: Living attendance roster derivation dari `StudentDormitoryAssignment` aktif dan presensi granular.
+
+- [x] **6.4 Server Actions & Mobile-First UI:**
+  - [x] 4 Server Actions di `src/actions/tahfidz.ts`.
+  - [x] 8 Server Actions di `src/actions/dormitory.ts`.
+  - [x] `createLivingAttendanceSessionAction` di `src/actions/attendance.ts`.
+  - [x] `/tahfidz`: Santri mutaba'ah roster & recent activities feed.
+  - [x] `/tahfidz/[studentId]`: Student mutaba'ah history & setoran ziyadah/muraja'ah recording form.
+  - [x] `/dormitories`: Dormitory buildings list, capacity progress bar, modal tambah gedung & kamar.
+  - [x] `/dormitories/[id]`: Rooms list, room occupants list, modal assign student, tombol end assignment, dan tombol "Buka Absensi Asrama".
+  - [x] `NavHeader`: Penambahan tautan navigasi "Tahfidz" (`BookMarked`) dan "Asrama" (`Home`).
+
+- [x] **6.5 Verifikasi & Quality Gate Milestone:**
+  - [x] 26 automated tests baru (9 tests di `test/tahfidz.test.ts` + 17 tests di `test/pesantren-living.test.ts`).
+  - [x] 229 total automated tests PASS (100% across 14 test suites, 0 fail).
+  - [x] TypeScript 0 error (`tsc --noEmit`).
+  - [x] Next.js Turbopack build PASS (`next build`, 23 static & dynamic routes).
+  - [x] Prisma validation PASS (`prisma validate`).
+
+
+

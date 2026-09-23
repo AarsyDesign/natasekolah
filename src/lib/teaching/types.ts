@@ -7,6 +7,16 @@ export const SUBJECT_CATEGORIES = [
   "AGAMA",
   "MULOK",
   "PEMINATAN",
+  // Pesantren / Diniyah Categories (Phase 6)
+  "DINIAH",
+  "KITAB",
+  "TAHSIN",
+  "TAJWID",
+  "AKHLAQ",
+  "FIQIH",
+  "AQIDAH",
+  "HADITS",
+  "LAINNYA",
 ] as const;
 
 export type SubjectCategory = (typeof SUBJECT_CATEGORIES)[number];

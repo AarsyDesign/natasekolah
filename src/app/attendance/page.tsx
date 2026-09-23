@@ -285,15 +285,21 @@ export default function AttendancePage() {
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div>
                     <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">
-                      {activeRoster.assignment.subjectName}
+                      {activeRoster.assignment?.subjectName || activeRoster.dormitoryRoom?.dormitoryName || "Sesi Absensi"}
                     </h1>
                     <p className="mt-0.5 text-xs sm:text-sm text-stone-600 flex items-center gap-2">
                       <School className="h-4 w-4 text-stone-500" />
-                      <span>{activeRoster.assignment.classroomName}</span>
-                      <span>•</span>
-                      <span>TA {activeRoster.assignment.academicYearName}</span>
-                      <span>•</span>
-                      <span>Pengajar: {activeRoster.assignment.teacherName}</span>
+                      {activeRoster.assignment ? (
+                        <>
+                          <span>{activeRoster.assignment.classroomName}</span>
+                          <span>•</span>
+                          <span>TA {activeRoster.assignment.academicYearName}</span>
+                          <span>•</span>
+                          <span>Pengajar: {activeRoster.assignment.teacherName}</span>
+                        </>
+                      ) : activeRoster.dormitoryRoom ? (
+                        <span>Kamar {activeRoster.dormitoryRoom.name}</span>
+                      ) : null}
                     </p>
                   </div>
                   <div className="text-right">

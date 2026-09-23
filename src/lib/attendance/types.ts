@@ -16,6 +16,10 @@ export function isValidAttendanceStatus(status: string): status is AttendanceSta
   return (ATTENDANCE_STATUSES as readonly string[]).includes(status);
 }
 
+export const ATTENDANCE_CONTEXTS = ["ACADEMIC", "LIVING"] as const;
+export type AttendanceContext = (typeof ATTENDANCE_CONTEXTS)[number];
+
+
 /**
  * Pemetaan status absensi internal ke label UI Bahasa Indonesia resmi.
  */
@@ -85,6 +89,17 @@ export class AttendanceSessionAlreadyExistsError extends AttendanceDomainError {
       409
     );
     this.name = "AttendanceSessionAlreadyExistsError";
+  }
+}
+
+export class LivingAttendanceSessionAlreadyExistsError extends AttendanceDomainError {
+  constructor(roomId: string, dateStr: string) {
+    super(
+      `Sesi absensi asrama untuk kamar (${roomId}) pada tanggal ${dateStr} sudah ada. Satu kamar hanya boleh memiliki 1 sesi absensi per hari.`,
+      "DUPLICATE_LIVING_ATTENDANCE_SESSION",
+      409
+    );
+    this.name = "LivingAttendanceSessionAlreadyExistsError";
   }
 }
 

@@ -5,6 +5,7 @@ import { getAuthenticatedTenantContext } from "../lib/auth/service";
 import type { TenantContext } from "../lib/tenant/context";
 import {
   createAttendanceSession,
+  createLivingAttendanceSession,
   getAttendanceSession,
   listAttendanceSessions,
   closeAttendanceSession,
@@ -178,6 +179,21 @@ export async function listAttendanceSessionsAction(query?: unknown) {
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat histori absensi.",
+    };
+  }
+}
+
+export async function createLivingAttendanceSessionAction(input: unknown) {
+  try {
+    const ctx = await getContext();
+    const session = await createLivingAttendanceSession(ctx, input);
+    revalidatePath("/attendance");
+    revalidatePath("/dormitories");
+    return { success: true, data: session };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal membuka sesi absensi asrama.",
     };
   }
 }

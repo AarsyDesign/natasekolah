@@ -35,13 +35,19 @@ export interface AttendanceRosterResult {
   sessionId: string;
   status: string;
   attendanceDate: Date;
-  assignment: {
+  context?: string;
+  assignment?: {
     id: string;
     teacherName: string;
     subjectName: string;
     classroomName: string;
     academicYearName: string;
-  };
+  } | null;
+  dormitoryRoom?: {
+    id: string;
+    name: string;
+    dormitoryName: string;
+  } | null;
   summary: {
     totalEligible: number;
     totalMarked: number;
@@ -81,6 +87,11 @@ export async function getAttendanceRoster(
           academicYear: true,
         },
       },
+      dormitoryRoom: {
+        include: {
+          dormitory: true,
+        },
+      },
       records: true,
     },
   });
@@ -90,43 +101,18 @@ export async function getAttendanceRoster(
   }
 
   // 3. Resource Scope Guard: Guru hanya boleh melihat roster sesinya sendiri
-  const isManager = hasPermission(ctx, "academic:manage");
-  if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
-    throw new AttendanceAccessDeniedError(
-      "Guru tidak diizinkan mengakses roster absensi rekan guru lain."
-    );
+  if (session.context === "LIVING") {
+    // Living context: Authorized via attendance:view
+  } else if (session.teacherAssignment) {
+    const isManager = hasPermission(ctx, "academic:manage");
+    if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
+      throw new AttendanceAccessDeniedError(
+        "Guru tidak diizinkan mengakses roster absensi rekan guru lain."
+      );
+    }
   }
 
-  // 4. Ambil seluruh siswa terdaftar (Enrollment) aktif pada rombel dan tahun ajaran penugasan
-  const enrollments = await prisma.enrollment.findMany({
-    where: {
-      institutionId: ctx.institutionId,
-      academicYearId: session.teacherAssignment.academicYearId,
-      classroomId: session.teacherAssignment.classroomId,
-      status: "ENROLLED",
-      student: {
-        status: "ACTIVE",
-      },
-    },
-    include: {
-      student: {
-        select: {
-          id: true,
-          nis: true,
-          nisn: true,
-          fullName: true,
-          gender: true,
-        },
-      },
-    },
-    orderBy: {
-      student: {
-        fullName: "asc",
-      },
-    },
-  });
-
-  // 5. Petakan record yang telah tersimpan
+  // Petakan record yang telah tersimpan
   const recordsMap = new Map<string, AttendanceRecord>();
   for (const record of session.records) {
     recordsMap.set(record.studentId, record);
@@ -137,6 +123,121 @@ export async function getAttendanceRoster(
   let sick = 0;
   let absent = 0;
   let markedCount = 0;
+
+  // 4A. Penanganan Sesi Asrama (LIVING)
+  if (session.context === "LIVING" && session.dormitoryRoom) {
+    const activeAssignments = await prisma.studentDormitoryAssignment.findMany({
+      where: {
+        institutionId: ctx.institutionId,
+        roomId: session.dormitoryRoom.id,
+        status: "ACTIVE",
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            nis: true,
+            nisn: true,
+            fullName: true,
+            gender: true,
+          },
+        },
+      },
+      orderBy: {
+        student: {
+          fullName: "asc",
+        },
+      },
+    });
+
+    const roster: AttendanceRosterItem[] = activeAssignments.map((a) => {
+      const existing = recordsMap.get(a.student.id);
+      let itemStatus: AttendanceStatus | "UNRECORDED" = "UNRECORDED";
+      let recordId: string | undefined;
+      let note: string | null = null;
+      let markedAt: Date | undefined;
+
+      if (existing) {
+        itemStatus = existing.status as AttendanceStatus;
+        recordId = existing.id;
+        note = existing.note;
+        markedAt = existing.markedAt;
+        markedCount++;
+
+        if (itemStatus === "PRESENT") present++;
+        else if (itemStatus === "EXCUSED") excused++;
+        else if (itemStatus === "SICK") sick++;
+        else if (itemStatus === "ABSENT") absent++;
+      }
+
+      return {
+        studentId: a.student.id,
+        enrollmentId: "",
+        nis: a.student.nis,
+        nisn: a.student.nisn,
+        fullName: a.student.fullName,
+        gender: a.student.gender,
+        recordId,
+        status: itemStatus,
+        note,
+        markedAt,
+      };
+    });
+
+    return {
+      sessionId: session.id,
+      status: session.status,
+      attendanceDate: session.attendanceDate,
+      context: session.context,
+      assignment: null,
+      dormitoryRoom: {
+        id: session.dormitoryRoom.id,
+        name: session.dormitoryRoom.name,
+        dormitoryName: session.dormitoryRoom.dormitory.name,
+      },
+      summary: {
+        totalEligible: activeAssignments.length,
+        totalMarked: markedCount,
+        totalUnrecorded: activeAssignments.length - markedCount,
+        present,
+        excused,
+        sick,
+        absent,
+      },
+      roster,
+    };
+  }
+
+  // 4B. Penanganan Sesi Akademik (ACADEMIC)
+  const enrollments = session.teacherAssignment
+    ? await prisma.enrollment.findMany({
+        where: {
+          institutionId: ctx.institutionId,
+          academicYearId: session.teacherAssignment.academicYearId,
+          classroomId: session.teacherAssignment.classroomId,
+          status: "ENROLLED",
+          student: {
+            status: "ACTIVE",
+          },
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              nis: true,
+              nisn: true,
+              fullName: true,
+              gender: true,
+            },
+          },
+        },
+        orderBy: {
+          student: {
+            fullName: "asc",
+          },
+        },
+      })
+    : [];
 
   const roster: AttendanceRosterItem[] = enrollments.map((enr) => {
     const existing = recordsMap.get(enr.studentId);
@@ -176,13 +277,17 @@ export async function getAttendanceRoster(
     sessionId: session.id,
     status: session.status,
     attendanceDate: session.attendanceDate,
-    assignment: {
-      id: session.teacherAssignment.id,
-      teacherName: session.teacherAssignment.teacher.name,
-      subjectName: session.teacherAssignment.subject.name,
-      classroomName: session.teacherAssignment.classroom.name,
-      academicYearName: session.teacherAssignment.academicYear.name,
-    },
+    context: session.context,
+    assignment: session.teacherAssignment
+      ? {
+          id: session.teacherAssignment.id,
+          teacherName: session.teacherAssignment.teacher.name,
+          subjectName: session.teacherAssignment.subject.name,
+          classroomName: session.teacherAssignment.classroom.name,
+          academicYearName: session.teacherAssignment.academicYear.name,
+        }
+      : null,
+    dormitoryRoom: null,
     summary: {
       totalEligible: enrollments.length,
       totalMarked: markedCount,
@@ -222,6 +327,7 @@ export async function markAttendance(
     },
     include: {
       teacherAssignment: true,
+      dormitoryRoom: true,
     },
   });
 
@@ -234,31 +340,75 @@ export async function markAttendance(
     throw new AttendanceSessionClosedError(session.id);
   }
 
-  // 6. Resource Scope Guard: Guru hanya boleh mengisi sesinya sendiri
-  const isManager = hasPermission(ctx, "academic:manage");
-  if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
-    throw new AttendanceAccessDeniedError(
-      "Guru tidak diizinkan mengubah catatan absensi rekan guru lain."
-    );
+  // 6. Resource Scope Guard: Guru hanya boleh mengisi sesinya sendiri jika konteks akademik
+  if (session.context === "LIVING") {
+    // Living context: authorized via attendance:manage
+  } else if (session.teacherAssignment) {
+    const isManager = hasPermission(ctx, "academic:manage");
+    if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
+      throw new AttendanceAccessDeniedError(
+        "Guru tidak diizinkan mengubah catatan absensi rekan guru lain."
+      );
+    }
   }
 
-  // 7. Domain Invariant: Siswa WAJIB terdaftar (Enrollment aktif) pada rombel & tahun ajaran penugasan
-  const enrollment = await prisma.enrollment.findFirst({
-    where: {
-      institutionId: ctx.institutionId,
-      studentId: sanitized.studentId,
-      academicYearId: session.teacherAssignment.academicYearId,
-      classroomId: session.teacherAssignment.classroomId,
-      status: "ENROLLED",
-      student: {
+  // 7. Domain Invariant: Dapatkan Enrollment yang sah
+  let enrollmentId: string | null = null;
+  if (session.context === "LIVING" && session.dormitoryRoomId) {
+    const assignment = await prisma.studentDormitoryAssignment.findFirst({
+      where: {
+        institutionId: ctx.institutionId,
+        studentId: sanitized.studentId,
+        roomId: session.dormitoryRoomId,
         status: "ACTIVE",
       },
-    },
-  });
+    });
 
-  if (!enrollment) {
+    if (!assignment) {
+      throw new InvalidAttendanceContextError(
+        `Santri (${sanitized.studentId}) tidak terdaftar aktif di kamar asrama sesi ini.`
+      );
+    }
+
+    const latestEnrollment = await prisma.enrollment.findFirst({
+      where: {
+        institutionId: ctx.institutionId,
+        studentId: sanitized.studentId,
+      },
+      orderBy: { enrolledAt: "desc" },
+    });
+
+    if (!latestEnrollment) {
+      throw new InvalidAttendanceContextError(
+        `Santri (${sanitized.studentId}) belum memiliki rekaman Enrollment di lembaga ini.`
+      );
+    }
+    enrollmentId = latestEnrollment.id;
+  } else if (session.teacherAssignment) {
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        institutionId: ctx.institutionId,
+        studentId: sanitized.studentId,
+        academicYearId: session.teacherAssignment.academicYearId,
+        classroomId: session.teacherAssignment.classroomId,
+        status: "ENROLLED",
+        student: {
+          status: "ACTIVE",
+        },
+      },
+    });
+
+    if (!enrollment) {
+      throw new InvalidAttendanceContextError(
+        `Siswa (${sanitized.studentId}) tidak memiliki riwayat pendaftaran aktif (Enrollment) pada rombel dan tahun ajaran penugasan ini.`
+      );
+    }
+    enrollmentId = enrollment.id;
+  }
+
+  if (!enrollmentId) {
     throw new InvalidAttendanceContextError(
-      `Siswa (${sanitized.studentId}) tidak memiliki riwayat pendaftaran aktif (Enrollment) pada rombel dan tahun ajaran penugasan ini.`
+      `Tidak dapat menentukan konteks pendaftaran (Enrollment) untuk siswa (${sanitized.studentId}).`
     );
   }
 
@@ -274,7 +424,7 @@ export async function markAttendance(
       institutionId: ctx.institutionId,
       attendanceSessionId: sanitized.attendanceSessionId,
       studentId: sanitized.studentId,
-      enrollmentId: enrollment.id,
+      enrollmentId,
       status: sanitized.status,
       note: sanitized.note,
       markedAt: new Date(),
@@ -323,6 +473,7 @@ export async function markAttendanceBatch(
     },
     include: {
       teacherAssignment: true,
+      dormitoryRoom: true,
     },
   });
 
@@ -336,41 +487,80 @@ export async function markAttendanceBatch(
   }
 
   // 6. Resource Scope Guard
-  const isManager = hasPermission(ctx, "academic:manage");
-  if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
-    throw new AttendanceAccessDeniedError(
-      "Guru tidak diizinkan mengubah catatan absensi rekan guru lain."
-    );
+  if (session.context === "LIVING") {
+    // Living context: authorized via attendance:manage
+  } else if (session.teacherAssignment) {
+    const isManager = hasPermission(ctx, "academic:manage");
+    if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
+      throw new AttendanceAccessDeniedError(
+        "Guru tidak diizinkan mengubah catatan absensi rekan guru lain."
+      );
+    }
   }
 
-  // 7. Domain Invariant: Ambil seluruh enrollment siswa yang sah untuk assignment ini
-  const eligibleEnrollments = await prisma.enrollment.findMany({
-    where: {
-      institutionId: ctx.institutionId,
-      academicYearId: session.teacherAssignment.academicYearId,
-      classroomId: session.teacherAssignment.classroomId,
-      status: "ENROLLED",
-      student: {
+  // 7. Domain Invariant: Ambil seluruh enrollment siswa yang sah
+  const enrollmentByStudentId = new Map<string, string>();
+
+  if (session.context === "LIVING" && session.dormitoryRoomId) {
+    const activeAssignments = await prisma.studentDormitoryAssignment.findMany({
+      where: {
+        institutionId: ctx.institutionId,
+        roomId: session.dormitoryRoomId,
         status: "ACTIVE",
       },
-    },
-    select: {
-      id: true,
-      studentId: true,
-    },
-  });
+      include: {
+        student: {
+          include: {
+            enrollments: {
+              orderBy: { enrolledAt: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
 
-  const enrollmentByStudentId = new Map<string, string>();
-  for (const enr of eligibleEnrollments) {
-    enrollmentByStudentId.set(enr.studentId, enr.id);
-  }
+    for (const a of activeAssignments) {
+      if (a.student.enrollments.length > 0) {
+        enrollmentByStudentId.set(a.studentId, a.student.enrollments[0].id);
+      }
+    }
 
-  // Validasi bahwa seluruh siswa dalam batch adalah siswa sah rombel ini
-  for (const item of sanitized.records) {
-    if (!enrollmentByStudentId.has(item.studentId)) {
-      throw new InvalidAttendanceContextError(
-        `Siswa (${item.studentId}) bukan anggota terdaftar pada rombel dan tahun ajaran sesi ini.`
-      );
+    for (const item of sanitized.records) {
+      if (!enrollmentByStudentId.has(item.studentId)) {
+        throw new InvalidAttendanceContextError(
+          `Santri (${item.studentId}) bukan penghuni aktif di kamar asrama sesi ini.`
+        );
+      }
+    }
+  } else if (session.teacherAssignment) {
+    const eligibleEnrollments = await prisma.enrollment.findMany({
+      where: {
+        institutionId: ctx.institutionId,
+        academicYearId: session.teacherAssignment.academicYearId,
+        classroomId: session.teacherAssignment.classroomId,
+        status: "ENROLLED",
+        student: {
+          status: "ACTIVE",
+        },
+      },
+      select: {
+        id: true,
+        studentId: true,
+      },
+    });
+
+    for (const enr of eligibleEnrollments) {
+      enrollmentByStudentId.set(enr.studentId, enr.id);
+    }
+
+    // Validasi bahwa seluruh siswa dalam batch adalah siswa sah rombel ini
+    for (const item of sanitized.records) {
+      if (!enrollmentByStudentId.has(item.studentId)) {
+        throw new InvalidAttendanceContextError(
+          `Siswa (${item.studentId}) bukan anggota terdaftar pada rombel dan tahun ajaran sesi ini.`
+        );
+      }
     }
   }
 
@@ -438,7 +628,7 @@ export async function getAttendanceRecords(
   }
 
   const isManager = hasPermission(ctx, "academic:manage");
-  if (!isManager && session.teacherAssignment.teacherId !== ctx.userId) {
+  if (!isManager && session.teacherAssignment && session.teacherAssignment.teacherId !== ctx.userId) {
     throw new AttendanceAccessDeniedError(
       "Guru tidak diizinkan mengakses rekaman absensi rekan guru lain."
     );

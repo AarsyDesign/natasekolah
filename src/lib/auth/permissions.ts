@@ -87,6 +87,14 @@ export const PERMISSIONS = [
   "report:view",
   "report:manage",
 
+  // Tahfidz & Quran Domain
+  "tahfidz:view",
+  "tahfidz:manage",
+
+  // Dormitory & Pesantren Living Domain
+  "dormitory:view",
+  "dormitory:manage",
+
   // Guardian Management Domain (Operasi staf mengelola/mengundang wali)
   "guardian:view",
   "guardian:manage",
@@ -175,6 +183,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "classroom:manage",
     "report:view",
     "report:manage",
+    "tahfidz:view",
+    "tahfidz:manage",
+    "dormitory:view",
+    "dormitory:manage",
     "guardian:view",
     "guardian:manage",
     "institution:view",
@@ -193,6 +205,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "classroom:view",
     "report:view",
     "report:manage",
+    "tahfidz:view",
+    "dormitory:view",
     "guardian:view",
     "institution:view",
     "institution:manage",
@@ -213,6 +227,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "classroom:manage",
     "report:view",
     "report:manage",
+    "tahfidz:view",
+    "tahfidz:manage",
+    "dormitory:view",
+    "dormitory:manage",
     "guardian:view",
     "institution:view",
     "settings:view",
@@ -230,6 +248,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "classroom:view",
     "classroom:manage",
     "report:view",
+    "tahfidz:view",
+    "tahfidz:manage",
+    "dormitory:view",
+    "dormitory:manage",
     "guardian:view",
     "guardian:manage",
     "institution:view",
@@ -242,6 +264,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "attendance:manage",
     "classroom:view",
     "report:view",
+    "tahfidz:view",
+    "tahfidz:manage",
+    "dormitory:view",
   ],
   FINANCE_STAFF: [
     "student:view",

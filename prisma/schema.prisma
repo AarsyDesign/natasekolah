@@ -40,6 +40,21 @@ model Institution {
   auditLogs           AuditLog[]
   attendanceSessions  AttendanceSession[]
   attendanceRecords   AttendanceRecord[]
+  notificationOutbox  NotificationOutbox[]
+  feeCategories       FeeCategory[]
+  studentCharges      StudentCharge[]
+  paymentTransactions PaymentTransaction[]
+  paymentAllocations  PaymentAllocation[]
+  cashbookEntries     CashbookEntry[]
+  receipts            Receipt[]
+  assessments         Assessment[]
+  assessmentScores    AssessmentScore[]
+  reportCards         ReportCard[]
+  reportCardSubjects  ReportCardSubject[]
+  tahfidzRecords      TahfidzRecord[]
+  dormitories         Dormitory[]
+  dormitoryRooms      DormitoryRoom[]
+  dormitoryAssignments StudentDormitoryAssignment[]
 
   @@index([slug])
   @@index([type])
@@ -63,6 +78,11 @@ model User {
   sessions            Session[]
   auditLogs           AuditLog[]
   teacherAssignments  TeacherAssignment[]
+  receivedPayments    PaymentTransaction[]
+  createdCashbookEntries CashbookEntry[]
+  issuedReceipts      Receipt[]
+  publishedReportCards ReportCard[]
+  recordedTahfidz     TahfidzRecord[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, email])
@@ -84,6 +104,8 @@ model AcademicYear {
   classrooms          Classroom[]
   enrollments         Enrollment[]
   teacherAssignments  TeacherAssignment[]
+  studentCharges      StudentCharge[]
+  reportCards         ReportCard[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, name])
@@ -105,6 +127,7 @@ model Classroom {
   academicYear        AcademicYear        @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
   enrollments         Enrollment[]
   teacherAssignments  TeacherAssignment[]
+  reportCards         ReportCard[]
 
   @@unique([id, institutionId])
   @@unique([id, academicYearId, institutionId])
@@ -137,6 +160,12 @@ model Student {
   enrollments     Enrollment[]
   guardians       GuardianStudent[]
   attendanceRecords AttendanceRecord[]
+  charges         StudentCharge[]
+  payments        PaymentTransaction[]
+  assessmentScores AssessmentScore[]
+  reportCards     ReportCard[]
+  tahfidzRecords  TahfidzRecord[]
+  dormitoryAssignments StudentDormitoryAssignment[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, nis])
@@ -163,6 +192,9 @@ model Enrollment {
   academicYear    AcademicYear   @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
   classroom       Classroom      @relation(fields: [classroomId, academicYearId, institutionId], references: [id, academicYearId, institutionId], onDelete: Cascade)
   attendanceRecords AttendanceRecord[]
+  assessmentScores AssessmentScore[]
+  reportCards     ReportCard[]
+  tahfidzRecords  TahfidzRecord[]
 
   // 1 siswa hanya memiliki 1 rekaman rombel per tahun ajaran
   @@unique([studentId, academicYearId])
@@ -299,6 +331,7 @@ model Subject {
 
   institution         Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   teacherAssignments  TeacherAssignment[]
+  reportCardSubjects  ReportCardSubject[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, code])
@@ -324,6 +357,7 @@ model TeacherAssignment {
   academicYear    AcademicYear   @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
   classroom       Classroom      @relation(fields: [classroomId, academicYearId, institutionId], references: [id, academicYearId, institutionId], onDelete: Cascade)
   attendanceSessions AttendanceSession[]
+  assessments     Assessment[]
 
   @@unique([id, institutionId])
   @@unique([teacherId, subjectId, classroomId, academicYearId])
@@ -337,12 +371,14 @@ model TeacherAssignment {
 // PHASE 3 — ATTENDANCE CORE
 // -------------------------------------------------------------
 
-// Attendance Session (Sesi Absensi Guru per Penugasan dan Tanggal)
+// Attendance Session (Sesi Absensi Guru per Penugasan dan Tanggal / Asrama)
 model AttendanceSession {
   id                  String             @id @default(cuid())
   institutionId       String
-  teacherAssignmentId String
-  attendanceDate      DateTime           // Tanggal absensi akademik (UTC Date)
+  teacherAssignmentId String?
+  dormitoryRoomId     String?
+  context             String             @default("ACADEMIC") // ACADEMIC | LIVING
+  attendanceDate      DateTime           // Tanggal absensi akademik / asrama (UTC Date)
   status              String             @default("OPEN") // OPEN | CLOSED
   openedAt            DateTime           @default(now())
   closedAt            DateTime?
@@ -350,14 +386,18 @@ model AttendanceSession {
   updatedAt           DateTime           @updatedAt
 
   institution         Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  teacherAssignment   TeacherAssignment  @relation(fields: [teacherAssignmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  teacherAssignment   TeacherAssignment? @relation(fields: [teacherAssignmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  dormitoryRoom       DormitoryRoom?     @relation(fields: [dormitoryRoomId, institutionId], references: [id, institutionId], onDelete: Cascade)
   records             AttendanceRecord[]
 
   @@unique([id, institutionId])
   @@unique([teacherAssignmentId, attendanceDate])
+  @@unique([dormitoryRoomId, attendanceDate])
   @@index([institutionId, attendanceDate])
   @@index([institutionId, status])
+  @@index([institutionId, context])
   @@index([institutionId, teacherAssignmentId])
+  @@index([institutionId, dormitoryRoomId])
   @@map("attendance_sessions")
 }
 
@@ -387,4 +427,397 @@ model AttendanceRecord {
   @@index([institutionId, status])
   @@map("attendance_records")
 }
+
+// -------------------------------------------------------------
+// PHASE 4 — COMMUNICATION ENGINE & NOTIFICATION OUTBOX
+// -------------------------------------------------------------
+
+model NotificationOutbox {
+  id              String         @id @default(cuid())
+  institutionId   String
+  channel         String         @default("WHATSAPP") // WHATSAPP | EMAIL | SMS
+  recipient       String         // Phone number / WA destination (e.g. "628123456789")
+  templateKey     String         // PAYMENT_RECEIPT | ATTENDANCE_ALERT | GUARDIAN_INVITE | ANNOUNCEMENT
+  payloadJson     String         // Event variables payload (JSON string)
+  status          String         @default("PENDING") // PENDING | PROCESSING | DELIVERED | FAILED | CANCELLED
+  attempts        Int            @default(0)
+  maxAttempts     Int            @default(5)
+  lastAttemptAt   DateTime?
+  nextRetryAt     DateTime?
+  errorMessage    String?
+  providerId      String?        // "fonnte" | "waha" | "deeplink"
+  externalId      String?        // Gateway message reference ID
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@index([institutionId, status])
+  @@index([institutionId, nextRetryAt])
+  @@index([institutionId, recipient])
+  @@map("notification_outbox")
+}
+
+// -------------------------------------------------------------
+// PHASE 4 — FINANCE CORE MODELS
+// -------------------------------------------------------------
+
+// Master Fee Category (Kategori Biaya / Syahriah Lembaga)
+model FeeCategory {
+  id              String          @id @default(cuid())
+  institutionId   String
+  code            String          // e.g. "SPP", "PANGKAL", "SERAGAM"
+  name            String          // e.g. "SPP Syahriah Bulanan"
+  description     String?
+  amount          Float           // Nominal acuan master
+  frequency       String          @default("MONTHLY") // ONE_TIME | MONTHLY | ANNUAL | CUSTOM
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  institution     Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  charges         StudentCharge[]
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, code])
+  @@index([institutionId, isActive])
+  @@map("fee_categories")
+}
+
+// Student Charge (Kewajiban Tagihan Siswa - Snapshot Nominal)
+model StudentCharge {
+  id              String              @id @default(cuid())
+  institutionId   String
+  studentId       String
+  feeCategoryId   String
+  academicYearId  String?
+  period          String?             // e.g. "2026-09"
+  dueDate         DateTime?
+  amount          Float               // Nominal snapshot saat tagihan terbit
+  status          String              @default("UNPAID") // UNPAID | PARTIAL | PAID | VOID
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  institution     Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student         Student             @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  feeCategory     FeeCategory         @relation(fields: [feeCategoryId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  academicYear    AcademicYear?       @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: SetNull)
+  allocations     PaymentAllocation[]
+
+  @@unique([id, institutionId])
+  @@index([institutionId, studentId])
+  @@index([institutionId, status])
+  @@index([institutionId, period])
+  @@map("student_charges")
+}
+
+// Payment Transaction (Penerimaan Kas Pembayaran dari Siswa)
+model PaymentTransaction {
+  id                String              @id @default(cuid())
+  institutionId     String
+  studentId         String
+  transactionNumber String              // e.g. "TRX-202609-000001"
+  paymentDate       DateTime            @default(now())
+  amount            Float               // Total pembayaran yang diterima
+  paymentMethod     String              @default("CASH") // CASH | TRANSFER | OTHER
+  note              String?
+  receivedById      String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  institution       Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student           Student             @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  receivedBy        User                @relation(fields: [receivedById, institutionId], references: [id, institutionId], onDelete: Cascade)
+  allocations       PaymentAllocation[]
+  receipt           Receipt?
+  cashbookEntry     CashbookEntry?
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, transactionNumber])
+  @@index([institutionId, studentId])
+  @@index([institutionId, paymentDate])
+  @@map("payment_transactions")
+}
+
+// Payment Allocation (Alokasi Pembayaran ke Spesifik Tagihan)
+model PaymentAllocation {
+  id                   String             @id @default(cuid())
+  institutionId        String
+  paymentTransactionId String
+  studentChargeId      String
+  amount               Float              // Nominal yang dialokasikan
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  institution          Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  paymentTransaction   PaymentTransaction @relation(fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  studentCharge        StudentCharge      @relation(fields: [studentChargeId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@index([institutionId, paymentTransactionId])
+  @@index([institutionId, studentChargeId])
+  @@map("payment_allocations")
+}
+
+// Cashbook Entry (Buku Kas Umum Lembaga - Pergerakan Kas)
+model CashbookEntry {
+  id                   String              @id @default(cuid())
+  institutionId        String
+  entryNumber          String              // e.g. "CSH-202609-000001"
+  entryDate            DateTime            @default(now())
+  type                 String              // INCOME | EXPENSE
+  amount               Float
+  paymentTransactionId String?             @unique
+  description          String
+  createdById          String
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  institution          Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: SetNull)
+  createdBy            User                @relation(fields: [createdById, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, entryNumber])
+  @@unique([paymentTransactionId, institutionId])
+  @@index([institutionId, entryDate])
+  @@index([institutionId, type])
+  @@map("cashbook_entries")
+}
+
+// Receipt (Kwitansi Bukti Pembayaran Sah)
+model Receipt {
+  id                   String              @id @default(cuid())
+  institutionId        String
+  paymentTransactionId String              @unique
+  receiptNumber        String              // e.g. "KW-202609-000001"
+  issuedAt             DateTime            @default(now())
+  issuedById           String
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  institution          Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  paymentTransaction   PaymentTransaction  @relation(fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  issuedBy             User                @relation(fields: [issuedById, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, receiptNumber])
+  @@unique([paymentTransactionId, institutionId])
+  @@index([institutionId, issuedAt])
+  @@map("receipts")
+}
+
+// -------------------------------------------------------------
+// PHASE 5 — FORMAL ACADEMIC CORE (ASSESSMENT, GRADES & RAPORT)
+// -------------------------------------------------------------
+
+// Assessment (Rencana & Pelaksanaan Penilaian Akademik Guru)
+model Assessment {
+  id                  String             @id @default(cuid())
+  institutionId       String
+  teacherAssignmentId String
+  title               String             // e.g. "Ulangan Harian Bab 1", "UTS Semester Ganjil"
+  type                String             // DAILY | QUIZ | MIDTERM | FINAL | PROJECT | OTHER
+  assessmentDate      DateTime
+  maxScore            Float              @default(100)
+  isPublished         Boolean            @default(false)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  institution         Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  teacherAssignment   TeacherAssignment  @relation(fields: [teacherAssignmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  scores              AssessmentScore[]
+
+  @@unique([id, institutionId])
+  @@index([institutionId, teacherAssignmentId])
+  @@index([institutionId, type])
+  @@map("assessments")
+}
+
+// Assessment Score (Nilai Penilaian per Siswa & Enrollment)
+model AssessmentScore {
+  id                  String             @id @default(cuid())
+  institutionId       String
+  assessmentId        String
+  studentId           String
+  enrollmentId        String
+  score               Float              // >= 0 and <= assessment.maxScore
+  note                String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  institution         Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  assessment          Assessment         @relation(fields: [assessmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  student             Student            @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  enrollment          Enrollment         @relation(fields: [enrollmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([assessmentId, studentId])
+  @@index([institutionId, assessmentId])
+  @@index([institutionId, studentId])
+  @@index([institutionId, enrollmentId])
+  @@map("assessment_scores")
+}
+
+// Report Card (Buku Raport Siswa & Snapshot Hasil Belajar)
+model ReportCard {
+  id                  String              @id @default(cuid())
+  institutionId       String
+  studentId           String
+  enrollmentId        String
+  academicYearId      String
+  classroomId         String
+  semester            String              // ODD | EVEN
+  status              String              @default("DRAFT") // DRAFT | PUBLISHED
+  publishedAt         DateTime?
+  publishedById       String?
+  notes               String?
+  frozenData          String?             // JSON snapshot abadi saat PUBLISHED
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  institution         Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student             Student             @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  enrollment          Enrollment          @relation(fields: [enrollmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  academicYear        AcademicYear        @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  classroom           Classroom           @relation(fields: [classroomId, academicYearId, institutionId], references: [id, academicYearId, institutionId], onDelete: Cascade)
+  publishedBy         User?               @relation(fields: [publishedById, institutionId], references: [id, institutionId], onDelete: SetNull)
+  subjects            ReportCardSubject[]
+
+  @@unique([id, institutionId])
+  @@unique([enrollmentId, semester])
+  @@index([institutionId, studentId])
+  @@index([institutionId, academicYearId, classroomId])
+  @@index([institutionId, status])
+  @@map("report_cards")
+}
+
+// Report Card Subject (Nilai Akhir per Mata Pelajaran dalam Raport)
+model ReportCardSubject {
+  id                  String             @id @default(cuid())
+  institutionId       String
+  reportCardId        String
+  subjectId           String
+  finalScore          Float
+  letterGrade         String?            // A | B | C | D
+  comments            String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  institution         Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  reportCard          ReportCard         @relation(fields: [reportCardId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  subject             Subject            @relation(fields: [subjectId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([reportCardId, subjectId])
+  @@index([institutionId, reportCardId])
+  @@index([institutionId, subjectId])
+  @@map("report_card_subjects")
+}
+
+// -------------------------------------------------------------
+// PHASE 6 — PESANTREN & TAHFIDZ LIVING CORE
+// -------------------------------------------------------------
+
+// Tahfidz Mutaba'ah Record
+model TahfidzRecord {
+  id              String         @id @default(cuid())
+  institutionId   String
+  studentId       String
+  enrollmentId    String
+  date            DateTime       // Tanggal setoran/muraja'ah (UTC Date)
+  surah           Int            // Nomor Surah (1 - 114)
+  surahName       String?        // Nama surah, e.g. "Al-Baqarah"
+  startAyah       Int            // Ayat awal (>= 1)
+  endAyah         Int            // Ayat akhir (>= startAyah)
+  type            String         // SETORAN | MURAJAAH
+  quality         String         // MUMTAZ | JAYYID | MAQBUL | REPEAT
+  note            String?
+  recordedBy      String         // User ID (Ustadz / Penguji)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student         Student        @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  enrollment      Enrollment     @relation(fields: [enrollmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  recorder        User           @relation(fields: [recordedBy, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@index([institutionId, studentId])
+  @@index([institutionId, enrollmentId])
+  @@index([institutionId, date])
+  @@index([institutionId, type])
+  @@map("tahfidz_records")
+}
+
+// Gedung / Kompleks Asrama Santri
+model Dormitory {
+  id              String         @id @default(cuid())
+  institutionId   String
+  name            String         // e.g. "Gedung Abu Bakar Ash-Shiddiq"
+  gender          String?        // L | P
+  description     String?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  rooms           DormitoryRoom[]
+
+  @@unique([id, institutionId])
+  @@unique([institutionId, name])
+  @@index([institutionId, isActive])
+  @@map("dormitories")
+}
+
+// Kamar / Kobong Asrama Santri
+model DormitoryRoom {
+  id              String         @id @default(cuid())
+  institutionId   String
+  dormitoryId     String
+  name            String         // e.g. "Kamar 101"
+  capacity        Int            // Kapasitas maksimum santri
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  dormitory       Dormitory      @relation(fields: [dormitoryId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  assignments     StudentDormitoryAssignment[]
+  attendanceSessions AttendanceSession[]
+
+  @@unique([id, institutionId])
+  @@unique([dormitoryId, name])
+  @@index([institutionId, dormitoryId])
+  @@index([institutionId, isActive])
+  @@map("dormitory_rooms")
+}
+
+// Penempatan Santri di Kamar Asrama (Historical Sacred History)
+model StudentDormitoryAssignment {
+  id              String         @id @default(cuid())
+  institutionId   String
+  studentId       String
+  roomId          String
+  startDate       DateTime       @default(now())
+  endDate         DateTime?
+  status          String         @default("ACTIVE") // ACTIVE | ENDED | MOVED
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student         Student        @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  room            DormitoryRoom  @relation(fields: [roomId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@index([institutionId, studentId, status])
+  @@index([institutionId, roomId, status])
+  @@map("student_dormitory_assignments")
+}
+
+
+
+
 

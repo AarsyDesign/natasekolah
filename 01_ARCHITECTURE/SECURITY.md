@@ -116,3 +116,41 @@
 * **Immutability of Closed Sessions (Perlindungan Retroaktif):**
   Setelah sesi diubah statusnya menjadi `CLOSED`, seluruh pembaruan atau penambahan kehadiran ditolak secara permanen (`AttendanceSessionClosedError` HTTP 400). Sesi hanya dapat ditutup jika seluruh siswa eligible dalam rombel telah memiliki catatan kehadiran (`AttendanceIncompleteError` HTTP 400). Rekaman kehadiran pada sesi yang ditutup tetap dapat dibaca untuk kebutuhan audit dan pelaporan.
 
+---
+
+## 12. Keamanan Penilaian & Raport Frozen Snapshot (Phase 5)
+* **Teacher Ownership on Assessments:**
+  Guru hanya dapat membuat assessment dan menginput nilai pada penugasan mengajar miliknya sendiri (`teacherId = session.userId`).
+* **Enrollment Scope Verification:**
+  Siswa dari rombel lain ditolak dengan `InvalidEnrollmentScopeError` (HTTP 400).
+* **Frozen Snapshot Immutability:**
+  Raport berstatus `PUBLISHED` menyimpan data secara permanen dalam `frozenData`. Nilai yang diubah kemudian hari tidak merusak raport yang telah diterbitkan.
+
+---
+
+## 13. Keamanan Pesantren, Tahfidz Mutaba'ah & Asrama Living (Phase 6)
+* **Zero Client Authority on RecordedBy:**
+  Identitas pembimbing (`recordedBy`) pada `TahfidzRecord` diekstrak secara mutlak dari sesi server (`ctx.userId`), menolak segala upaya client menyuntikkan ID pencatat palsu.
+* **Tahfidz Tenant Boundary:**
+  Tenant A tidak dapat mencatat hafalan untuk santri Tenant B (`ResourceNotFoundError` 404), dan tidak dapat membaca rekam jejak hafalan santri lembaga lain (`TahfidzRecordNotFoundError` 404).
+* **Student-Enrollment Binding Invariant:**
+  Rekaman mutaba'ah memverifikasi bahwa `enrollmentId` secara fisik cocok dengan `studentId` santri terkait (`StudentEnrollmentMismatchError` 400).
+* **Dormitory Tenant & Capacity Isolation:**
+  Gedung dan kamar asrama diisolasi per tenant. Penempatan santri melarang kamar melebihi kapasitas fisik (`DormitoryRoomCapacityExceededError` 400) dan menolak penempatan ganda aktif untuk santri yang sama (`ActiveDormitoryAssignmentExistsError` 400).
+* **Living Attendance Room Occupancy Guard:**
+  Sesi absensi asrama (`context: "LIVING"`) membatasi presensi hanya pada santri yang berstatus `ACTIVE` sebagai penghuni kamar tersebut (`InvalidAttendanceContextError` 400).
+* **Compound Foreign Keys Hardening:**
+  ```prisma
+  // TahfidzRecord
+  student    Student    @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  recorder   User       @relation(fields: [recordedBy, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  // DormitoryRoom
+  dormitory  Dormitory  @relation(fields: [dormitoryId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  // StudentDormitoryAssignment
+  student    Student       @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  room       DormitoryRoom @relation(fields: [roomId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  ```
+

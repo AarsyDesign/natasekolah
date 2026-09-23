@@ -131,9 +131,17 @@ function LoginForm() {
           </button>
         </form>
 
-        <p className="mt-6 border-t border-[#e5e5e0] pt-4 text-sm leading-6 text-[#52525b]">
-          Belum memiliki akses? Hubungi administrator lembaga Anda.
-        </p>
+        <div className="mt-6 border-t border-[#e5e5e0] pt-4 text-sm leading-6 text-[#52525b] space-y-2">
+          <p>
+            Wali murid memiliki token undangan?{" "}
+            <Link className="font-semibold text-[#0f766e] underline underline-offset-4" href="/wali/aktivasi">
+              Aktivasi portal wali
+            </Link>
+          </p>
+          <p>
+            Belum memiliki akses? Hubungi administrator lembaga Anda.
+          </p>
+        </div>
         <Link className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#0f766e] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f766e] focus-visible:ring-offset-2" href="/">
           Kembali ke informasi NataSekolah
         </Link>
