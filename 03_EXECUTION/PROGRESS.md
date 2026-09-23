@@ -25,11 +25,56 @@
 | **Phase 6** | **Pesantren & Tahfidz Living Core** (Diniyah/Kitab, Tahfidz Mutaba'ah, Asrama & Living Attendance) | **COMPLETE** | 2026-09-23 (229 Tests Pass) |
 | **Phase 7** | **Parent Experience** (PWA Wali Murid, Transparansi Rekap Tagihan) | **COMPLETE** | 2026-09-23 (245 Tests Pass) |
 | **Milestone** | **Operational Admin Experience / Daily Operations** (Command Center, Perlu Perhatian, RBAC Quick Actions & Global Search) | **COMPLETE** | 2026-09-23 (256 Tests Pass) |
+| **Milestone** | **Institution Configuration & Settings** (Profile, Plugins, Dynamic Terminology, Operational Rules, User Management) | **COMPLETE** | 2026-09-23 (273 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-23] - Milestone: Institution Configuration & Settings (Multi-Tenant Profile, Plugin Config, Dynamic Terminology, Operational Rules & User Management) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Memungkinkan NataSekolah dikonfigurasi secara menyeluruh per lembaga tanpa modifikasi source code atau fork codebase, mencakup profil lembaga, kontrol plugin domain, terminologi kultural dinamis, aturan operasional (presensi, keuangan, komunikasi, akademik), dan manajemen pengguna internal terotorisasi.
+* **Implementasi:**
+  1. **Zero-Migration Multi-Tenant Architecture:**
+     * Menggunakan kolom `settingsJson` pada model `Institution` yang sudah tersedia di Prisma schema untuk menyimpan pengaturan terminologi, aturan operasional, serta kontak web & email tanpa perlu destructive migration.
+  2. **Institution Profile Management (`/settings/institution`):**
+     * Menampilkan dan mengedit nama, alamat, nomor telepon, logoUrl, email, dan website.
+     * Slug lembaga dilindungi sebagai read-only untuk menjaga konsistensi domain/subdomain tenant.
+     * Penegakan otorisasi mutlak dengan izin `institution:manage`.
+  3. **Plugin Registry & Configuration (`/settings/plugins`):**
+     * Menggunakan `Institution.enabledPlugins` sebagai single source of truth.
+     * Menyediakan toggle plugin terdaftar: `FORMAL_ACADEMIC`, `PESANTREN_LIVING`, `TAHFIDZ`, `PKBM`.
+     * Plugin `CORE` dilindungi dan tidak dapat dinonaktifkan.
+     * Prinsip zero-data-loss: penonaktifan plugin hanya menyembunyikan UI dan menegakkan error 403 di server, tanpa menghapus data historis domain. Mengaktifkan kembali langsung memulihkan akses data lama.
+  4. **Dynamic Terminology Dictionary (`/settings/terminology`):**
+     * Menyediakan preset terminologi otomatis sesuai jenis lembaga:
+       * Pesantren: Santri, Santri (jamak), Wali Santri, Halaqah, Tahun Ajaran, Syahriah, Ustadz.
+       * Sekolah Formal: Siswa, Siswa (jamak), Wali Murid, Kelas, Tahun Ajaran, SPP, Guru.
+       * Rumah Tahfidz: Santri, Wali Santri, Halaqah, Tahun Ajaran, Infaq / Syahriah, Ustadz / Muhaffizh.
+       * PKBM: Warga Belajar, Wali / Pendamping, Kelompok Belajar, Tahun Ajaran, Biaya Pendidikan, Tutor / Fasilitator.
+     * Memungkinkan kustomisasi per istilah dengan fallback aman ke preset default. Terminologi hanya memengaruhi presentasi UI, bukan semantik database.
+  5. **Operational Rules Settings (`/settings/operations`):**
+     * Pengaturan presensi: batas menit keterlambatan (`lateThresholdMinutes`), kewajiban catatan kehadiran.
+     * Pengaturan keuangan: prefix nomor kwitansi (`receiptNumberPrefix`), jatuh tempo tagihan (`invoiceDueDays`), catatan kaki kwitansi (`receiptFooterNote`).
+     * Pengaturan komunikasi: saklar notifikasi WhatsApp outbox dan pemilihan provider tanpa menyimpan rahasia/kredensial API di database (kredensial tetap di `.env`).
+     * Pengaturan akademik: KKM bawaan (`passingGradeDefault`) dan judul kop cetak raport.
+  6. **User & Role Management (`/settings/users`):**
+     * Daftar pengguna internal lembaga terisolasi tenant (`listManagedUsers`).
+     * Pembaruan multi-role aman dari daftar 6 peran resmi (`ASSIGNABLE_ROLES`).
+     * Pengaktifan/penonaktifan akun pengguna dengan pembatalan sesi instan (`Session.deleteMany`).
+     * Perlindungan diri: pengguna tidak dapat menonaktifkan akun sendiri atau mencabut seluruh role admin dari dirinya sendiri.
+  7. **Settings Layout & Hub (`/settings`):**
+     * Halaman hub terpadu dengan kartu ringkasan untuk setiap seksi pengaturan.
+     * Sub-navigasi responsif (tabs) dengan feedback status simpan/error dan target sentuh $\ge 44\text{px}$.
+  8. **Automated Testing Suite (`test/institution-settings.test.ts`):**
+     * 17 targeted tests komprehensif mencakup isolasi tenant, penegakan izin `institution:manage` dan `staff:manage`, pengalihan plugin aman, preset dan fallback terminologi, validasi aturan operasional, serta pencegahan mutasi role sepihak dan deaktivasi diri.
+* **Testing & Verifikasi Milestone:**
+  * 273 automated tests di 17 file test **PASS 100% (0 fail)**.
+  * TypeScript typecheck (`npx tsc --noEmit`) **PASS 100% (0 errors)**.
+  * Prisma schema validation (`npx prisma validate`) **VALID**.
+  * Next.js production build (`npm run build`) **PASS 100% (39 static & dynamic routes compiled)**.
+
+---
 
 ### [2026-09-23] - Milestone: Operational Admin Experience / Daily Operations (Operational Command Center, Perlu Perhatian, RBAC Quick Actions & Tenant Global Search) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Mentransformasikan NataSekolah dari sekadar kumpulan modul terisolasi menjadi Pusat Komando Operasional Harian (Operational Command Center) bagi admin/operator sekolah dan pondok, menjawab dengan cepat: apa yang perlu dikerjakan hari ini, apa yang belum selesai, ada masalah apa, dan data mana yang butuh perhatian.

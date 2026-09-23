@@ -1,5 +1,31 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Milestone: Institution Configuration & Settings (Multi-Tenant Profile, Plugin Config, Dynamic Terminology, Operational Rules & User Management) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/settings/`: Modul domain konfigurasi dan pengaturan institusi:
+  * `types.ts`: Definisi DTO profil (`InstitutionProfileData`), kamus istilah (`TerminologyDictionary`), aturan operasional (`OperationalSettings`, `OperationalAttendanceSettings`, `OperationalFinanceSettings`, `OperationalCommunicationSettings`, `OperationalAcademicSettings`), konfigurasi terurai (`ParsedInstitutionSettings`), dan entitas pengguna (`ManagedUser`, `ASSIGNABLE_ROLES`, `Role`).
+  * `validation.ts`: Skema validasi Zod dengan sanitasi ketat untuk profil lembaga (`institutionProfileSchema`), kamus istilah (`terminologySchema`), aturan operasional (`operationalSettingsSchema`), mutasi peran (`updateUserRolesSchema`), dan status akun (`toggleUserActiveSchema`).
+  * `terminology.ts`: Kamus preset bawaan (`DEFAULT_SEKOLAH_TERMINOLOGY`, `DEFAULT_PESANTREN_TERMINOLOGY`, `DEFAULT_RUMAH_TAHFIDZ_TERMINOLOGY`, `DEFAULT_PKBM_TERMINOLOGY`) dan helper resolusi kamus terpadu `resolveInstitutionTerminology`.
+  * `institution-service.ts`: Layanan baca/tulis profil, terminologi, dan aturan operasional terisolasi tenant dengan penegakan izin `institution:manage` dan pemanfaatan `settingsJson` zero-migration.
+  * `user-service.ts`: Layanan manajemen staf internal lembaga (`listManagedUsers`, `updateUserRoles`, `toggleUserActiveStatus`) dengan proteksi anti-tampering role, isolasi tenant, dan proteksi dari penonaktifan diri sendiri.
+* `src/actions/settings.ts`: Server Actions terproteksi konteks tenant dan RBAC untuk seluruh mutasi profil, plugin, terminologi, operasional, dan staf.
+* `src/app/settings/`: Halaman dan antarmuka pengaturan terpadu:
+  * `layout.tsx`: Layout pengaturan dengan sub-navigasi tab responsif (Lembaga, Plugin, Terminologi, Operasional, Pengguna & Akses) berstandar WCAG AA dan target sentuh $\ge 44\text{px}$.
+  * `page.tsx`: Pusat Pengaturan (`/settings`) dengan kartu ikhtisar status masing-masing modul.
+  * `institution/page.tsx`: Form profil lembaga (nama, alamat, telepon, logo, email, website) dengan slug terproteksi read-only.
+  * `plugins/page.tsx`: Halaman kontrol aktivasi plugin domain dengan pesan peringatan keamanan data historis.
+  * `terminology/page.tsx`: Editor terminologi dinamis dengan preset kultural (Sekolah, Pesantren, Rumah Tahfidz, PKBM) dan live preview kontekstual.
+  * `operations/page.tsx`: Konfigurasi parameter operasional (toleransi presensi, format kwitansi keuangan, perilaku notifikasi WA, dan KKM akademik).
+  * `users/page.tsx`: Antarmuka manajemen pengguna internal lembaga, dialog edit multi-role, dan modal konfirmasi status akun.
+* `test/institution-settings.test.ts`: Rangkaian 17 automated tests komprehensif mencakup isolasi tenant profil, penegakan izin `institution:manage` dan `staff:manage`, toggling plugin aman tanpa kehilangan data, preset & fallback terminologi dinamis, validasi Zod operasional, dan pencegahan eskalasi role staf.
+
+### Changed
+* `src/components/nav-header.tsx`: Menambahkan tautan menu `Pengaturan` (`/settings`) pada bilah navigasi utama.
+* `03_EXECUTION/PROGRESS.md`: Memperbarui matriks gerbang pengembangan dengan status COMPLETE untuk Milestone Pengaturan Institusi (273 tests PASS).
+
+---
+
 ## [2026-09-23] - Milestone: Operational Admin Experience / Daily Operations (Operational Command Center, Perlu Perhatian, RBAC Quick Actions & Global Search) (IMPLEMENTED / VERIFIED)
 
 ### Added

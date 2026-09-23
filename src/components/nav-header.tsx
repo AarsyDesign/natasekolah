@@ -19,6 +19,7 @@ import {
   BookMarked,
   Home,
   Search,
+  Settings,
 } from "lucide-react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 
@@ -40,6 +41,7 @@ export function NavHeader({ subtitle }: { subtitle?: string }) {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/settings", label: "Pengaturan", icon: Settings },
     { href: "/tahfidz", label: "Tahfidz", icon: BookMarked },
     { href: "/dormitories", label: "Asrama", icon: Home },
     { href: "/assessments", label: "Penilaian", icon: FileCheck2 },
