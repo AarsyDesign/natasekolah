@@ -1,5 +1,23 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Milestone: NataSekolah Design System & Product UX Reset (DESIGN.md v2, Design Tokens, Navigation Contract, Data Density, A11y & Anti-Patterns) (COMPLETE / SPECIFIED)
+
+### Added
+* `DESIGN.md` (v2.0): Spesifikasi dan kontrak arsitektur antarmuka pengguna menyeluruh (24 bagian) mencakup:
+  * Karakter produk: *Clean · Fresh · Calm · Fast · Organized* (Dial `ENERGY 1 / RHYTHM 2 / MOTION 1`, Anti-Slop Mode 1).
+  * Palet semantik berbasis warna alam & kertas administrasi nusantara (Canvas `#fbfbfa`, Surface `#ffffff`, Brand Teal `#0f766e`, Text `#18181b`, dan status fungsional emerald, amber, blue, rose).
+  * Skala tipografi Bahasa Indonesia dengan ukuran teks minimum aman bagi guru senior dan wali murid.
+  * Standar radius terpadu (`rounded-sm` 4px, `rounded-md` 6px, `rounded-lg` 8px, `rounded-xl` 12px) dan pelarangan badge pill `rounded-full`.
+  * Sistem navigasi persisten (*Persistent Application Shell*) dengan hierarki 2-level terinspirasi GitLab Pajamas.
+  * Spesifikasi 15 komponen primitif dan komposit (Button, Input, Select, Checkbox, Switch, Tabs, Card, Table, Badge, Dialog, Dropdown, Tooltip, Toast, Breadcrumb, Pagination).
+  * Standar Data-Dense UI dengan density scale (compact 36px, comfortable 48px, spacious 56px) dan reflow responsif ponsel (*ResourceList* terinspirasi Shopify Polaris).
+  * Prinsip perceived performance (IBM Carbon): skeleton presisi seukuran container target, zero layout shift (CLS = 0), dan pelarangan fullscreen blocking spinner.
+  * Standar aksesibilitas WCAG 2.1 AA (kontras teks 14.5:1, target sentuh min 44px, keyboard accessibility, reduced motion).
+  * Pengalaman spesifik 5 peran pengguna (*Admin, Guru, Bendahara, Wali, Pimpinan*).
+  * Tata kelola implementasi terstruktur tanpa mendestabilkan domain backend atau kode eksisting.
+
+---
+
 ## [2026-09-23] - Milestone: Teacher Workspace / Academic Operations (Teacher Workspace, Class View, Student Academic Summary, Attendance & Assessment Integration, Plugin Guard) (IMPLEMENTED / VERIFIED)
 
 ### Added

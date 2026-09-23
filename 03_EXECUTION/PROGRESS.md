@@ -28,11 +28,43 @@
 | **Milestone** | **Institution Configuration & Settings** (Profile, Plugins, Dynamic Terminology, Operational Rules, User Management) | **COMPLETE** | 2026-09-23 (273 Tests Pass) |
 | **Milestone** | **Finance & Billing Operations** (Fee Categories, Bulk Billing with Duplicate Prevention, Cashier Multi-Charge Counter, Atomic Allocations, Printable Receipts, Cashbook Immutability, Operational Reports & CSV Export) | **COMPLETE** | 2026-09-23 (288 Tests Pass) |
 | **Milestone** | **Teacher Workspace / Academic Operations** (Teacher Workspace `/teacher`, Class View `/teacher/classes/[id]`, Student Academic Summary, Attendance & Assessment Integration, Plugin Guard) | **COMPLETE** | 2026-09-23 (303 Tests Pass) |
+| **Milestone** | **NataSekolah Design System & Product UX Reset** (DESIGN.md v2, Design Tokens, Navigation Contract, Data Density, A11y & Anti-Patterns) | **COMPLETE** | 2026-09-23 (303 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-23] - Milestone: NataSekolah Design System & Product UX Reset (DESIGN.md v2, Design Tokens, Navigation Contract, Data Density, A11y & Anti-Patterns) (COMPLETE / SPECIFIED)
+* **Tujuan:** Menetapkan kontrak arsitektur dan spesifikasi desain antarmuka menyeluruh (*Design System & Product UX Contract*) melalui perombakan `DESIGN.md` menjadi v2.0 yang komprehensif, terstruktur, dan berakar pada karakter produk: **Clean · Fresh · Calm · Fast · Organized** tanpa mengubah arsitektur backend atau mendestabilkan kode aplikasi yang sudah berjalan.
+* **Hasil Kerja & Implementasi Spesifikasi:**
+  1. **Audit UI Eksisting:**
+     * Mengidentifikasi unmount/remount navigasi `NavHeader` pada setiap pergantian halaman akibat belum adanya persistent application shell.
+     * Mengidentifikasi inkonsistensi penggunaan border radius (`rounded-lg`, `rounded-xl`, dan penyalahgunaan `rounded-full` pada badge status).
+     * Mengidentifikasi arbitrary raw color dan gradien banner yang berpotensi melanggar prinsip *ENERGY 1 / MOTION 1*.
+     * Mengidentifikasi risiko overflow horizontal pada tabel data padat saat dibuka di layar ponsel sempit.
+  2. **Riset & Benchmark Open-Source Berkualitas:**
+     * *Shopify Polaris:* Adopsi pola pemisahan tabel interaktif (`IndexTable`) vs ringkasan vertikal ramah ponsel (`ResourceList`), penjajaran data terstandar (angka rata kanan tabular, teks rata kiri).
+     * *GitLab Pajamas:* Adopsi navigasi 2-level terprediksi (Workspace Operasional Harian vs Master Data Lembaga).
+     * *IBM Carbon:* Adopsi skala kepadatan tabel (~36px compact, ~48px comfortable, ~56px spacious) dan skeleton loader presisi seukuran container target untuk eliminasi *Cumulative Layout Shift* (CLS).
+     * *Radix UI / shadcn/ui:* Standar komponen primitif berbasis WAI-ARIA, indikator fokus tegas, dan penelusuran keyboard penuh.
+  3. **Penyusunan DESIGN.md v2 (24 Bagian Lengkap):**
+     * Filosofi & kepribadian produk (*Clean, Fresh, Calm, Fast, Organized*).
+     * Token semantik CSS lengkap (Canvas, Surface, Primary, Foreground, Borders, Semantic Status).
+     * Standar tipografi Bahasa Indonesia dengan ukuran teks minimum yang nyaman bagi guru dan orang tua.
+     * Sistem navigasi lintas perangkat (Desktop, Tablet, Ponsel Bottom Bar) dengan arsitektur *Persistent App Shell*.
+     * Standar 15 komponen inti (Button, Input, Select, Checkbox, Switch, Tabs, Card, Table, Badge, Dialog, Dropdown, Tooltip, Toast, Breadcrumb, Pagination).
+     * Standar penanganan Data-Dense UI dan reflow responsif ponsel.
+     * Standar loading (skeleton only, zero fullscreen spinner), empty state solutif, dan error state manusiawi.
+     * Standar aksesibilitas WCAG 2.1 AA (rasio kontras 5.3:1 - 14.5:1, target sentuh min 44px, keyboard navigation).
+     * Standar motion fungsional (maks 150-200ms, tanpa efek bouncing `scale-95`).
+     * Pengalaman spesifik 5 peran pengguna (*Admin, Guru, Bendahara, Wali, Pimpinan*).
+     * Komposisi halaman standar 4-blok (Header, Metrik, Filter/Kontrol, Area Data).
+     * Pedoman penulisan (Anti-Slop R-02, tanpa em dash, format rupiah/tanggal resmi).
+     * Daftar larangan tegas (*Anti-Patterns*).
+     * Tata kelola implementasi (*Design System Primitives → Composite Components → Role Workspaces*).
+  4. **Zero-Migration & Zero-Disruption Compliance:**
+     * Menegakkan batasan ketat: tidak menambah domain baru, tidak mengubah backend atau skema Prisma, dan tidak melakukan redesign massal mendadak pada fase ini. Seluruh pengujian eksisting (303 tests) tetap lulus 100%.
 
 ### [2026-09-23] - Milestone: Teacher Workspace / Academic Operations (Teacher Workspace, Class View, Student Academic Summary, Attendance & Assessment Integration, Plugin Guard) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Menghadirkan ruang kerja terpadu bagi guru (`/teacher`) untuk menjawab: *"Kelas apa yang saya ajar, apa yang harus saya kerjakan, dan bagaimana perkembangan siswa saya?"* di atas Teaching Core, Attendance Core, dan Formal Academic Core tanpa membuat model database atau engine duplikat.
