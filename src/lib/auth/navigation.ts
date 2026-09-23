@@ -1,10 +1,13 @@
-const DEFAULT_AUTHENTICATED_PATH = "/students";
+export const DEFAULT_AUTHENTICATED_PATH = "/dashboard";
 
 /**
  * Membatasi redirect setelah login pada path internal aplikasi agar parameter
  * query tidak dapat digunakan sebagai open redirect ke situs lain.
  */
-export function getSafePostLoginPath(candidate: string | null | undefined): string {
+export function getSafePostLoginPath(
+  candidate: string | null | undefined,
+  fallback = DEFAULT_AUTHENTICATED_PATH
+): string {
   if (
     candidate &&
     candidate.startsWith("/") &&
@@ -14,5 +17,5 @@ export function getSafePostLoginPath(candidate: string | null | undefined): stri
     return candidate;
   }
 
-  return DEFAULT_AUTHENTICATED_PATH;
+  return fallback;
 }

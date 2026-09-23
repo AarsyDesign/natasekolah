@@ -1,5 +1,26 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Milestone: Operational Admin Experience / Daily Operations (Operational Command Center, Perlu Perhatian, RBAC Quick Actions & Global Search) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/operations/`: Modul domain pusat komando operasional harian:
+  * `types.ts`: Definisi tipe data dashboard (`OperationalDashboardData`, `OperationalDashboardStats`), item perhatian (`OperationalAttentionItem`, `AttentionCategory`, `AttentionSeverity`), aksi cepat (`QuickActionItem`), dan hasil pencarian global (`GlobalSearchResultItem`, `SearchEntityType`).
+  * `dashboard-service.ts`: Layanan agregasi statistik hari ini (siswa aktif, presensi hari ini dibuka vs ditutup, rekap kehadiran, arus kas pembayaran, tagihan jatuh tempo, asesmen akademik, mutaba'ah tahfidz, santri asrama, dan outbox WA) serta deteksi anomali operasional untuk bagian "Perlu Perhatian".
+  * `search-service.ts`: Layanan pencarian cepat multi-entitas (Siswa, NIS, NISN, Rombel, Guru/Staf, dan Wali Murid) terisolasi tenant dan terfilter izin RBAC.
+* `src/actions/operations.ts`: Server Actions terproteksi sesi otentikasi untuk `getOperationalDashboardAction` dan `searchGlobalAction`.
+* `src/components/global-search-dialog.tsx`: Komponen dialog pencarian global responsif dengan pintasan keyboard (`Ctrl+K` / `Cmd+K`, Arrow Up/Down, Enter), penanganan status pemuatan, dan navigasi instan ke entitas target.
+* `src/app/dashboard/page.tsx`: Halaman Operational Command Center (`/dashboard`) terpadu menyajikan 4 seksi: Metrik Hari Ini, Perlu Perhatian Operasional, Aksi Cepat Terotorisasi, dan Status Plugin Lembaga.
+* `test/operations-dashboard.test.ts`: Rangkaian 11 automated tests mencakup isolasi tenant dashboard, isolasi izin RBAC guru vs bendahara, pemfilteran quick action sesuai role, penegakan plugin lembaga, agregasi item perhatian, dan isolasi tenant pada pencarian global.
+
+### Changed
+* `src/lib/auth/navigation.ts`: Memperbarui `DEFAULT_AUTHENTICATED_PATH` menjadi `/dashboard` agar staf internal langsung diarahkan ke Pusat Komando Operasional setelah masuk.
+* `src/components/nav-header.tsx`: Menambahkan tautan navigasi ke `/dashboard`, tombol pencarian cepat dengan badge `Ctrl K`, pintasan keyboard global, dan tautan logo yang mengarah ke dashboard.
+* `src/app/page.tsx`: Menambahkan tombol "Dashboard Operasional" pada header beranda utama.
+* `test/auth-navigation.test.ts`: Memperbarui ekspektasi rute default post-login ke `/dashboard`.
+* `03_EXECUTION/PROGRESS.md`: Memperbarui progres milestone menjadi COMPLETE (256/256 tests PASS, 33 rute terkompilasi).
+
+---
+
 ## [2026-09-23] - Phase 7: Parent Experience / Portal Wali (PWA Mobile-First, ReBAC Read Model, Frozen Report & Multi-Child) (IMPLEMENTED / VERIFIED)
 
 ### Added

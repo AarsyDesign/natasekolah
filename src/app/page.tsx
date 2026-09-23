@@ -131,8 +131,14 @@ export default function VisionPage() {
 
           <div className="flex items-center gap-2">
             <Link
+              href="/dashboard"
+              className="touch-target rounded-lg bg-teal-800 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-teal-700"
+            >
+              Dashboard Operasional
+            </Link>
+            <Link
               href="/students"
-              className="touch-target rounded-lg bg-teal-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-teal-700"
+              className="touch-target rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50"
             >
               Buku Induk
             </Link>

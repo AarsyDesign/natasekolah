@@ -24,11 +24,43 @@
 | **Phase 5** | **Formal Academic Core** (Assessment, AssessmentScore, Grade Calculation, Frozen Report Card) | **COMPLETE** | 2026-09-23 (203 Tests Pass) |
 | **Phase 6** | **Pesantren & Tahfidz Living Core** (Diniyah/Kitab, Tahfidz Mutaba'ah, Asrama & Living Attendance) | **COMPLETE** | 2026-09-23 (229 Tests Pass) |
 | **Phase 7** | **Parent Experience** (PWA Wali Murid, Transparansi Rekap Tagihan) | **COMPLETE** | 2026-09-23 (245 Tests Pass) |
+| **Milestone** | **Operational Admin Experience / Daily Operations** (Command Center, Perlu Perhatian, RBAC Quick Actions & Global Search) | **COMPLETE** | 2026-09-23 (256 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-23] - Milestone: Operational Admin Experience / Daily Operations (Operational Command Center, Perlu Perhatian, RBAC Quick Actions & Tenant Global Search) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Mentransformasikan NataSekolah dari sekadar kumpulan modul terisolasi menjadi Pusat Komando Operasional Harian (Operational Command Center) bagi admin/operator sekolah dan pondok, menjawab dengan cepat: apa yang perlu dikerjakan hari ini, apa yang belum selesai, ada masalah apa, dan data mana yang butuh perhatian.
+* **Implementasi:**
+  1. **Operational Dashboard Service (`src/lib/operations/dashboard-service.ts`):**
+     * Mengagregasi metrik hari ini: jumlah siswa aktif, sesi presensi hari ini (dibuka vs ditutup, rekap hadir/sakit/izin/alpa), arus kas pembayaran hari ini & total tagihan aktif.
+     * Plugin-aware: hanya memuat asesmen & raport jika `FORMAL_ACADEMIC` aktif, mutaba'ah tahfidz jika `TAHFIDZ` aktif, dan santri mukim asrama jika `PESANTREN_LIVING` aktif.
+  2. **Section "Perlu Perhatian" (Operational Attention Aggregation):**
+     * Mendeteksi sesi presensi gantung/belum ditutup (`AttendanceSession.status === "OPEN"`).
+     * Mendeteksi pesan notifikasi WhatsApp outbox yang gagal terkirim (`NotificationOutbox.status === "FAILED"`).
+     * Mendeteksi tagihan santri yang melewati batas jatuh tempo (`dueDate < now()`).
+     * Mendeteksi asesmen akademik draf yang belum dipublikasikan (`isPublished: false`).
+     * Mendeteksi rombel aktif yang belum memiliki penugasan guru pengajar (`TeacherAssignment`).
+     * Mendeteksi buku raport semester yang masih berstatus `DRAFT`.
+     * Setiap item memiliki severity, ringkasan jumlah, dan tombol direct action menuju halaman penyelesaian.
+  3. **Aksi Cepat Terotorisasi (RBAC & Plugin Aware Quick Actions):**
+     * Dihitung secara dinamis di server berdasarkan izin pengguna (`hasPermission`) dan plugin aktif (`isPluginEnabled`).
+     * Menyediakan tombol aksi cepat: Tambah Siswa, Kelola Rombel, Catat Presensi, Input Nilai, Buat Tagihan, Catat Pembayaran, Buka Data Wali, Setoran Tahfidz, Kelola Asrama, dan Tinjau Outbox WA.
+  4. **Pencarian Global Terisolasi Tenant (Global Search / Quick Navigation):**
+     * `src/lib/operations/search-service.ts`: Query multi-entitas cepat (Siswa, NIS, NISN, Rombel, Guru/Staf, dan Wali Murid) dengan isolasi `institutionId` mutlak.
+     * `src/components/global-search-dialog.tsx`: Modal dialog pencarian ramah keyboard (`Ctrl+K` / `Cmd+K`, Arrow Up/Down, Enter), responsif mobile dengan target sentuh $\ge 44\text{px}$.
+  5. **Antarmuka Komando Operasional (`src/app/dashboard/page.tsx` & `src/components/nav-header.tsx`):**
+     * NavHeader diperbarui dengan link Dashboard, tombol pencarian cepat, dan shortcut keyboard.
+     * Default redirect post-login diperbarui menuju `/dashboard`.
+  6. **Automated Testing (`test/operations-dashboard.test.ts`):**
+     * 11 targeted tests komprehensif mencakup isolasi tenant dashboard, isolasi izin RBAC guru vs bendahara, pemfilteran quick action, penegakan plugin lembaga, deteksi item perhatian, dan isolasi tenant pada pencarian global.
+* **Testing & Verifikasi Milestone:**
+  * 256 automated tests di 16 file test **PASS 100% (0 fail)**.
+  * TypeScript typecheck (`npx tsc --noEmit`): **PASS (0 error)**.
+  * Prisma schema validation (`npx prisma validate`): **VALID 🚀**.
+  * Next.js Production Build (`npm run build`): **PASS (33 routes compiled)**.
 
 ### [2026-09-23] - Phase 7: Parent Experience / Portal Wali (PWA Mobile-First, ReBAC Read Model, Frozen Report & Multi-Child) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Membangun antarmuka terpadu wali murid (Portal Wali) berprinsip ReBAC (`GuardianStudent`), menghadirkan transparansi kehadiran, keuangan, mutaba'ah tahfidz, asrama, dan buku raport resmi berbasis frozen snapshot abadi.
