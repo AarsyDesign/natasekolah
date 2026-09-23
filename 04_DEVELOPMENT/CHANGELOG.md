@@ -1,5 +1,60 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Milestone: Finance & Billing Operations (Fee Categories, Bulk Billing, Cashier Multi-Charge Counter, Atomic Allocations, Printable Receipts, Cashbook Immutability, Operational Reports & CSV Export) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/finance/reporting-service.ts`: Layanan laporan operasional keuangan terpadu (`getPaymentSummaryReport`, `getOutstandingSummaryReport`, `getCashflowReport`) berbasis data aktual database terisolasi tenant dan terproteksi izin `finance:view`.
+* `src/lib/finance/export-utils.ts`: Modul client-safe untuk ekspor laporan keuangan ke format CSV terstandarisasi Microsoft Excel dengan penambahan UTF-8 BOM (`\uFEFF`) (`generatePaymentsCSV`, `generateChargesCSV`, `generateCashbookCSV`, `downloadCSV`).
+* `src/app/finance/reports/page.tsx`: Halaman pelaporan keuangan operasional (`/finance/reports`) dengan 3 tab:
+  * *Rekap Pembayaran:* Agregasi penerimaan kasir, total transaksi, rata-rata, breakdown kategori biaya & metode pembayaran, filter rentang tanggal, dan ekspor CSV.
+  * *Tagihan & Tunggakan:* Agregasi piutang, status terbayar vs sisa, tagihan jatuh tempo, tabel rincian santri menunggak dengan hitungan hari keterlambatan, dan ekspor CSV.
+  * *Arus Kas Operasional:* Buku kas umum, arus masuk, arus keluar, saldo bersih kas, dan ekspor CSV.
+* `test/finance-operations.test.ts`: Rangkaian 15 automated integration tests komprehensif mencakup:
+  * Pembuatan tagihan massal berbasis target (seluruh siswa aktif vs per kelas).
+  * Pencegahan duplikasi tagihan (melewati siswa yang sudah memiliki tagihan aktif di periode/kategori yang sama).
+  * Isolasi tenant mutlak pada penagihan dan pembayaran.
+  * Preview siswa eligible vs sudah ditagih (`getTargetStudentsForBilling`).
+  * Perhitungan ringkasan tagihan real-time (`getBillingSummary`).
+  * Pembayaran kasir multi-tagihan secara atomik (`PaymentTransaction`, `PaymentAllocation`, `CashbookEntry`, `Receipt`).
+  * Penolakan over-allocation, tagihan VOID, dan tagihan silang tenant.
+  * Prefix nomor kwitansi kustom dan catatan kaki operasional dari konfigurasi lembaga.
+  * Integritas dan immutabilitas mutasi kas pembayaran kasir serta pencatatan manual operasional.
+  * Agregasi laporan pembayaran, arus kas, dan penegakan izin RBAC `finance:view`.
+
+### Changed
+* `src/lib/validation/finance.ts`:
+  * Menambahkan status `OVERDUE` pada skema filter tagihan.
+  * Menambahkan skema validasi `targetStudentsQuerySchema` untuk live preview pembuatan tagihan.
+  * Menambahkan skema validasi `financialReportFilterSchema` untuk filter periode pelaporan.
+* `src/lib/finance/charge-service.ts`:
+  * Menambahkan pencegahan duplikasi tagihan pada `bulkCreateStudentCharges` dan mengembalikan metadata `{ count, skippedCount, createdForStudentIds }`.
+  * Menambahkan fungsi `getTargetStudentsForBilling` untuk preview kandidat siswa dan deteksi status tagihan eksisting.
+  * Menambahkan fungsi `getBillingSummary` untuk agregasi metrik tagihan total, lunas, sebagian, belum dibayar, dan jatuh tempo.
+  * Memperkaya `listStudentCharges` dengan filter `status: "OVERDUE"` berbasis `dueDate < now` dan sisa tagihan $> 0$.
+* `src/lib/finance/receipt-service.ts`:
+  * Menambahkan pembacaan prefix nomor kwitansi kustom dari `Institution.settingsJson` (`receiptNumberPrefix`, default `KW`) pada `generateUniqueReceiptNumber`.
+  * Menambahkan fungsi `getReceiptDetails` untuk mengambil data kwitansi lengkap bersama profil lembaga dan catatan kaki kwitansi (`receiptFooterNote`).
+* `src/actions/finance.ts`:
+  * Mengekspos Server Actions baru: `getReceiptDetailsAction`, `getTargetStudentsForBillingAction`, `getBillingSummaryAction`, `getPaymentSummaryReportAction`, `getOutstandingSummaryReportAction`, dan `getCashflowReportAction`.
+* `src/app/finance/page.tsx`:
+  * Mengintegrasikan metrik penagihan real-time dan buku kas ke dalam ringkasan dashboard keuangan.
+  * Menambahkan kartu navigasi langsung ke `Laporan & Export Excel` (`/finance/reports`).
+* `src/app/finance/charges/page.tsx`:
+  * Menambahkan kartu ringkasan status operasional (Total Tagihan, Sudah Terbayar, Sebagian, Belum Dibayar, Jatuh Tempo).
+  * Menambahkan modal pembuatan tagihan tunggal dan tagihan massal cerdas dengan live preview target santri.
+  * Menambahkan filter status Jatuh Tempo, dialog konfirmasi pembatalan tagihan (VOID), dan tombol ekspor CSV.
+* `src/app/finance/payments/page.tsx`:
+  * Redesain antarmuka kasir cepat: pencarian instan siswa, daftar tagihan tertunggak, alokasi multi-tagihan otomatis/manual, dan dialog konfirmasi sebelum eksekusi pembayaran.
+  * Modal cetak kwitansi instan yang ramah cetak (`@media print`) dengan kop lembaga, rincian alokasi, stempel lunas, dan catatan kaki operasional.
+  * Fitur ekspor CSV histori pembayaran kasir.
+* `src/app/finance/cashbook/page.tsx`:
+  * Menampilkan badge sumber transaksi: kasir pembayaran (sumber otomatis `PAYMENT`, immutable) vs mutasi manual (`MANUAL`).
+  * Modal pencatatan pengeluaran (EXPENSE) dan pemasukan (INCOME) operasional non-SPP.
+  * Ringkasan saldo kas masuk, kas keluar, saldo bersih, dan penerimaan hari ini.
+  * Fitur ekspor CSV Buku Kas Umum.
+
+---
+
 ## [2026-09-23] - Milestone: Institution Configuration & Settings (Multi-Tenant Profile, Plugin Config, Dynamic Terminology, Operational Rules & User Management) (IMPLEMENTED / VERIFIED)
 
 ### Added

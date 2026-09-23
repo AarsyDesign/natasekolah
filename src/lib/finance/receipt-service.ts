@@ -19,7 +19,24 @@ export async function generateUniqueReceiptNumber(
 ): Promise<string> {
   const client = txPrisma || prisma;
   const dateStr = new Date().toISOString().slice(0, 7).replace("-", ""); // e.g. "202609"
-  const prefix = `KW-${dateStr}-`;
+
+  let customPrefix = "KW";
+  try {
+    const inst = await client.institution.findUnique({
+      where: { id: institutionId },
+      select: { settingsJson: true },
+    });
+    if (inst?.settingsJson) {
+      const parsed = JSON.parse(inst.settingsJson);
+      if (parsed?.operational?.finance?.receiptNumberPrefix) {
+        customPrefix = parsed.operational.finance.receiptNumberPrefix.toUpperCase().trim();
+      }
+    }
+  } catch {
+    // fallback to KW
+  }
+
+  const prefix = `${customPrefix}-${dateStr}-`;
 
   const count = await client.receipt.count({
     where: {
@@ -174,5 +191,73 @@ export async function listReceipts(input?: Partial<ReceiptQueryInput>) {
     page: filter.page,
     limit: filter.limit,
     totalPages: Math.ceil(total / filter.limit) || 1,
+  };
+}
+
+/**
+ * Get comprehensive receipt details with institution branding and operational settings
+ */
+export async function getReceiptDetails(paymentTransactionId: string, txPrisma?: typeof prisma) {
+  const context = requireTenantContext();
+  requirePermission(context, "finance:view");
+  const client = txPrisma || prisma;
+
+  const receipt = await client.receipt.findFirst({
+    where: {
+      institutionId: context.institutionId,
+      paymentTransactionId,
+    },
+    include: {
+      institution: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          type: true,
+          address: true,
+          phone: true,
+          logoUrl: true,
+          settingsJson: true,
+        },
+      },
+      paymentTransaction: {
+        include: {
+          student: true,
+          receivedBy: true,
+          allocations: {
+            include: {
+              studentCharge: {
+                include: {
+                  feeCategory: true,
+                  academicYear: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      issuedBy: true,
+    },
+  });
+
+  if (!receipt) {
+    throw new ReceiptError("Kwitansi tidak ditemukan", 404);
+  }
+
+  let footerNote = "Kwitansi resmi diterbitkan secara digital oleh sistem.";
+  if (receipt.institution.settingsJson) {
+    try {
+      const parsed = JSON.parse(receipt.institution.settingsJson);
+      if (parsed?.operational?.finance?.receiptFooterNote) {
+        footerNote = parsed.operational.finance.receiptFooterNote;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return {
+    ...receipt,
+    footerNote,
   };
 }

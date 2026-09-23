@@ -13,6 +13,8 @@ import {
   getStudentCharge,
   voidStudentCharge,
   calculateStudentFinancialSummary,
+  getTargetStudentsForBilling,
+  getBillingSummary,
   createPaymentTransaction,
   listPaymentTransactions,
   getPaymentTransaction,
@@ -20,7 +22,11 @@ import {
   listCashbookEntries,
   getCashbookSummary,
   getReceiptByPayment,
+  getReceiptDetails,
   listReceipts,
+  getPaymentSummaryReport,
+  getOutstandingSummaryReport,
+  getCashflowReport,
 } from "../lib/finance";
 import {
   FeeCategoryInput,
@@ -34,6 +40,8 @@ import {
   CashbookEntryInput,
   CashbookFilterInput,
   ReceiptQueryInput,
+  TargetStudentsQueryInput,
+  FinancialReportFilterInput,
 } from "../lib/validation/finance";
 
 export async function createFeeCategoryAction(input: FeeCategoryInput) {
@@ -176,6 +184,54 @@ export async function listReceiptsAction(input?: Partial<ReceiptQueryInput>) {
   const context = await getAuthenticatedTenantContext();
   return runWithTenantContext(context, async () => {
     const data = await listReceipts(input);
+    return { success: true, data };
+  });
+}
+
+export async function getReceiptDetailsAction(paymentTransactionId: string) {
+  const context = await getAuthenticatedTenantContext();
+  return runWithTenantContext(context, async () => {
+    const data = await getReceiptDetails(paymentTransactionId);
+    return { success: true, data };
+  });
+}
+
+export async function getTargetStudentsForBillingAction(query: TargetStudentsQueryInput) {
+  const context = await getAuthenticatedTenantContext();
+  return runWithTenantContext(context, async () => {
+    const data = await getTargetStudentsForBilling(query);
+    return { success: true, data };
+  });
+}
+
+export async function getBillingSummaryAction() {
+  const context = await getAuthenticatedTenantContext();
+  return runWithTenantContext(context, async () => {
+    const data = await getBillingSummary();
+    return { success: true, data };
+  });
+}
+
+export async function getPaymentSummaryReportAction(input?: Partial<FinancialReportFilterInput>) {
+  const context = await getAuthenticatedTenantContext();
+  return runWithTenantContext(context, async () => {
+    const data = await getPaymentSummaryReport(input);
+    return { success: true, data };
+  });
+}
+
+export async function getOutstandingSummaryReportAction(input?: Partial<FinancialReportFilterInput>) {
+  const context = await getAuthenticatedTenantContext();
+  return runWithTenantContext(context, async () => {
+    const data = await getOutstandingSummaryReport(input);
+    return { success: true, data };
+  });
+}
+
+export async function getCashflowReportAction(input?: Partial<FinancialReportFilterInput>) {
+  const context = await getAuthenticatedTenantContext();
+  return runWithTenantContext(context, async () => {
+    const data = await getCashflowReport(input);
     return { success: true, data };
   });
 }

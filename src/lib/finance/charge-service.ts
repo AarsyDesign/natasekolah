@@ -89,14 +89,38 @@ export async function bulkCreateStudentCharges(input: BulkChargeInput, txPrisma?
       id: { in: validated.studentIds },
       institutionId: context.institutionId,
     },
-    select: { id: true },
+    select: { id: true, fullName: true, nis: true },
   });
 
   if (validStudents.length === 0) {
     throw new ChargeError("Tidak ada siswa valid yang ditemukan", 404);
   }
 
-  const data = validStudents.map((st) => ({
+  // Duplicate prevention: check existing non-VOID charges for feeCategory + period / academicYear
+  const existingCharges = await client.studentCharge.findMany({
+    where: {
+      institutionId: context.institutionId,
+      studentId: { in: validStudents.map((s) => s.id) },
+      feeCategoryId: feeCategory.id,
+      status: { not: "VOID" },
+      ...(validated.period ? { period: validated.period } : {}),
+      ...(validated.academicYearId ? { academicYearId: validated.academicYearId } : {}),
+    },
+    select: { studentId: true },
+  });
+
+  const existingStudentIds = new Set(existingCharges.map((c) => c.studentId));
+  const studentsToCharge = validStudents.filter((s) => !existingStudentIds.has(s.id));
+
+  if (studentsToCharge.length === 0) {
+    return {
+      count: 0,
+      skippedCount: validStudents.length,
+      createdForStudentIds: [],
+    };
+  }
+
+  const data = studentsToCharge.map((st) => ({
     institutionId: context.institutionId,
     studentId: st.id,
     feeCategoryId: feeCategory.id,
@@ -111,7 +135,163 @@ export async function bulkCreateStudentCharges(input: BulkChargeInput, txPrisma?
 
   return {
     count: result.count,
-    createdForStudentIds: validStudents.map((s) => s.id),
+    skippedCount: validStudents.length - studentsToCharge.length,
+    createdForStudentIds: studentsToCharge.map((s) => s.id),
+  };
+}
+
+/**
+ * Query candidate students for billing generation with duplicate preview
+ */
+export async function getTargetStudentsForBilling(
+  query: {
+    classroomId?: string | null;
+    feeCategoryId?: string | null;
+    period?: string | null;
+    academicYearId?: string | null;
+  },
+  txPrisma?: typeof prisma
+) {
+  const context = requireTenantContext();
+  requirePermission(context, "finance:view");
+  const client = txPrisma || prisma;
+
+  let candidateStudents: Array<{ id: string; fullName: string; nis: string }> = [];
+
+  if (query.classroomId) {
+    // Query active enrollments for the classroom
+    const enrollments = await client.enrollment.findMany({
+      where: {
+        classroomId: query.classroomId,
+        institutionId: context.institutionId,
+        status: "ENROLLED",
+      },
+      include: {
+        student: {
+          select: { id: true, fullName: true, nis: true, status: true },
+        },
+      },
+      orderBy: { student: { fullName: "asc" } },
+    });
+
+    candidateStudents = enrollments
+      .filter((e) => e.student.status === "ACTIVE")
+      .map((e) => ({
+        id: e.student.id,
+        fullName: e.student.fullName,
+        nis: e.student.nis,
+      }));
+  } else {
+    // Query all active students in the tenant
+    candidateStudents = await client.student.findMany({
+      where: {
+        institutionId: context.institutionId,
+        status: "ACTIVE",
+      },
+      select: { id: true, fullName: true, nis: true },
+      orderBy: { fullName: "asc" },
+      take: 500,
+    });
+  }
+
+  // Check existing charges if feeCategoryId is provided
+  let existingStudentIds = new Set<string>();
+  if (query.feeCategoryId && candidateStudents.length > 0) {
+    const existing = await client.studentCharge.findMany({
+      where: {
+        institutionId: context.institutionId,
+        feeCategoryId: query.feeCategoryId,
+        studentId: { in: candidateStudents.map((s) => s.id) },
+        status: { not: "VOID" },
+        ...(query.period ? { period: query.period } : {}),
+        ...(query.academicYearId ? { academicYearId: query.academicYearId } : {}),
+      },
+      select: { studentId: true },
+    });
+    existingStudentIds = new Set(existing.map((c) => c.studentId));
+  }
+
+  const mappedStudents = candidateStudents.map((s) => ({
+    id: s.id,
+    fullName: s.fullName,
+    nis: s.nis,
+    isAlreadyCharged: existingStudentIds.has(s.id),
+  }));
+
+  const alreadyChargedCount = mappedStudents.filter((s) => s.isAlreadyCharged).length;
+  const eligibleCount = mappedStudents.length - alreadyChargedCount;
+
+  return {
+    totalStudents: mappedStudents.length,
+    eligibleCount,
+    alreadyChargedCount,
+    students: mappedStudents,
+  };
+}
+
+/**
+ * Get Billing Summary (Aggregated metrics for charges & outstanding balances)
+ */
+export async function getBillingSummary(txPrisma?: typeof prisma) {
+  const context = requireTenantContext();
+  requirePermission(context, "finance:view");
+  const client = txPrisma || prisma;
+
+  const now = new Date();
+
+  const charges = await client.studentCharge.findMany({
+    where: {
+      institutionId: context.institutionId,
+      status: { not: "VOID" },
+    },
+    include: {
+      allocations: {
+        select: { amount: true },
+      },
+    },
+  });
+
+  let totalChargesAmount = 0;
+  let totalPaidAmount = 0;
+  let unpaidCount = 0;
+  let partialCount = 0;
+  let paidCount = 0;
+  let overdueCount = 0;
+  let overdueAmount = 0;
+
+  for (const c of charges) {
+    totalChargesAmount += c.amount;
+    const paid = c.allocations.reduce((sum, a) => sum + a.amount, 0);
+    totalPaidAmount += paid;
+    const remaining = Math.max(0, c.amount - paid);
+
+    if (c.status === "PAID") {
+      paidCount++;
+    } else if (c.status === "PARTIAL") {
+      partialCount++;
+    } else {
+      unpaidCount++;
+    }
+
+    const isOverdue = c.dueDate && c.dueDate < now && remaining > 0;
+    if (isOverdue) {
+      overdueCount++;
+      overdueAmount += remaining;
+    }
+  }
+
+  const totalOutstandingAmount = Math.max(0, totalChargesAmount - totalPaidAmount);
+
+  return {
+    totalChargesCount: charges.length,
+    totalChargesAmount,
+    totalPaidAmount,
+    totalOutstandingAmount,
+    unpaidCount,
+    partialCount,
+    paidCount,
+    overdueCount,
+    overdueAmount,
   };
 }
 
@@ -135,7 +315,13 @@ export async function listStudentCharges(
   if (filter.feeCategoryId) where.feeCategoryId = filter.feeCategoryId;
   if (filter.academicYearId) where.academicYearId = filter.academicYearId;
   if (filter.period) where.period = filter.period;
-  if (filter.status) where.status = filter.status;
+
+  if (filter.status === "OVERDUE") {
+    where.status = { in: ["UNPAID", "PARTIAL"] };
+    where.dueDate = { lt: new Date() };
+  } else if (filter.status) {
+    where.status = filter.status;
+  }
 
   if (filter.search) {
     where.OR = [
@@ -161,14 +347,18 @@ export async function listStudentCharges(
     client.studentCharge.count({ where }),
   ]);
 
+  const now = new Date();
+
   // Compute allocated totals on demand (no mutable balance stored on student/charge)
   const items = rawItems.map((c) => {
     const allocatedAmount = c.allocations.reduce((sum, a) => sum + a.amount, 0);
     const remainingAmount = Math.max(0, c.amount - allocatedAmount);
+    const isOverdue = Boolean(c.dueDate && c.dueDate < now && remainingAmount > 0);
     return {
       ...c,
       allocatedAmount,
       remainingAmount,
+      isOverdue,
     };
   });
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { NavHeader } from "@/components/nav-header";
-import { getCashbookSummaryAction, listStudentChargesAction } from "@/actions/finance";
+import { getCashbookSummaryAction, getBillingSummaryAction } from "@/actions/finance";
 import {
   CreditCard,
   DollarSign,
@@ -14,6 +14,9 @@ import {
   CheckCircle2,
   RefreshCw,
   PlusCircle,
+  FileSpreadsheet,
+  Clock,
+  ArrowRight,
 } from "lucide-react";
 
 export default function FinanceDashboardPage() {
@@ -23,10 +26,16 @@ export default function FinanceDashboardPage() {
     netBalance: 0,
     todayIncome: 0,
   });
-  const [chargeSummary, setChargeSummary] = useState({
-    totalCharges: 0,
-    totalPaid: 0,
-    totalOutstanding: 0,
+  const [billingSummary, setBillingSummary] = useState({
+    totalChargesCount: 0,
+    totalChargesAmount: 0,
+    totalPaidAmount: 0,
+    totalOutstandingAmount: 0,
+    unpaidCount: 0,
+    partialCount: 0,
+    paidCount: 0,
+    overdueCount: 0,
+    overdueAmount: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -34,31 +43,17 @@ export default function FinanceDashboardPage() {
     async function loadData() {
       setLoading(true);
       try {
-        const [cashRes, chargesRes] = await Promise.all([
+        const [cashRes, billRes] = await Promise.all([
           getCashbookSummaryAction(),
-          listStudentChargesAction({ limit: 100 }),
+          getBillingSummaryAction(),
         ]);
 
         if (cashRes.success && cashRes.data) {
           setCashSummary(cashRes.data);
         }
 
-        if (chargesRes.success && chargesRes.data) {
-          let totalC = 0;
-          let totalP = 0;
-
-          chargesRes.data.items.forEach((item: any) => {
-            if (item.status !== "VOID") {
-              totalC += item.amount;
-              totalP += item.allocatedAmount;
-            }
-          });
-
-          setChargeSummary({
-            totalCharges: totalC,
-            totalPaid: totalP,
-            totalOutstanding: Math.max(0, totalC - totalP),
-          });
+        if (billRes.success && billRes.data) {
+          setBillingSummary(billRes.data);
         }
       } catch (err: unknown) {
         console.error("Failed to load finance summary", err);
@@ -82,14 +77,20 @@ export default function FinanceDashboardPage() {
               <CreditCard className="w-6 h-6 text-emerald-600" /> Dashboard Keuangan & Syahriah
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Pusat kendali transaksi pembayaran, tagihan kesiswaan, dan kasir lembaga
+              Pusat kendali transaksi pembayaran, penagihan kesiswaan, dan kasir lembaga
             </p>
           </div>
 
           <div className="flex gap-2">
             <Link
+              href="/finance/charges"
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl shadow-xs hover:bg-slate-50 active:scale-[0.98] transition-all min-h-[44px]"
+            >
+              <Receipt className="w-4 h-4 text-purple-600" /> Buat Tagihan
+            </Link>
+            <Link
               href="/finance/payments"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-xl shadow-sm hover:bg-emerald-700 active:scale-[0.98] transition-all min-h-[44px]"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-xl shadow-xs hover:bg-emerald-700 active:scale-[0.98] transition-all min-h-[44px]"
             >
               <PlusCircle className="w-4 h-4" /> Kasir Pembayaran
             </Link>
@@ -103,71 +104,85 @@ export default function FinanceDashboardPage() {
             Menghitung ringkasan keuangan realtime...
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
             {/* Card 1: Today Income */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Penerimaan Hari Ini
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900">
+              <div className="text-xl font-bold text-slate-900">
                 Rp {cashSummary.todayIncome.toLocaleString("id-ID")}
               </div>
-              <span className="text-xs text-slate-500 mt-1 block">Kasir & Pembayaran</span>
+              <span className="text-xs text-slate-400 mt-0.5 block">Kasir pembayaran</span>
             </div>
 
             {/* Card 2: Total Paid */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Sudah Terbayar
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-blue-700">
-                Rp {chargeSummary.totalPaid.toLocaleString("id-ID")}
+              <div className="text-xl font-bold text-blue-700">
+                Rp {billingSummary.totalPaidAmount.toLocaleString("id-ID")}
               </div>
-              <span className="text-xs text-slate-500 mt-1 block">Dari total kewajiban</span>
+              <span className="text-xs text-slate-400 mt-0.5 block">{billingSummary.paidCount} tagihan lunas</span>
             </div>
 
             {/* Card 3: Remaining Outstanding */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Sisa Tagihan (Tunggakan)
+                  Sisa Tunggakan
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Clock className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-rose-600">
-                Rp {chargeSummary.totalOutstanding.toLocaleString("id-ID")}
+              <div className="text-xl font-bold text-amber-700">
+                Rp {billingSummary.totalOutstandingAmount.toLocaleString("id-ID")}
               </div>
-              <span className="text-xs text-slate-500 mt-1 block">Belum terbayar</span>
+              <span className="text-xs text-slate-400 mt-0.5 block">{billingSummary.unpaidCount + billingSummary.partialCount} belum beres</span>
             </div>
 
-            {/* Card 4: Net Cashbook Balance */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
+            {/* Card 4: Overdue */}
+            <div className="bg-white p-4 rounded-2xl border border-rose-200 shadow-xs bg-rose-50/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-rose-600">
+                  Jatuh Tempo (Overdue)
+                </span>
+                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl font-bold text-rose-700">
+                Rp {billingSummary.overdueAmount.toLocaleString("id-ID")}
+              </div>
+              <span className="text-xs text-rose-500 font-medium mt-0.5 block">{billingSummary.overdueCount} tagihan lewat batas</span>
+            </div>
+
+            {/* Card 5: Net Cashbook Balance */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs col-span-1 sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Saldo Buku Kas Umum
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900">
+              <div className="text-xl font-bold text-slate-900">
                 Rp {cashSummary.netBalance.toLocaleString("id-ID")}
               </div>
-              <span className="text-xs text-slate-500 mt-1 block">
-                Total Masuk - Total Keluar
-              </span>
+              <span className="text-xs text-slate-400 mt-0.5 block">Total Masuk - Keluar</span>
             </div>
           </div>
         )}
@@ -175,64 +190,84 @@ export default function FinanceDashboardPage() {
         {/* Sub-module Navigation Grid */}
         <h2 className="text-lg font-bold text-slate-900 mb-4">Modul Keuangan & Operasional</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
-            href="/finance/fees"
-            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group"
+            href="/finance/payments"
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-500 hover:shadow-md transition-all group"
           >
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <BookOpen className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <CreditCard className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
-              Master Kategori Biaya
+            <h3 className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center justify-between">
+              <span>Kasir & Transaksi Pembayaran</span>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Atur komponen SPP, uang pangkal, seragam, dan jenis syahriah lembaga.
+              Penerimaan pembayaran SPP/syahriah, multi-alokasi atomik, dan bukti kwitansi resmi.
             </p>
           </Link>
 
           <Link
             href="/finance/charges"
-            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group"
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-purple-500 hover:shadow-md transition-all group"
           >
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Receipt className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
-              Kewajiban Tagihan Siswa
+            <h3 className="font-bold text-slate-900 group-hover:text-purple-600 transition-colors flex items-center justify-between">
+              <span>Kewajiban Tagihan Siswa</span>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Terbitkan tagihan per siswa atau massal dengan nominal snapshot abadi.
+              Penerbitan tagihan tunggal atau massal per rombel dengan proteksi tagihan ganda.
             </p>
           </Link>
 
           <Link
-            href="/finance/payments"
-            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group"
+            href="/finance/reports"
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-teal-500 hover:shadow-md transition-all group"
           >
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <CreditCard className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <FileSpreadsheet className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
-              Kasir & Transaksi Pembayaran
+            <h3 className="font-bold text-slate-900 group-hover:text-teal-600 transition-colors flex items-center justify-between">
+              <span>Laporan & Export Excel</span>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Terima pembayaran, alokasikan tagihan, dan terbitkan kwitansi resmi.
+              Rekap pembayaran berkala, monitoring tunggakan, arus kas, dan unduh CSV.
             </p>
           </Link>
 
           <Link
             href="/finance/cashbook"
-            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group"
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-teal-500 hover:shadow-md transition-all group"
           >
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <DollarSign className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
-              Buku Kas Umum (BKU)
+            <h3 className="font-bold text-slate-900 group-hover:text-cyan-600 transition-colors flex items-center justify-between">
+              <span>Buku Kas Umum (BKU)</span>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Pencatatan mutasi kas pemasukan & pengeluaran operasional sekolah.
+              Mutasi kas masuk otomatis dari kasir dan mutasi belanja/operasional lembaga.
+            </p>
+          </Link>
+
+          <Link
+            href="/finance/fees"
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-amber-500 hover:shadow-md transition-all group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <h3 className="font-bold text-slate-900 group-hover:text-amber-600 transition-colors flex items-center justify-between">
+              <span>Master Kategori Biaya</span>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Atur acuan nominal SPP bulanan, uang pangkal, seragam, dan pos syahriah.
             </p>
           </Link>
         </div>

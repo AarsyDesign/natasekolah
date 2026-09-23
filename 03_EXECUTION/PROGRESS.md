@@ -26,11 +26,52 @@
 | **Phase 7** | **Parent Experience** (PWA Wali Murid, Transparansi Rekap Tagihan) | **COMPLETE** | 2026-09-23 (245 Tests Pass) |
 | **Milestone** | **Operational Admin Experience / Daily Operations** (Command Center, Perlu Perhatian, RBAC Quick Actions & Global Search) | **COMPLETE** | 2026-09-23 (256 Tests Pass) |
 | **Milestone** | **Institution Configuration & Settings** (Profile, Plugins, Dynamic Terminology, Operational Rules, User Management) | **COMPLETE** | 2026-09-23 (273 Tests Pass) |
+| **Milestone** | **Finance & Billing Operations** (Fee Categories, Bulk Billing with Duplicate Prevention, Cashier Multi-Charge Counter, Atomic Allocations, Printable Receipts, Cashbook Immutability, Operational Reports & CSV Export) | **COMPLETE** | 2026-09-23 (288 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-23] - Milestone: Finance & Billing Operations (Fee Categories, Bulk Billing, Cashier Multi-Charge Counter, Atomic Allocations, Printable Receipts, Cashbook Immutability, Operational Reports & CSV Export) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Mengubah Finance Core yang sudah terkunci menjadi alur kerja operasional nyata bagi bendahara/kasir sekolah dan pesantren dengan integritas finansial mutlak, isolasi tenant ketat, transaksi atomik, kwitansi cetak instan, dan pelaporan operasional terintegrasi portal wali.
+* **Implementasi:**
+  1. **Zero-Migration Compliance & Finance Core Integrity:**
+     * Mempertahankan skema Prisma Finance Core secara utuh tanpa modifikasi field atau constraint (`FeeCategory`, `StudentCharge`, `PaymentTransaction`, `PaymentAllocation`, `CashbookEntry`, `Receipt`).
+     * Memanfaatkan konfigurasi operasional lembaga dari `Institution.settingsJson` (`receiptNumberPrefix`, `receiptFooterNote`, `invoiceDueDays`).
+  2. **Billing Operations & Bulk Charge Generation with Duplicate Prevention:**
+     * Menambahkan `bulkCreateStudentCharges` cerdas dengan deteksi tagihan eksisting per `(studentId, feeCategoryId, period / academicYearId)` non-`VOID` dalam tenant yang sama. Melewati siswa yang sudah ditagih untuk menjamin nol duplikasi tagihan.
+     * Endpoint preview target siswa `getTargetStudentsForBilling`: mengevaluasi siswa target (seluruh siswa aktif atau per rombel/kelas) dan menyajikan live preview jumlah siswa eligible vs yang sudah ditagih.
+     * Halaman operasional `/finance/charges` dengan ringkasan status derived dari alokasi pembayaran (`Total Tagihan`, `Sudah Terbayar`, `Sebagian`, `Belum Dibayar`, dan `Jatuh Tempo` berbasis `dueDate < now`).
+     * Tindakan pembatalan tagihan (VOID) yang aman: hanya dapat dibatalkan jika belum memiliki alokasi pembayaran.
+  3. **Cashier Payment Counter & Multi-Charge Allocation (`/finance/payments`):**
+     * Alur kasir berkecepatan tinggi: pencarian instan siswa/santri via nama atau NISN, menampilkan seluruh tagihan outstanding (`UNPAID` dan `PARTIAL`).
+     * Dukungan pembayaran multi-tagihan secara fleksibel: kalkulasi alokasi otomatis (FIFO) atau input manual per tagihan.
+     * Dialog konfirmasi wajib sebelum eksekusi transaksi untuk mencegah salah input kasir.
+     * Transaksi database atomik (Prisma `$transaction`): validasi tenant boundary, status tagihan aktif, alokasi tidak melebihi sisa tagihan, pembuatan `PaymentTransaction`, pembuatan `PaymentAllocation`, pembukuan otomatis `CashbookEntry` (INCOME), dan penerbitan `Receipt` secara atomik dengan rollback otomatis bila terjadi error.
+     * Penolakan keras terhadap over-allocation, tagihan VOID, dan tagihan lintas tenant.
+  4. **Printable Receipt & Operational Branding:**
+     * Penomoran kwitansi bebas tabrakan (atomic counter collision-free) dengan prefix kustom dari konfigurasi lembaga (misal: `KW-202609-0001` atau `KWT-SMP-202609-0001`).
+     * Modal detail kwitansi ramah cetak (`@media print` CSS clean): kop logo dan informasi lembaga, rincian pembayaran & alokasi komponen biaya, stempel/status lunas, serta catatan kaki operasional lembaga (`receiptFooterNote`).
+  5. **Operational Cashbook (`/finance/cashbook`):**
+     * Buku Kas Umum dengan pemisahan tegas antara mutasi masuk otomatis kasir pembayaran (sumber `PAYMENT`, immutable) dan mutasi manual operasional (sumber `MANUAL`).
+     * Modal pencatatan pengeluaran (EXPENSE) dan pemasukan (INCOME) operasional non-SPP.
+     * Ringkasan real-time: Total Masuk, Total Keluar, Saldo Bersih, dan Penerimaan Hari Ini.
+  6. **Operational Financial Reporting (`/finance/reports`):**
+     * 3 tab laporan agregasi transaksi aktual database:
+       * *Rekap Pembayaran:* filter rentang tanggal, total penerimaan, jumlah transaksi, rata-rata, breakdown kategori biaya & metode pembayaran, serta tabel transaksi terperinci.
+       * *Tagihan & Tunggakan:* total piutang/tagihan, tagihan terbayar, sisa piutang, santri menunggak dengan hitungan hari keterlambatan.
+       * *Arus Kas Operasional:* total arus masuk, arus keluar, dan saldo bersih kas.
+  7. **Universal Client-Safe CSV Export:**
+     * Ekspor CSV siap buka di Microsoft Excel dengan UTF-8 BOM (`\uFEFF`) untuk Rekap Pembayaran, Tagihan & Tunggakan, serta Buku Kas Umum.
+  8. **Guardian Portal Synchronization:**
+     * Seluruh transaksi pembayaran kasir yang completed langsung tersinkronisasi dan dapat dilihat oleh wali murid yang tertaut pada `/wali/keuangan` dengan pembatasan ReBAC Guardian tetap terjaga.
+* **Hasil Verifikasi:**
+  * 15 Unit/Integration Tests baru pada `test/finance-operations.test.ts` lulus 100%.
+  * Total 288 tests lulus 100% tanpa regresi.
+  * TypeScript typecheck (`npx tsc --noEmit`) bersih (0 error).
+  * Prisma schema validasi (`npx prisma validate`) valid.
+  * Next.js production build (`npm run build`) sukses untuk seluruh 40 routes.
 
 ### [2026-09-23] - Milestone: Institution Configuration & Settings (Multi-Tenant Profile, Plugin Config, Dynamic Terminology, Operational Rules & User Management) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Memungkinkan NataSekolah dikonfigurasi secara menyeluruh per lembaga tanpa modifikasi source code atau fork codebase, mencakup profil lembaga, kontrol plugin domain, terminologi kultural dinamis, aturan operasional (presensi, keuangan, komunikasi, akademik), dan manajemen pengguna internal terotorisasi.

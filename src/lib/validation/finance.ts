@@ -84,18 +84,39 @@ export const bulkChargeInputSchema = z.object({
 
 export type BulkChargeInput = z.input<typeof bulkChargeInputSchema>;
 
+export const EXTENDED_CHARGE_STATUSES = [...STUDENT_CHARGE_STATUSES, "OVERDUE"] as const;
+export type ExtendedChargeStatus = (typeof EXTENDED_CHARGE_STATUSES)[number];
+
 export const studentChargeFilterSchema = z.object({
   studentId: z.string().optional(),
   feeCategoryId: z.string().optional(),
   academicYearId: z.string().optional(),
   period: z.string().optional(),
-  status: z.enum(STUDENT_CHARGE_STATUSES).optional(),
+  status: z.enum(EXTENDED_CHARGE_STATUSES).optional(),
   search: z.string().optional(),
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().max(100).default(20),
 });
 
 export type StudentChargeFilterInput = z.infer<typeof studentChargeFilterSchema>;
+
+export const targetStudentsQuerySchema = z.object({
+  classroomId: z.string().optional().nullable(),
+  feeCategoryId: z.string().optional().nullable(),
+  period: z.string().optional().nullable(),
+  academicYearId: z.string().optional().nullable(),
+});
+
+export type TargetStudentsQueryInput = z.infer<typeof targetStudentsQuerySchema>;
+
+export const financialReportFilterSchema = z.object({
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+  feeCategoryId: z.string().optional(),
+  academicYearId: z.string().optional(),
+});
+
+export type FinancialReportFilterInput = z.infer<typeof financialReportFilterSchema>;
 
 // -------------------------------------------------------------
 // Payment & Allocation Validation
