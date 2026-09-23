@@ -1,5 +1,41 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-23] - Milestone: UI Foundation & Persistent App Shell (Design Tokens, UI Primitives, Persistent AppShell, Mobile Navigation, Zero-CLS Skeletons, DataTableView & Dashboard Reference Implementation) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/utils.ts`: Utilitas fungsi `cn` untuk penggabungan kelas Tailwind dinamis (`clsx` + `tailwind-merge`).
+* `src/components/ui/button.tsx`: Komponen tombol primitif terstandarisasi dengan 5 varian (`primary`, `secondary`, `outline`, `ghost`, `destructive`), status `isLoading`, disabled, dan target sentuh jempol minimum 44px.
+* `src/components/ui/input.tsx`: Komponen input formulir aksesibel dengan label, pesan error, helper text, dan focus-visible ring.
+* `src/components/ui/select.tsx`: Komponen dropdown select native dengan ikon chevron, label, dan pesan error terintegrasi.
+* `src/components/ui/checkbox.tsx`: Komponen centang aksesibel dengan touch target 44px, label, dan deskripsi.
+* `src/components/ui/switch.tsx`: Komponen toggle switch dengan atribut WAI-ARIA `role="switch"` dan keyboard spacebar support.
+* `src/components/ui/tabs.tsx`: Komponen segmented tabs terstruktur (`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`) dengan WAI-ARIA `role="tablist"` dan `role="tab"`.
+* `src/components/ui/card.tsx`: Komponen kartu data terpadu (`Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`).
+* `src/components/ui/badge.tsx`: Komponen badge status persegi tumpul (`rounded-md`, pelarangan pill-shape `rounded-full`) dengan 6 varian semantik (`success`, `warning`, `danger`, `info`, `neutral`, `primary`).
+* `src/components/ui/dialog.tsx`: Komponen modal dialog aksesibel dengan backdrop blur, penutupan via tombol Escape, dan penataan focus trap.
+* `src/components/ui/dropdown.tsx`: Komponen dropdown menu dengan click-outside handler dan keyboard accessibility.
+* `src/components/ui/tooltip.tsx`: Komponen tooltip ringan dengan trigger hover dan keyboard focus.
+* `src/components/ui/breadcrumb.tsx`: Komponen jejak navigasi aksesibel (`<nav aria-label="Breadcrumb">`) dengan pemisah `ChevronRight`.
+* `src/components/ui/pagination.tsx`: Komponen navigasi halaman terpadu dengan informasi rentang data, tombol *Sebelumnya*, dan *Berikutnya*.
+* `src/components/ui/skeleton.tsx`: Komponen blok animasi pulse dasar untuk perceived performance.
+* `src/components/loading/skeletons.tsx`: Pustaka skeleton loading terpadu seukuran container target (`PageSkeleton`, `TableSkeleton`, `CardSkeleton`, `ListSkeleton`, `FormSkeleton`) untuk eliminasi Cumulative Layout Shift (CLS = 0).
+* `src/components/data-dense/data-table-view.tsx`: Komponen DataTableView responsif dengan tampilan tabel multi-kolom di desktop (`md:table`) dan transformasi otomatis menjadi *ResourceList* vertikal terstruktur di ponsel (`md:hidden`).
+* `src/components/app-shell.tsx`: Komponen Persistent Application Shell dengan desktop topbar, navigasi 2-level terstruktur (Pusat Aktivitas Harian vs Master Data), mobile bottom bar 4-aksi + Drawer menu lengkap, serta singleton GlobalSearchDialog (Ctrl+K).
+* `src/components/app-shell-wrapper.tsx`: Wrapper integrasi root layout yang mengecualikan halaman publik/landing (`/`), login (`/login`), dan portal wali (`/wali/*`) secara otomatis.
+* `test/ui-foundation.test.ts`: Rangkaian 12 automated unit/contract tests mencakup pengujian utility `cn`, token semantik, invariants primitif UI (Badge rounded-md, Button 44px tanpa bounce), aturan routing AppShell, dan penjajaran tabel data-dense.
+
+### Changed
+* `src/app/globals.css`:
+  * Mengonfigurasi token CSS semantik lengkap berbasis `DESIGN.md v2.0` pada `@theme` Tailwind CSS v4 (`--color-canvas`, `--color-surface`, `--color-primary`, Pine Teal `#0f766e`, `--color-foreground`, `--color-border`, status success, warning, danger, info, dan focus-visible styling).
+* `src/components/nav-header.tsx`:
+  * Diintegrasikan dengan `useAppShell()`. Ketika berada di dalam persistent `AppShell`, `NavHeader` menyinkronkan subtitle ke konteks shell dan merender `null` untuk mencegah terjadinya double header pada halaman eksisting.
+* `src/app/layout.tsx`:
+  * Membungkus seluruh aplikasi dengan `<AppShellWrapper>` untuk mengaktifkan shell persisten tanpa kedipan layar antar-rute.
+* `src/app/dashboard/page.tsx`:
+  * Migrasi sebagai reference implementation: mengadopsi `PageSkeleton` menggantikan spinner fullscreen, menggunakan komponen `Button`, `Badge`, `Card`, serta membersihkan kode dari warna raw dan animasi bouncing `active:scale-95`.
+
+---
+
 ## [2026-09-23] - Milestone: NataSekolah Design System & Product UX Reset (DESIGN.md v2, Design Tokens, Navigation Contract, Data Density, A11y & Anti-Patterns) (COMPLETE / SPECIFIED)
 
 ### Added

@@ -29,11 +29,56 @@
 | **Milestone** | **Finance & Billing Operations** (Fee Categories, Bulk Billing with Duplicate Prevention, Cashier Multi-Charge Counter, Atomic Allocations, Printable Receipts, Cashbook Immutability, Operational Reports & CSV Export) | **COMPLETE** | 2026-09-23 (288 Tests Pass) |
 | **Milestone** | **Teacher Workspace / Academic Operations** (Teacher Workspace `/teacher`, Class View `/teacher/classes/[id]`, Student Academic Summary, Attendance & Assessment Integration, Plugin Guard) | **COMPLETE** | 2026-09-23 (303 Tests Pass) |
 | **Milestone** | **NataSekolah Design System & Product UX Reset** (DESIGN.md v2, Design Tokens, Navigation Contract, Data Density, A11y & Anti-Patterns) | **COMPLETE** | 2026-09-23 (303 Tests Pass) |
+| **Milestone** | **UI Foundation & Persistent App Shell** (Design Tokens, 15 Primitives, Persistent AppShell, Mobile Nav, Loading Skeletons, DataTableView, Dashboard Reference) | **COMPLETE** | 2026-09-23 (315 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-23] - Milestone: UI Foundation & Persistent App Shell (Design Tokens, UI Primitives, Persistent AppShell, Mobile Navigation, Zero-CLS Skeletons, DataTableView & Dashboard Reference Implementation) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Mengimplementasikan fondasi antarmuka pengguna (UI Foundation) dan shell aplikasi persisten (*Persistent Application Shell*) berbasis `DESIGN.md v2.0` untuk menjamin seluruh halaman operasional NataSekolah konsisten, responsif, berkecepatan tinggi (*fast perceived navigation*), dan bebas dari kedipan remount navigasi tanpa merombak logika domain backend yang telah terkunci.
+* **Implementasi:**
+  1. **Semantic Design Tokens (`src/app/globals.css`):**
+     * Mengonfigurasi token CSS semantik terpadu menggunakan `@theme` Tailwind CSS v4: Canvas (`--color-canvas`), Surface (`--color-surface`, `--color-surface-muted`), Brand Primary (`--color-primary`, Pine Teal `#0f766e`), Foreground (`--color-foreground`, Zinc 900 `#18181b`), Borders (`--color-border`), dan Status Semantik (`success`, `warning`, `danger`, `info`).
+     * Standar focus-visible terpadu (`outline: 2px solid var(--primary)`), angka berjarak tetap (`.tabular-nums`), dan target sentuh minimum jempol (`.touch-target` min 44x44px).
+  2. **Komponen Primitif UI Standar (`src/components/ui/*` & `src/lib/utils.ts`):**
+     * Utilitas standar `cn` berbasis `clsx` dan `tailwind-merge`.
+     * `Button`: Varian `primary`, `secondary`, `outline`, `ghost`, `destructive` dengan target sentuh min 44px, status `isLoading`, dan eliminasi animasi pantul (*bouncy scale-95*).
+     * `Input` & `Select`: Form control berstandar aksesibel dengan label, error helper, dan min-h 44px.
+     * `Checkbox` & `Switch`: Kontrol seleksi ramah sentuh jempol dengan atribut WAI-ARIA `role="switch"` dan keyboard support.
+     * `Tabs`: Segmented tab bar ramping dengan WAI-ARIA `role="tablist"` dan `role="tab"`.
+     * `Card`: Kontainer datar dengan bayangan lembut `shadow-2xs` dan border stone-200.
+     * `Badge`: Indikator status persegi tumpul `rounded-md` (pelarangan ketat bentuk kapsul `rounded-full` untuk status fungsional).
+     * `Dialog`: Modal dialog dengan backdrop blur, penutupan via tombol `Escape`, dan perangkap fokus.
+     * `Dropdown`: Menu dropdown terstruktur dengan penutup klik luar (*click outside*) dan navigasi keyboard.
+     * `Tooltip`, `Breadcrumb`, `Pagination`: Komponen pelengkap navigasi dan navigasi halaman terstandar.
+     * `Skeleton`: Blok dasar animasi pulse abu-abu halus untuk perceived performance.
+  3. **Persistent Application Shell (`src/components/app-shell.tsx` & `src/components/app-shell-wrapper.tsx`):**
+     * Arsitektur shell persisten di `src/app/layout.tsx`: Header dan bilah navigasi tidak pernah di-unmount/remount saat berpindah rute operasional.
+     * Navigasi 2-level terprediksi (GitLab Pajamas pattern):
+       * Level 1 (Pusat Aktivitas Harian): Dashboard, Workspace Guru, Presensi, Keuangan, Penilaian, Raport.
+       * Level 2 (Master Data & Administrasi): Siswa/Buku Induk, Tahun Ajaran, Rombel, Mapel, Direktori Guru, Penugasan, Asrama, Tahfidz, Outbox WA, Pengaturan.
+     * Bilah Navigasi Bawah Ponsel (*Mobile Bottom Bar*): 4 aksi jempol frekuensi tinggi (Dasbor, Guru, Presensi, Keuangan) + Drawer menu selengkapnya.
+     * Singleton GlobalSearchDialog (Ctrl+K): Dikelola terpusat di shell tanpa re-instansiasi di setiap halaman.
+     * Koordinasi Subtitle Otomatis via `AppShellContext`: Mempertahankan kompatibilitas penuh dengan komponen `NavHeader` eksisting tanpa terjadinya double header.
+     * Pengecualian rute non-operasional: Halaman landing (`/`), login (`/login`), dan portal wali (`/wali/*`) dikecualikan secara elegan tanpa membebani shell staf.
+  4. **Loading Foundation & Zero CLS (`src/components/loading/skeletons.tsx`):**
+     * Pustaka skeleton reusable seukuran container target: `PageSkeleton`, `TableSkeleton`, `CardSkeleton`, `ListSkeleton`, `FormSkeleton`.
+     * Menghilangkan total spinner fullscreen yang membekukan layar pada navigasi normal.
+  5. **Responsive Data-Dense Foundation (`src/components/data-dense/data-table-view.tsx`):**
+     * Kontrak tabel data operasional:
+       * Desktop (`md:table`): Tabel multi-kolom padat dengan angka/nominal rata kanan (`font-mono tabular-nums`) dan teks rata kiri.
+       * Mobile (`md:hidden`): Transformasi otomatis menjadi *ResourceList* vertikal terstruktur tanpa geser horizontal.
+  6. **Reference Implementation — Dashboard (`/dashboard`):**
+     * Migrasi struktur visual `/dashboard` menggunakan UI Primitives (`Button`, `Badge`, `Card`), semantic design tokens, dan `PageSkeleton` saat memuat data awal (CLS = 0).
+     * Seluruh domain service (`getOperationalDashboardAction`), penanganan hak akses, dan logika operasional tetap 100% utuh tanpa modifikasi backend.
+* **Hasil Verifikasi:**
+  * 12 Unit/Integration Tests baru pada `test/ui-foundation.test.ts` lulus 100%.
+  * Total 315 tests lulus 100% tanpa regresi (108 test suites, 0 fail).
+  * TypeScript typecheck (`npx tsc --noEmit`) bersih (0 error).
+  * Prisma schema validasi (`npx prisma validate`) valid (0 error).
+  * Next.js production build (`npm run build`) sukses untuk seluruh 41 routes.
 
 ### [2026-09-23] - Milestone: NataSekolah Design System & Product UX Reset (DESIGN.md v2, Design Tokens, Navigation Contract, Data Density, A11y & Anti-Patterns) (COMPLETE / SPECIFIED)
 * **Tujuan:** Menetapkan kontrak arsitektur dan spesifikasi desain antarmuka menyeluruh (*Design System & Product UX Contract*) melalui perombakan `DESIGN.md` menjadi v2.0 yang komprehensif, terstruktur, dan berakar pada karakter produk: **Clean · Fresh · Calm · Fast · Organized** tanpa mengubah arsitektur backend atau mendestabilkan kode aplikasi yang sudah berjalan.

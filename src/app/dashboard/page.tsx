@@ -29,9 +29,12 @@ import {
   Receipt,
   UserPlus,
   ShieldCheck,
-  ExternalLink,
   GraduationCap,
 } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
+import { PageSkeleton } from "../../components/loading/skeletons";
 import { GlobalSearchDialog } from "../../components/global-search-dialog";
 
 export default function OperationalDashboardPage() {
@@ -94,45 +97,41 @@ export default function OperationalDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-100/60 pb-16 font-sans text-stone-900">
+    <div className="min-h-screen bg-[#fbfbfa] text-[#18181b] font-sans">
       <NavHeader subtitle="Pusat Komando Operasional" />
 
-      <main className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-        {/* Loading State */}
-        {loading && !data && (
-          <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-            <RefreshCw className="h-7 w-7 animate-spin text-teal-700" />
-            <p className="text-sm font-medium text-stone-600">
-              Menyinkronkan data operasional harian...
-            </p>
-          </div>
-        )}
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        {/* Loading State: Zero-CLS Skeleton Loader instead of spinner */}
+        {loading && !data && <PageSkeleton />}
 
         {/* Error State */}
         {error && !loading && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center text-rose-900 shadow-xs">
-            <AlertCircle className="mx-auto h-8 w-8 text-rose-600" />
+          <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-red-900 shadow-2xs">
+            <AlertCircle className="mx-auto h-8 w-8 text-red-600" />
             <h3 className="mt-2 text-base font-semibold">Gagal Memuat Dasbor</h3>
-            <p className="mt-1 text-sm text-rose-700">{error}</p>
-            <button
-              onClick={fetchDashboardData}
-              className="touch-target mt-4 inline-flex items-center gap-2 rounded-lg bg-rose-700 px-4 py-2 text-sm font-medium text-white hover:bg-rose-800"
-            >
-              <RefreshCw className="h-4 w-4" /> Coba Lagi
-            </button>
+            <p className="mt-1 text-sm text-red-700">{error}</p>
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="destructive"
+                size="default"
+                onClick={fetchDashboardData}
+              >
+                <RefreshCw className="h-4 w-4" /> Coba Lagi
+              </Button>
+            </div>
           </div>
         )}
 
         {data && (
           <div className="space-y-8">
-            {/* Header: Greeting, Date, Quick Search & Refresh */}
-            <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-stone-200 bg-white p-5 shadow-xs">
+            {/* 1. Header: Greeting, Date, Quick Search & Refresh */}
+            <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-stone-200 bg-white p-5 shadow-2xs">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-800">
+                  <Badge variant="primary">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     {data.institution.name}
-                  </span>
+                  </Badge>
                   <span className="rounded-md bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
                     {data.institution.type}
                   </span>
@@ -148,33 +147,34 @@ export default function OperationalDashboardPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
+                  size="default"
                   onClick={() => setIsSearchOpen(true)}
-                  className="touch-target inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-medium text-stone-700 hover:bg-stone-100"
+                  aria-label="Pencarian Cepat (Ctrl+K)"
                 >
                   <Search className="h-4 w-4 text-stone-500" />
-                  <span>Pencarian Cepat</span>
-                  <kbd className="hidden sm:inline-block rounded-xs bg-white px-1.5 py-0.5 text-[10px] text-stone-500 border border-stone-200">
+                  <span className="hidden md:inline">Pencarian Cepat</span>
+                  <kbd className="hidden sm:inline-block rounded-xs bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500 border border-stone-200 font-mono">
                     Ctrl+K
                   </kbd>
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="outline"
+                  size="default"
                   onClick={fetchDashboardData}
                   disabled={isPending}
-                  className="touch-target inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700 shadow-2xs hover:bg-stone-50 disabled:opacity-50"
                   aria-label="Segarkan data operasional"
                 >
                   <RefreshCw
                     className={`h-3.5 w-3.5 ${isPending ? "animate-spin text-teal-700" : ""}`}
                   />
                   <span className="hidden sm:inline">Segarkan</span>
-                </button>
+                </Button>
               </div>
             </section>
 
-            {/* SECTION 1: PERLU PERHATIAN (OPERATIONAL ATTENTION) */}
+            {/* 2. SECTION 1: PERLU PERHATIAN (OPERATIONAL ATTENTION) */}
             <section aria-labelledby="attention-heading">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -182,20 +182,14 @@ export default function OperationalDashboardPage() {
                   <h2 id="attention-heading" className="text-base font-bold text-stone-900">
                     Perlu Perhatian Operasional
                   </h2>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      data.attentionItems.length > 0
-                        ? "bg-amber-100 text-amber-900"
-                        : "bg-emerald-100 text-emerald-800"
-                    }`}
-                  >
+                  <Badge variant={data.attentionItems.length > 0 ? "warning" : "success"}>
                     {data.attentionItems.length}
-                  </span>
+                  </Badge>
                 </div>
               </div>
 
               {data.attentionItems.length === 0 ? (
-                <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-emerald-900">
+                <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 text-emerald-900">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
                   <p className="text-sm">
                     <strong>Kondisi Operasional Normal:</strong> Tidak ada sesi gantung, pesan
@@ -208,11 +202,11 @@ export default function OperationalDashboardPage() {
                     const isCritical = item.severity === "CRITICAL";
                     const isWarning = item.severity === "WARNING";
 
-                    const badgeClass = isCritical
-                      ? "bg-rose-100 text-rose-800 border-rose-200"
+                    const badgeVariant = isCritical
+                      ? "danger"
                       : isWarning
-                      ? "bg-amber-100 text-amber-900 border-amber-200"
-                      : "bg-stone-100 text-stone-800 border-stone-200";
+                      ? "warning"
+                      : "neutral";
 
                     const borderClass = isCritical
                       ? "border-rose-200 hover:border-rose-300"
@@ -223,15 +217,13 @@ export default function OperationalDashboardPage() {
                     return (
                       <div
                         key={item.id}
-                        className={`flex flex-col justify-between rounded-xl border bg-white p-4 shadow-2xs transition ${borderClass}`}
+                        className={`flex flex-col justify-between rounded-lg border bg-white p-4 shadow-2xs transition-colors ${borderClass}`}
                       >
                         <div>
                           <div className="flex items-center justify-between gap-2">
-                            <span
-                              className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${badgeClass}`}
-                            >
+                            <Badge variant={badgeVariant}>
                               {item.category} • {item.count} Item
-                            </span>
+                            </Badge>
                             <span className="text-[11px] font-medium text-stone-400">
                               {item.severity}
                             </span>
@@ -242,12 +234,11 @@ export default function OperationalDashboardPage() {
                           </p>
                         </div>
                         <div className="mt-4 pt-3 border-t border-stone-100">
-                          <Link
-                            href={item.actionHref}
-                            className="touch-target inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-stone-900 px-3 py-2 text-xs font-semibold text-white shadow-2xs transition hover:bg-teal-800"
-                          >
-                            <span>{item.actionLabel}</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
+                          <Link href={item.actionHref} className="block">
+                            <Button variant="primary" size="default" className="w-full text-xs">
+                              <span>{item.actionLabel}</span>
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </Button>
                           </Link>
                         </div>
                       </div>
@@ -257,7 +248,7 @@ export default function OperationalDashboardPage() {
               )}
             </section>
 
-            {/* SECTION 2: HARI INI (TODAY'S OPERATIONAL PULSE) */}
+            {/* 3. SECTION 2: HARI INI (OPERATIONAL PULSE) */}
             <section aria-labelledby="today-heading">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -268,21 +259,21 @@ export default function OperationalDashboardPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {/* 1. Siswa Aktif */}
                 {data.stats.students && (
                   <Link
                     href="/students"
-                    className="group rounded-xl border border-stone-200 bg-white p-4 shadow-2xs transition hover:border-teal-300 hover:shadow-sm"
+                    className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs transition-colors hover:border-teal-400"
                   >
                     <div className="flex items-center justify-between text-stone-500">
-                      <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                         Buku Induk
                       </span>
                       <Users className="h-4 w-4 text-teal-700" />
                     </div>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-2xl font-bold tracking-tight text-stone-900">
+                      <span className="text-2xl font-bold tracking-tight text-stone-900 font-mono tabular-nums">
                         {data.stats.students.totalActive}
                       </span>
                       <span className="text-xs text-stone-500">Siswa Aktif</span>
@@ -297,16 +288,16 @@ export default function OperationalDashboardPage() {
                 {data.stats.attendance && (
                   <Link
                     href="/attendance"
-                    className="group rounded-xl border border-stone-200 bg-white p-4 shadow-2xs transition hover:border-teal-300 hover:shadow-sm"
+                    className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs transition-colors hover:border-teal-400"
                   >
                     <div className="flex items-center justify-between text-stone-500">
-                      <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                         Presensi Harian
                       </span>
                       <ClipboardCheck className="h-4 w-4 text-emerald-700" />
                     </div>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-2xl font-bold tracking-tight text-stone-900">
+                      <span className="text-2xl font-bold tracking-tight text-stone-900 font-mono tabular-nums">
                         {data.stats.attendance.todaySessionsTotal}
                       </span>
                       <span className="text-xs text-stone-500">Sesi Hari Ini</span>
@@ -333,16 +324,16 @@ export default function OperationalDashboardPage() {
                 {data.stats.finance && (
                   <Link
                     href="/finance"
-                    className="group rounded-xl border border-stone-200 bg-white p-4 shadow-2xs transition hover:border-teal-300 hover:shadow-sm"
+                    className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs transition-colors hover:border-teal-400"
                   >
                     <div className="flex items-center justify-between text-stone-500">
-                      <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                         Arus Kas & SPP
                       </span>
                       <CreditCard className="h-4 w-4 text-emerald-700" />
                     </div>
                     <div className="mt-2">
-                      <span className="text-lg font-bold tracking-tight text-stone-900">
+                      <span className="text-lg font-bold tracking-tight text-stone-900 font-mono tabular-nums">
                         Rp {data.stats.finance.todayPaymentsSum.toLocaleString("id-ID")}
                       </span>
                       <p className="text-[11px] text-stone-500">
@@ -365,16 +356,16 @@ export default function OperationalDashboardPage() {
                 {data.stats.academic && (
                   <Link
                     href="/assessments"
-                    className="group rounded-xl border border-stone-200 bg-white p-4 shadow-2xs transition hover:border-teal-300 hover:shadow-sm"
+                    className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs transition-colors hover:border-teal-400"
                   >
                     <div className="flex items-center justify-between text-stone-500">
-                      <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                         Penilaian & Raport
                       </span>
                       <FileCheck2 className="h-4 w-4 text-sky-700" />
                     </div>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-2xl font-bold tracking-tight text-stone-900">
+                      <span className="text-2xl font-bold tracking-tight text-stone-900 font-mono tabular-nums">
                         {data.stats.academic.totalAssessments}
                       </span>
                       <span className="text-xs text-stone-500">Total Penilaian</span>
@@ -391,16 +382,16 @@ export default function OperationalDashboardPage() {
                 {data.stats.tahfidz && (
                   <Link
                     href="/tahfidz"
-                    className="group rounded-xl border border-stone-200 bg-white p-4 shadow-2xs transition hover:border-teal-300 hover:shadow-sm"
+                    className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs transition-colors hover:border-teal-400"
                   >
                     <div className="flex items-center justify-between text-stone-500">
-                      <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                         Tahfidz Qur&apos;an
                       </span>
                       <BookMarked className="h-4 w-4 text-cyan-700" />
                     </div>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-2xl font-bold tracking-tight text-stone-900">
+                      <span className="text-2xl font-bold tracking-tight text-stone-900 font-mono tabular-nums">
                         {data.stats.tahfidz.todayRecordsCount}
                       </span>
                       <span className="text-xs text-stone-500">Setoran Hari Ini</span>
@@ -415,16 +406,16 @@ export default function OperationalDashboardPage() {
                 {data.stats.living && (
                   <Link
                     href="/dormitories"
-                    className="group rounded-xl border border-stone-200 bg-white p-4 shadow-2xs transition hover:border-teal-300 hover:shadow-sm"
+                    className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs transition-colors hover:border-teal-400"
                   >
                     <div className="flex items-center justify-between text-stone-500">
-                      <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                         Asrama & Kobong
                       </span>
                       <Home className="h-4 w-4 text-rose-700" />
                     </div>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-2xl font-bold tracking-tight text-stone-900">
+                      <span className="text-2xl font-bold tracking-tight text-stone-900 font-mono tabular-nums">
                         {data.stats.living.activeResidentsCount}
                       </span>
                       <span className="text-xs text-stone-500">Santri Mukim</span>
@@ -439,17 +430,17 @@ export default function OperationalDashboardPage() {
                 {data.stats.notifications && (
                   <Link
                     href="/notifications"
-                    className="group rounded-xl border border-stone-200 bg-white p-4 shadow-2xs transition hover:border-teal-300 hover:shadow-sm"
+                    className="group rounded-lg border border-stone-200 bg-white p-4 shadow-2xs transition-colors hover:border-teal-400"
                   >
                     <div className="flex items-center justify-between text-stone-500">
-                      <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                         Outbox WhatsApp
                       </span>
                       <MessageSquare className="h-4 w-4 text-teal-700" />
                     </div>
                     <div className="mt-2 flex items-baseline gap-2">
                       <span
-                        className={`text-2xl font-bold tracking-tight ${
+                        className={`text-2xl font-bold tracking-tight font-mono tabular-nums ${
                           data.stats.notifications.failedCount > 0
                             ? "text-rose-700"
                             : "text-stone-900"
@@ -467,7 +458,7 @@ export default function OperationalDashboardPage() {
               </div>
             </section>
 
-            {/* SECTION 3: AKSI CEPAT (QUICK ACTIONS SESUAI RBAC) */}
+            {/* 4. SECTION 3: AKSI CEPAT (QUICK ACTIONS SESUAI RBAC) */}
             <section aria-labelledby="quick-actions-heading">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -482,7 +473,7 @@ export default function OperationalDashboardPage() {
               </div>
 
               {data.quickActions.length === 0 ? (
-                <div className="rounded-xl border border-stone-200 bg-white p-6 text-center text-stone-500">
+                <div className="rounded-lg border border-stone-200 bg-white p-6 text-center text-stone-500 shadow-2xs">
                   <p className="text-sm">Tidak ada aksi cepat khusus untuk peran akun Anda.</p>
                 </div>
               ) : (
@@ -491,10 +482,10 @@ export default function OperationalDashboardPage() {
                     <Link
                       key={action.id}
                       href={action.href}
-                      className="group flex flex-col justify-between rounded-xl border border-stone-200 bg-white p-4 shadow-2xs transition hover:border-teal-400 hover:shadow-xs min-h-[96px]"
+                      className="group flex flex-col justify-between rounded-lg border border-stone-200 bg-white p-4 shadow-2xs transition-colors hover:border-teal-400 min-h-[96px]"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-stone-100 group-hover:bg-teal-50">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-stone-100 group-hover:bg-teal-50 transition-colors">
                           {renderQuickActionIcon(action.iconName)}
                         </div>
                         <div className="min-w-0">
@@ -506,7 +497,7 @@ export default function OperationalDashboardPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="mt-3 flex items-center justify-end text-xs font-medium text-teal-700 group-hover:translate-x-0.5 transition-transform">
+                      <div className="mt-3 flex items-center justify-end text-xs font-medium text-teal-700">
                         <ArrowRight className="h-3.5 w-3.5" />
                       </div>
                     </Link>
@@ -515,8 +506,8 @@ export default function OperationalDashboardPage() {
               )}
             </section>
 
-            {/* SECTION 4: TRANSPARANSI PLUGIN AKTIF */}
-            <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-2xs">
+            {/* 5. SECTION 4: TRANSPARANSI PLUGIN AKTIF */}
+            <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-2xs">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold text-stone-900">
@@ -527,23 +518,18 @@ export default function OperationalDashboardPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <span className="rounded-md bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-700">
-                    Core Platform (Wajib)
-                  </span>
+                  <Badge variant="neutral">Core Platform (Wajib)</Badge>
                   {data.institution.enabledPlugins.map((plugin) => (
-                    <span
-                      key={plugin}
-                      className="rounded-md bg-teal-50 border border-teal-200 px-2.5 py-1 text-xs font-semibold text-teal-800"
-                    >
+                    <Badge key={plugin} variant="primary">
                       {plugin}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
             </section>
           </div>
         )}
-      </main>
+      </div>
 
       {/* Global Search Dialog Modal */}
       <GlobalSearchDialog

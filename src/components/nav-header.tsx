@@ -22,23 +22,26 @@ import {
   Settings,
 } from "lucide-react";
 import { GlobalSearchDialog } from "./global-search-dialog";
+import { useAppShell } from "./app-shell";
 
 export function NavHeader({ subtitle }: { subtitle?: string }) {
   const pathname = usePathname();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { isInsideShell, setSubtitle } = useAppShell();
 
-  // Shortcut Ctrl+K / Cmd+K
+  // Coordinate with parent AppShell if mounted inside it
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setIsSearchOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    if (isInsideShell && subtitle) {
+      setSubtitle(subtitle);
+    }
+  }, [isInsideShell, subtitle, setSubtitle]);
 
+  // If already inside the persistent AppShell, skip rendering the duplicate header
+  if (isInsideShell) {
+    return null;
+  }
+
+  // Fallback standalone rendering if rendered outside AppShell
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/teacher", label: "Workspace Guru", icon: GraduationCap },
@@ -69,7 +72,7 @@ export function NavHeader({ subtitle }: { subtitle?: string }) {
                 href="/dashboard"
                 className="touch-target inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-stone-900 transition hover:text-teal-700"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-800 text-white font-bold shadow-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-800 text-white font-bold shadow-2xs">
                   N
                 </div>
                 <div className="hidden sm:block">
@@ -86,7 +89,7 @@ export function NavHeader({ subtitle }: { subtitle?: string }) {
               <button
                 type="button"
                 onClick={() => setIsSearchOpen(true)}
-                className="touch-target inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-500 shadow-2xs transition hover:border-stone-300 hover:bg-stone-50 focus:outline-hidden focus:ring-2 focus:ring-teal-700/20"
+                className="touch-target inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-500 shadow-2xs transition hover:border-stone-300 hover:bg-stone-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-teal-700"
                 aria-label="Cari data (Ctrl+K)"
               >
                 <Search className="h-3.5 w-3.5 text-stone-400" />
