@@ -1,5 +1,28 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-24] - Candidate B: Automated Communication Outbox Integration (Payment, Attendance Close, Cron Worker & Idempotency) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/notification/guardian-resolver.ts`: Helper resolusi nomor kontak WhatsApp wali murid dengan hierarki teruji: (1) Primary Guardian (`GuardianStudent.isPrimary`), (2) Guardian terdaftar lain, (3) Fallback `student.parentWaPhone`. Dilengkapi normalisasi nomor format Indonesia (+62 / 08 / 628 -> 628xxx).
+* `src/app/api/cron/process-outbox/route.ts`: Endpoint cron background worker (`GET` & `POST`) dengan otentikasi constant-time `Authorization: Bearer <CRON_SECRET>`. Memproses batch antrean notifikasi per-tenant menggunakan `runWithTenantContext` untuk menjamin isolasi multi-tenant yang ketat.
+* `test/automated-communication-outbox.test.ts`: Rangkaian 15 automated tests komprehensif mencakup lifecycle pembayaran ke outbox, penutupan absensi (ABSENT/SICK/EXCUSED vs PRESENT), deduplikasi/idempotency, error boundary defensif, dan keamanan endpoint cron.
+
+### Changed
+* `src/lib/finance/payment-service.ts`:
+  * Mengintegrasikan `createPaymentTransaction` dengan `notifyPaymentCompleted` post-commit.
+  * Mengisolasi pengiriman notifikasi dalam boundary `try/catch` defensif sehingga kegagalan outbox tidak dapat membatalkan atau me-rollback transaksi pembayaran, alokasi tagihan, BKU/cashbook, dan kwitansi.
+* `src/lib/attendance/session-service.ts`:
+  * Mengintegrasikan `closeAttendanceSession` dengan `notifyAttendanceAlert` post-close.
+  * Hanya memproses status `ABSENT`, `SICK`, dan `EXCUSED` (status `PRESENT` secara tegas tidak dikirimi notifikasi).
+  * Error boundary per-siswa sehingga kegagalan satu siswa tidak menghentikan siswa lain dan status penutupan sesi tetap `CLOSED`.
+* `src/lib/notification/outbox-service.ts` & `src/lib/validation/notification.ts`:
+  * Menambahkan parameter `idempotencyKey` pada `queueNotification` dan validasi Zod.
+  * Menerapkan deterministik ID per-tenant (`nob_{institutionId}_{key}`) untuk deduplikasi $O(1)$ dan pencegahan pesan ganda tanpa membutuhkan migrasi skema database baru.
+* `src/lib/notification/events.ts`:
+  * Mendukung `idempotencyKey` opsional pada `notifyPaymentCompleted` dan `notifyAttendanceAlert`.
+
+---
+
 ## [2026-09-24] - Milestone: Motion System & Interaction Polish (Motion Tokens, Reusable Motion Primitives, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) (IMPLEMENTED / VERIFIED)
 
 ### Added

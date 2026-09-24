@@ -32,11 +32,37 @@
 | **Milestone** | **UI Foundation & Persistent App Shell** (Design Tokens, 15 Primitives, Persistent AppShell, Mobile Nav, Loading Skeletons, DataTableView, Dashboard Reference) | **COMPLETE** | 2026-09-23 (315 Tests Pass) |
 | **Milestone** | **Finance Workspace UX Migration** (Unified Workspace Navigation, Charges, Payments & Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV, Design Tokens, Anti-Slop Mode 1) | **COMPLETE** | 2026-09-23 (325 Tests Pass) |
 | **Milestone** | **Motion System & Interaction Polish** (Motion Tokens, Micro-Interactions, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) | **COMPLETE** | 2026-09-24 (340 Tests Pass) |
+| **Milestone** | **Automated Communication Outbox Integration** (Candidate B: Payment Outbox, Attendance Close Outbox, Cron Worker, Deterministic Idempotency) | **COMPLETE** | 2026-09-24 (360 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-24] - Candidate B: Automated Communication Outbox Integration (Payment, Attendance Close, Cron Worker & Idempotency) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Menghubungkan lifecycle pembayaran dan penutupan sesi absensi secara otomatis ke engine komunikasi WhatsApp (`NotificationOutbox`), menyediakan cron worker endpoint untuk pengiriman berkala, serta menerapkan deduplikasi/idempotency $O(1)$ tanpa migrasi skema database.
+* **Implementasi:**
+  1. **Guardian Phone Resolution Hierarchy (`src/lib/notification/guardian-resolver.ts`):**
+     * Resolusi hierarkis: (1) Primary Guardian (`isPrimary: true`), (2) Guardian terdaftar lain, (3) Fallback `Student.parentWaPhone`.
+     * Normalisasi nomor telepon format Indonesia (+62 / 08 / 628).
+  2. **Payment → Outbox (`src/lib/finance/payment-service.ts`):**
+     * Post-commit fire-and-forget boundary pada `createPaymentTransaction`.
+     * Mengirim payload `studentName`, `receiptNo`, `amount`, `categoryName`, `paymentDate`.
+     * Boundary defensif menjamin kegagalan outbox tidak pernah menggagalkan transaksi finansial.
+  3. **Attendance CLOSE → Outbox (`src/lib/attendance/session-service.ts`):**
+     * Terintegrasi saat sesi berhasil `CLOSED`.
+     * HANYA memproses `ABSENT`, `SICK`, `EXCUSED` (status `PRESENT` diabaikan).
+     * Error boundary per-siswa menjamin kegagalan satu siswa tidak menghentikan siswa lain dan sesi tetap `CLOSED`.
+  4. **Idempotency & Deduplication (`src/lib/notification/outbox-service.ts`):**
+     * Deterministic ID berformat `nob_{institutionId}_{key}` memanfaatkan constraint primary key `@id`.
+  5. **Cron Outbox Worker (`src/app/api/cron/process-outbox/route.ts`):**
+     * Endpoint dengan otentikasi konstan `Authorization: Bearer <CRON_SECRET>`.
+     * Memproses batch per-tenant secara terisolasi via `runWithTenantContext`.
+  6. **Verifikasi:**
+     * 15 automated tests baru (total 360 passing).
+     * Live runtime verification pada Supabase Tokyo (Payment -> Outbox PENDING -> Worker DELIVERED via deeplink).
+
+---
 
 ### [2026-09-24] - Milestone: Motion System & Interaction Polish (Motion Tokens, Reusable Motion Primitives, Shimmer Skeleton, Dialog/Drawer Motion, Cashier Multi-Step Success Feedback, Reduced-Motion WCAG AA) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Membangun dan mengimplementasikan **Motion Language NataSekolah** yang halus, intensional, konsisten, cepat ($\le 240\text{ms}$), dan *non-disruptive* berbasis `DESIGN.md v2.0` (Dial `ENERGY 1 / RHYTHM 2 / MOTION 1`, Anti-Slop Mode 1). Menghilangkan perubahan state yang kaku (*instant snap*) dan mengganti pulse generik dengan shimmer halus, tanpa menambah bobot library pihak ketiga ataupun merombak logika domain/finansial backend.
