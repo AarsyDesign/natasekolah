@@ -36,6 +36,7 @@ function createMockPrismaFinanceOperations() {
   const studentsStore: Map<string, any> = new Map();
   const enrollmentsStore: Map<string, any> = new Map();
   const institutionsStore: Map<string, any> = new Map();
+  const auditLogsStore: Map<string, any> = new Map();
 
   let autoId = 1;
 
@@ -422,6 +423,20 @@ function createMockPrismaFinanceOperations() {
           list = list.filter((r) => r.receiptNumber.startsWith(where.receiptNumber.startsWith));
         }
         return list.length;
+      },
+    },
+
+    auditLog: {
+      create: async ({ data }: any) => {
+        const id = `al_${autoId++}`;
+        const record = { id, ...data, createdAt: new Date() };
+        auditLogsStore.set(id, record);
+        return record;
+      },
+      findMany: async ({ where }: any) => {
+        let list = Array.from(auditLogsStore.values());
+        if (where?.institutionId) list = list.filter((a) => a.institutionId === where.institutionId);
+        return list;
       },
     },
 

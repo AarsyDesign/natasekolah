@@ -26,6 +26,7 @@ function createMockPrismaFinance() {
   const cashbookEntriesStore: Map<string, any> = new Map();
   const receiptsStore: Map<string, any> = new Map();
   const studentsStore: Map<string, any> = new Map();
+  const auditLogsStore: Map<string, any> = new Map();
 
   let autoId = 1;
 
@@ -267,8 +268,49 @@ function createMockPrismaFinance() {
       },
     },
 
+    auditLog: {
+      create: async ({ data }: any) => {
+        const id = `al_${autoId++}`;
+        const record = { id, ...data, createdAt: new Date() };
+        auditLogsStore.set(id, record);
+        return record;
+      },
+      findMany: async ({ where }: any) => {
+        let list = Array.from(auditLogsStore.values());
+        if (where?.institutionId) list = list.filter((a) => a.institutionId === where.institutionId);
+        if (where?.entityType) list = list.filter((a) => a.entityType === where.entityType);
+        if (where?.entityId) list = list.filter((a) => a.entityId === where.entityId);
+        if (where?.action) list = list.filter((a) => a.action === where.action);
+        return list;
+      },
+      findFirst: async ({ where }: any) => {
+        const list = Array.from(auditLogsStore.values());
+        return list.find((a) => {
+          if (where.id && a.id !== where.id) return false;
+          if (where.institutionId && a.institutionId !== where.institutionId) return false;
+          if (where.entityType && a.entityType !== where.entityType) return false;
+          if (where.entityId && a.entityId !== where.entityId) return false;
+          if (where.action && a.action !== where.action) return false;
+          return true;
+        }) || null;
+      },
+    },
+
     $transaction: async (fn: any) => {
-      return await fn(mock);
+      // Snapshot state to support transaction rollback semantics in tests
+      const chargeSnapshot = new Map(
+        Array.from(studentChargesStore.entries()).map(([k, v]) => [k, { ...v }])
+      );
+      const auditSnapshot = new Map(auditLogsStore);
+      try {
+        return await fn(mock);
+      } catch (err) {
+        studentChargesStore.clear();
+        chargeSnapshot.forEach((v, k) => studentChargesStore.set(k, v));
+        auditLogsStore.clear();
+        auditSnapshot.forEach((v, k) => auditLogsStore.set(k, v));
+        throw err;
+      }
     },
 
     $stores: {
@@ -278,6 +320,7 @@ function createMockPrismaFinance() {
       paymentAllocationsStore,
       cashbookEntriesStore,
       receiptsStore,
+      auditLogsStore,
     },
   };
 
@@ -552,6 +595,211 @@ describe("Phase 4 — Finance Core Domain Tests", () => {
           ),
         PaymentError
       );
+    });
+  });
+
+  describe("6.1 Hardening: Atomic VOID with AuditLog Integrity", () => {
+    test("Successful VOID marks charge VOID and atomically records AuditLog with actor & details", async () => {
+      const mockPrisma = createMockPrismaFinance();
+
+      await runWithTenantContext(mockTenantContext, async () => {
+        const cat = await createFeeCategory(
+          { code: "SPP", name: "SPP", amount: 150000 },
+          mockPrisma as any
+        );
+        const charge = await createStudentCharge(
+          { studentId: "std_001", feeCategoryId: cat.id, amount: 150000 },
+          mockPrisma as any
+        );
+
+        const voidResult = await voidStudentCharge(charge.id, "Kesalahan input tagihan", mockPrisma as any);
+        assert.strictEqual(voidResult.status, "VOID");
+
+        // Verify StudentCharge in store is VOID
+        const storedCharge = mockPrisma.$stores.studentChargesStore.get(charge.id);
+        assert.strictEqual(storedCharge.status, "VOID");
+
+        // Verify AuditLog in store
+        const auditLogs = await mockPrisma.auditLog.findMany({
+          where: {
+            institutionId: mockTenantContext.institutionId,
+            entityType: "STUDENT_CHARGE",
+            entityId: charge.id,
+          },
+        });
+        assert.strictEqual(auditLogs.length, 1);
+        const log = auditLogs[0];
+        assert.strictEqual(log.institutionId, mockTenantContext.institutionId);
+        assert.strictEqual(log.userId, mockTenantContext.userId);
+        assert.strictEqual(log.action, "VOID");
+        assert.strictEqual(log.entityType, "STUDENT_CHARGE");
+        assert.strictEqual(log.entityId, charge.id);
+
+        const details = JSON.parse(log.detailsJson);
+        assert.strictEqual(details.amount, 150000);
+        assert.strictEqual(details.studentId, "std_001");
+        assert.strictEqual(details.reason, "Kesalahan input tagihan");
+      });
+    });
+
+    test("VOID with payment allocation is rejected, charge remains unchanged, and no AuditLog is created", async () => {
+      const mockPrisma = createMockPrismaFinance();
+
+      await runWithTenantContext(mockTenantContext, async () => {
+        const cat = await createFeeCategory(
+          { code: "SPP", name: "SPP", amount: 100000 },
+          mockPrisma as any
+        );
+        const charge = await createStudentCharge(
+          { studentId: "std_001", feeCategoryId: cat.id, amount: 100000 },
+          mockPrisma as any
+        );
+
+        // Pay the charge
+        await createPaymentTransaction(
+          {
+            studentId: "std_001",
+            amount: 100000,
+            paymentMethod: "CASH",
+            allocations: [{ studentChargeId: charge.id, amount: 100000 }],
+          },
+          mockPrisma as any
+        );
+
+        // Attempt to VOID allocated charge
+        await assert.rejects(
+          async () => voidStudentCharge(charge.id, "Attempt void paid", mockPrisma as any),
+          (err: any) => {
+            assert.strictEqual(err.name, "ChargeError");
+            assert.strictEqual(err.statusCode, 400);
+            return true;
+          }
+        );
+
+        // Verify charge is NOT voided
+        const storedCharge = mockPrisma.$stores.studentChargesStore.get(charge.id);
+        assert.strictEqual(storedCharge.status, "PAID");
+
+        // Verify NO audit log was created
+        const auditLogs = await mockPrisma.auditLog.findMany({
+          where: { entityId: charge.id, action: "VOID" },
+        });
+        assert.strictEqual(auditLogs.length, 0);
+      });
+    });
+
+    test("Tenant isolation: Attempting to VOID another tenant's charge fails with 404 and logs nothing", async () => {
+      const mockPrisma = createMockPrismaFinance();
+      let tenantAChargeId = "";
+
+      await runWithTenantContext(mockTenantContext, async () => {
+        const cat = await createFeeCategory(
+          { code: "DAFTAR", name: "Pendaftaran", amount: 500000 },
+          mockPrisma as any
+        );
+        const charge = await createStudentCharge(
+          { studentId: "std_001", feeCategoryId: cat.id, amount: 500000 },
+          mockPrisma as any
+        );
+        tenantAChargeId = charge.id;
+      });
+
+      // Tenant B tries to VOID Tenant A's charge
+      await runWithTenantContext(otherTenantContext, async () => {
+        await assert.rejects(
+          async () => voidStudentCharge(tenantAChargeId, "Malicious cross-tenant void", mockPrisma as any),
+          (err: any) => {
+            assert.strictEqual(err.name, "ChargeError");
+            assert.strictEqual(err.statusCode, 404);
+            return true;
+          }
+        );
+
+        // Verify Tenant B has no audit logs created
+        const tenantBAudits = await mockPrisma.auditLog.findMany({
+          where: { institutionId: otherTenantContext.institutionId },
+        });
+        assert.strictEqual(tenantBAudits.length, 0);
+      });
+
+      // Verify Tenant A's charge is still UNPAID and no VOID audit was created
+      const chargeA = mockPrisma.$stores.studentChargesStore.get(tenantAChargeId);
+      assert.strictEqual(chargeA.status, "UNPAID");
+      const tenantAAudits = await mockPrisma.auditLog.findMany({
+        where: { institutionId: mockTenantContext.institutionId, action: "VOID" },
+      });
+      assert.strictEqual(tenantAAudits.length, 0);
+    });
+
+    test("Authorization: User without finance:manage permission is rejected before modifying state", async () => {
+      const mockPrisma = createMockPrismaFinance();
+      let chargeId = "";
+
+      await runWithTenantContext(mockTenantContext, async () => {
+        const cat = await createFeeCategory(
+          { code: "EKSKUL", name: "Ekskul", amount: 25000 },
+          mockPrisma as any
+        );
+        const charge = await createStudentCharge(
+          { studentId: "std_001", feeCategoryId: cat.id, amount: 25000 },
+          mockPrisma as any
+        );
+        chargeId = charge.id;
+      });
+
+      const unauthorizedContext: TenantContext = {
+        institutionId: "inst_finance_demo",
+        userId: "user_regular_teacher",
+        roles: ["TEACHER"],
+        permissions: ["academic:view"],
+        isSuperAdmin: false,
+      };
+
+      await runWithTenantContext(unauthorizedContext, async () => {
+        await assert.rejects(
+          async () => voidStudentCharge(chargeId, "Unauthorized void", mockPrisma as any),
+          /Akses ditolak|Forbidden/i
+        );
+      });
+
+      // Charge remains UNPAID and no AuditLog
+      const charge = mockPrisma.$stores.studentChargesStore.get(chargeId);
+      assert.strictEqual(charge.status, "UNPAID");
+      const audits = await mockPrisma.auditLog.findMany({
+        where: { entityId: chargeId, action: "VOID" },
+      });
+      assert.strictEqual(audits.length, 0);
+    });
+
+    test("Atomicity: If AuditLog recording fails, StudentCharge VOID is rolled back", async () => {
+      const mockPrisma = createMockPrismaFinance();
+      let chargeId = "";
+
+      await runWithTenantContext(mockTenantContext, async () => {
+        const cat = await createFeeCategory(
+          { code: "SERAGAM", name: "Seragam", amount: 350000 },
+          mockPrisma as any
+        );
+        const charge = await createStudentCharge(
+          { studentId: "std_001", feeCategoryId: cat.id, amount: 350000 },
+          mockPrisma as any
+        );
+        chargeId = charge.id;
+
+        // Sabotage auditLog.create inside transaction to simulate database failure
+        mockPrisma.auditLog.create = async () => {
+          throw new Error("Simulated AuditLog database connection failure");
+        };
+
+        await assert.rejects(
+          async () => voidStudentCharge(chargeId, "Should fail atomically", mockPrisma as any),
+          /Simulated AuditLog database connection failure/
+        );
+
+        // Verify charge rolled back and was NOT left as VOID
+        const storedCharge = mockPrisma.$stores.studentChargesStore.get(chargeId);
+        assert.strictEqual(storedCharge.status, "UNPAID");
+      });
     });
   });
 

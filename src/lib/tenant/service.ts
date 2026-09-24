@@ -120,13 +120,17 @@ export class TenantStudentService extends BaseTenantService {
  * Layanan Audit Log Terisolasi Tenant
  */
 export class TenantAuditService extends BaseTenantService {
-  async log(params: {
-    action: string;
-    entityType: string;
-    entityId?: string;
-    detailsJson?: string;
-  }) {
-    return prisma.auditLog.create({
+  async log(
+    params: {
+      action: string;
+      entityType: string;
+      entityId?: string;
+      detailsJson?: string;
+    },
+    txPrisma?: typeof prisma | any
+  ) {
+    const client = txPrisma || prisma;
+    return client.auditLog.create({
       data: {
         institutionId: this.institutionId,
         userId: this.context.userId,

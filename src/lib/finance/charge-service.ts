@@ -1,6 +1,7 @@
 import { prisma } from "../prisma";
 import { requireTenantContext } from "../tenant/context";
 import { requirePermission } from "../auth/permissions";
+import { TenantAuditService } from "../tenant/service";
 import {
   StudentChargeInput,
   studentChargeInputSchema,
@@ -414,32 +415,75 @@ export async function getStudentCharge(id: string, txPrisma?: typeof prisma) {
 
 /**
  * Void a StudentCharge (cannot void if allocations exist)
+ * Atomically updates charge status and records AuditLog in a single transaction.
  */
-export async function voidStudentCharge(id: string, txPrisma?: typeof prisma) {
+export async function voidStudentCharge(
+  id: string,
+  reasonOrTxPrisma?: string | typeof prisma | any,
+  txPrisma?: typeof prisma | any
+) {
   const context = requireTenantContext();
   requirePermission(context, "finance:manage");
-  const client = txPrisma || prisma;
 
-  const charge = await client.studentCharge.findFirst({
-    where: { id, institutionId: context.institutionId },
-    include: { allocations: true },
-  });
+  let reason: string | undefined;
+  let rootClient: any;
 
-  if (!charge) {
-    throw new ChargeError("Tagihan tidak ditemukan", 404);
+  if (typeof reasonOrTxPrisma === "string") {
+    reason = reasonOrTxPrisma;
+    rootClient = txPrisma || prisma;
+  } else if (reasonOrTxPrisma && typeof reasonOrTxPrisma === "object") {
+    rootClient = reasonOrTxPrisma;
+    reason = typeof txPrisma === "string" ? txPrisma : undefined;
+  } else {
+    rootClient = txPrisma || prisma;
   }
 
-  if (charge.allocations.length > 0) {
-    throw new ChargeError(
-      "Tagihan yang sudah memiliki alokasi pembayaran tidak dapat di-void",
-      400
+  const auditService = new TenantAuditService(context);
+
+  const executeVoid = async (tx: any) => {
+    const charge = await tx.studentCharge.findFirst({
+      where: { id, institutionId: context.institutionId },
+      include: { allocations: true },
+    });
+
+    if (!charge) {
+      throw new ChargeError("Tagihan tidak ditemukan", 404);
+    }
+
+    if (charge.allocations.length > 0) {
+      throw new ChargeError(
+        "Tagihan yang sudah memiliki alokasi pembayaran tidak dapat di-void",
+        400
+      );
+    }
+
+    const updatedCharge = await tx.studentCharge.update({
+      where: { id: charge.id },
+      data: { status: "VOID" },
+    });
+
+    await auditService.log(
+      {
+        action: "VOID",
+        entityType: "STUDENT_CHARGE",
+        entityId: charge.id,
+        detailsJson: JSON.stringify({
+          amount: charge.amount,
+          feeCategoryId: charge.feeCategoryId,
+          studentId: charge.studentId,
+          reason: reason || "Voided by authorized staff",
+        }),
+      },
+      tx
     );
-  }
 
-  return await client.studentCharge.update({
-    where: { id: charge.id },
-    data: { status: "VOID" },
-  });
+    return updatedCharge;
+  };
+
+  if (typeof rootClient.$transaction === "function") {
+    return await rootClient.$transaction(executeVoid);
+  }
+  return await executeVoid(rootClient);
 }
 
 /**
