@@ -51,6 +51,7 @@ export const queueNotificationInputSchema = z.object({
   payload: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
   channel: z.enum(NOTIFICATION_CHANNELS).default("WHATSAPP"),
   maxAttempts: z.number().int().min(1).max(10).optional(),
+  idempotencyKey: z.string().min(1).max(128).optional(),
 });
 
 export type QueueNotificationInput = z.infer<typeof queueNotificationInputSchema>;

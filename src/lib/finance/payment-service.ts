@@ -12,6 +12,8 @@ import {
   generateUniqueCashbookNumber,
   generateUniqueReceiptNumber,
 } from "./receipt-service";
+import { resolveGuardianPhone } from "../notification/guardian-resolver";
+import { notifyPaymentCompleted } from "../notification/events";
 
 export class PaymentError extends Error {
   constructor(message: string, public statusCode = 400) {
@@ -45,7 +47,7 @@ export async function createPaymentTransaction(
   }
 
   // Execute atomic Prisma transaction
-  return await rootClient.$transaction(async (tx) => {
+  const result = await rootClient.$transaction(async (tx) => {
     // 2. Validate Student belongs to current tenant
     const student = await tx.student.findFirst({
       where: { id: validated.studentId, institutionId: context.institutionId },
@@ -185,12 +187,51 @@ export async function createPaymentTransaction(
       },
     });
 
+    const categoryName = charges.map((c) => c.feeCategory.name).join(", ") || "Pembayaran Siswa";
+
     return {
       payment,
       receipt,
       student,
+      categoryName,
     };
   });
+
+  // 10. POST-COMMIT: Automated Communication Outbox Integration
+  // Must execute outside the transaction boundary and never throw or revert payment
+  try {
+    const recipientPhone = await resolveGuardianPhone(
+      context.institutionId,
+      result.student.id,
+      rootClient
+    );
+
+    if (recipientPhone) {
+      await notifyPaymentCompleted(
+        {
+          recipientPhone,
+          studentName: result.student.fullName,
+          receiptNo: result.receipt.receiptNumber,
+          amount: result.payment.amount,
+          categoryName: result.categoryName,
+          paymentDate: result.payment.paymentDate
+            ? new Date(result.payment.paymentDate).toLocaleDateString("id-ID")
+            : new Date().toLocaleDateString("id-ID"),
+          idempotencyKey: `payment:${result.payment.id}`,
+        },
+        rootClient
+      );
+    }
+  } catch (error) {
+    // Non-blocking defensive error boundary: log and ignore
+    console.error("[PaymentService] Non-fatal notification outbox enqueue error:", error);
+  }
+
+  return {
+    payment: result.payment,
+    receipt: result.receipt,
+    student: result.student,
+  };
 }
 
 /**

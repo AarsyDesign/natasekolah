@@ -29,23 +29,62 @@ export async function queueNotification(
 
   const client = txPrisma || prisma;
 
-  const payloadJson = JSON.stringify(validated.payload);
+  // Multi-tenant safe deterministic ID for deduplication / idempotency without schema change
+  // Combines tenant isolation prefix with sanitized idempotency key, bounded to 100 chars
+  const deterministicId = validated.idempotencyKey
+    ? `nob_${context.institutionId}_${validated.idempotencyKey.replace(/[^a-zA-Z0-9_-]/g, "_")}`.slice(0, 100)
+    : undefined;
 
-  const notification = await client.notificationOutbox.create({
-    data: {
-      institutionId: context.institutionId,
-      recipient: validated.recipient,
-      templateKey: validated.templateKey,
-      payloadJson: payloadJson,
-      channel: validated.channel,
-      status: "PENDING",
-      attempts: 0,
-      maxAttempts: validated.maxAttempts ?? 5,
-      nextRetryAt: new Date(),
-    },
-  });
+  if (deterministicId) {
+    const existing = await client.notificationOutbox.findFirst({
+      where: {
+        id: deterministicId,
+        institutionId: context.institutionId,
+      },
+    });
+    if (existing) {
+      return existing;
+    }
+  }
 
-  return notification;
+  const payloadWithDedup = {
+    ...validated.payload,
+    ...(validated.idempotencyKey ? { _idempotencyKey: validated.idempotencyKey } : {}),
+  };
+  const payloadJson = JSON.stringify(payloadWithDedup);
+
+  try {
+    const notification = await client.notificationOutbox.create({
+      data: {
+        ...(deterministicId ? { id: deterministicId } : {}),
+        institutionId: context.institutionId,
+        recipient: validated.recipient,
+        templateKey: validated.templateKey,
+        payloadJson: payloadJson,
+        channel: validated.channel,
+        status: "PENDING",
+        attempts: 0,
+        maxAttempts: validated.maxAttempts ?? 5,
+        nextRetryAt: new Date(),
+      },
+    });
+
+    return notification;
+  } catch (err: unknown) {
+    // If concurrent insert created the same record, return existing record gracefully (P2002 unique constraint)
+    if (deterministicId && typeof err === "object" && err !== null && "code" in err && (err as { code: string }).code === "P2002") {
+      const existing = await client.notificationOutbox.findFirst({
+        where: {
+          id: deterministicId,
+          institutionId: context.institutionId,
+        },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+    throw err;
+  }
 }
 
 /**

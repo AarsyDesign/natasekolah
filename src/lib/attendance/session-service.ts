@@ -19,6 +19,8 @@ import {
   formatAttendanceDate,
   normalizeAttendanceDate,
 } from "./types";
+import { resolveGuardianPhone } from "../notification/guardian-resolver";
+import { notifyAttendanceAlert } from "../notification/events";
 
 /**
  * Layanan Domain Sesi Absensi (Attendance Session Service) NataSekolah.
@@ -344,7 +346,7 @@ export async function closeAttendanceSession(
   }
 
   // 7. Eksekusi Penutupan Sesi (Kunci Status menjadi CLOSED & Rekam Timestamp closedAt)
-  return prisma.attendanceSession.update({
+  const updatedSession = await prisma.attendanceSession.update({
     where: {
       id_institutionId: {
         id: attendanceSessionId,
@@ -371,6 +373,68 @@ export async function closeAttendanceSession(
       },
     },
   });
+
+  // 8. POST-CLOSE: Automated Communication Outbox Integration
+  // Sesi sudah resmi CLOSED. Sekarang proses notifikasi kehadiran untuk siswa yang tidak hadir.
+  // HANYA proses status: ABSENT, SICK, EXCUSED (JANGAN kirim notifikasi untuk PRESENT).
+  // Kegagalan notifikasi santri manapun TIDAK BOLEH membatalkan status penutupan sesi (defensive boundary).
+  try {
+    const alertRecords = await prisma.attendanceRecord.findMany({
+      where: {
+        attendanceSessionId: updatedSession.id,
+        institutionId: ctx.institutionId,
+        status: { in: ["ABSENT", "SICK", "EXCUSED"] },
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    const subjectName = updatedSession.teacherAssignment?.subject?.name || undefined;
+    const attendanceDateFormatted = updatedSession.attendanceDate
+      ? new Date(updatedSession.attendanceDate).toLocaleDateString("id-ID")
+      : new Date().toLocaleDateString("id-ID");
+
+    for (const record of alertRecords) {
+      try {
+        const recipientPhone = await resolveGuardianPhone(
+          ctx.institutionId,
+          record.studentId,
+          prisma
+        );
+
+        if (recipientPhone) {
+          await notifyAttendanceAlert({
+            recipientPhone,
+            studentName: record.student.fullName,
+            status: record.status as "ABSENT" | "SICK" | "EXCUSED",
+            date: attendanceDateFormatted,
+            subjectName,
+            idempotencyKey: `attendance:${updatedSession.id}:${record.studentId}`,
+          });
+        }
+      } catch (studentError) {
+        // Error boundary per siswa: satu siswa gagal, siswa lain tetap diproses
+        console.error(
+          `[AttendanceService] Non-fatal notification error for student ${record.studentId}:`,
+          studentError
+        );
+      }
+    }
+  } catch (outboxError) {
+    // Error boundary level sesi: sesi tetap berstatus CLOSED
+    console.error(
+      "[AttendanceService] Non-fatal attendance notification enqueue error:",
+      outboxError
+    );
+  }
+
+  return updatedSession;
 }
 
 /**

@@ -9,9 +9,12 @@ export async function notifyPaymentCompleted(
     amount: number;
     categoryName: string;
     paymentDate?: string;
+    idempotencyKey?: string;
   },
   txPrisma?: typeof prisma
 ) {
+  const dedupKey = params.idempotencyKey || `payment:${params.receiptNo}`;
+
   return queueNotification(
     {
       recipient: params.recipientPhone,
@@ -24,6 +27,7 @@ export async function notifyPaymentCompleted(
         paymentDate: params.paymentDate || new Date().toLocaleDateString("id-ID"),
       },
       channel: "WHATSAPP",
+      idempotencyKey: dedupKey,
     },
     txPrisma
   );
@@ -36,6 +40,7 @@ export async function notifyAttendanceAlert(
     status: "PRESENT" | "EXCUSED" | "SICK" | "ABSENT";
     date?: string;
     subjectName?: string;
+    idempotencyKey?: string;
   },
   txPrisma?: typeof prisma
 ) {
@@ -50,6 +55,7 @@ export async function notifyAttendanceAlert(
         subjectName: params.subjectName || null,
       },
       channel: "WHATSAPP",
+      idempotencyKey: params.idempotencyKey,
     },
     txPrisma
   );
