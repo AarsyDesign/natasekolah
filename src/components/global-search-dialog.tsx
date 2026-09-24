@@ -136,12 +136,12 @@ export function GlobalSearchDialog({ isOpen, onClose }: GlobalSearchDialogProps)
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 sm:pt-24 bg-stone-900/50 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 sm:pt-24 bg-stone-900/50 backdrop-blur-xs animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-xl overflow-hidden rounded-xl border border-stone-200 bg-white shadow-2xl">
+      <div className="w-full max-w-xl overflow-hidden rounded-xl border border-stone-200 bg-white shadow-2xl animate-modal-enter">
         {/* Search Input Bar */}
         <div className="relative flex items-center border-b border-stone-200 px-4">
           <Search className="h-5 w-5 text-stone-400 shrink-0" />

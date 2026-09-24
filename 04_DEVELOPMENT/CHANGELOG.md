@@ -1,5 +1,45 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-24] - Milestone: Motion System & Interaction Polish (Motion Tokens, Reusable Motion Primitives, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/components/ui/success-check.tsx`: Komponen SVG centang sukses teranimasi (`animate-checkmark`) dengan ukuran fleksibel (`sm`, `default`, `lg`) untuk konfirmasi micro-animation pada kasir pembayaran dan mutasi keuangan.
+* `test/motion-system.test.ts`: Rangkaian 15 automated contract tests untuk token durasi dan easing, dukungan prefers-reduced-motion, verifikasi 0 `active:scale-95`, 0 fullscreen blocking spinner, motion primitif Skeleton shimmer, Dialog modal enter, Dropdown enter, dan alur pembayaran kasir 3-tahap.
+
+### Changed
+* `src/app/globals.css`:
+  * Menambahkan semantic motion duration tokens (`--duration-instant: 75ms`, `--duration-fast: 120ms`, `--duration-standard: 180ms`, `--duration-slow: 240ms`) dan cubic-bezier easing tokens (`--ease-standard`, `--ease-enter`, `--ease-exit`) pada `@theme` Tailwind CSS v4 dan `:root`.
+  * Menambahkan keyframes CSS berkinerja tinggi GPU-accelerated: `modal-enter`, `drawer-slide-up`, `dropdown-enter`, `tooltip-enter`, `fade-in`, `content-enter`, `shimmer`, `checkmark-draw`.
+  * Menambahkan utility classes: `.animate-modal-enter`, `.animate-drawer-slide-up`, `.animate-dropdown-enter`, `.animate-tooltip-enter`, `.animate-fade-in`, `.animate-content-enter`, `.animate-shimmer`, `.animate-checkmark`.
+  * Menambahkan global `@media (prefers-reduced-motion: reduce)` yang menetralkan seluruh transisi dan animasi menjadi `0.01ms !important`.
+* `src/components/ui/skeleton.tsx`:
+  * Menggantikan pulse kasar dengan subtle linear sheen `.animate-shimmer` yang tenang dan profesional.
+* `src/components/ui/button.tsx`:
+  * Mengadopsi transisi warna dan respon sentuh halus `transition-colors duration-150 ease-standard active:opacity-95` tanpa scaling bouncing.
+* `src/components/ui/dialog.tsx`:
+  * Backdrop modal kini menggunakan `.animate-fade-in` dan kontainer dialog menggunakan `.animate-modal-enter`.
+* `src/components/ui/dropdown.tsx`:
+  * Konten dropdown menggunakan `.animate-dropdown-enter` dan item dropdown menggunakan transisi halus `duration-150`.
+* `src/components/ui/tooltip.tsx`:
+  * Popover tooltip menggunakan `.animate-tooltip-enter`.
+* `src/components/ui/tabs.tsx`:
+  * Segmented tab trigger mengadopsi `duration-150 ease-standard active:opacity-95` dan tab content menggunakan `.animate-fade-in`.
+* `src/components/app-shell.tsx`:
+  * Konten halaman dibungkus dengan transisi konten halus `.animate-content-enter` berbasis rute tanpa remount shell.
+  * Mobile drawer menggunakan `.animate-drawer-slide-up` dan backdrop `.animate-fade-in`.
+* `src/components/global-search-dialog.tsx`:
+  * Modal pencarian cepat (Ctrl+K) menggunakan `.animate-fade-in` dan `.animate-modal-enter`.
+* `src/components/finance/finance-workspace-nav.tsx`:
+  * Tab navigasi workspace keuangan menggunakan `transition-all duration-150 ease-standard active:opacity-95`.
+* `src/app/finance/payments/page.tsx`:
+  * Memperbarui alur kasir pembayaran menjadi 3 tahap terpadu: (1) Form alokasi tagihan, (2) Konfirmasi penerimaan kas, (3) Tampilan status sukses dengan checkmark micro-animation (`SuccessCheck`), ringkasan santri & nominal, serta aksi langsung cetak kwitansi.
+* `src/app/finance/charges/page.tsx`:
+  * Preview hasil verifikasi calon tagihan massal mengadopsi `.animate-fade-in` untuk transisi mulus.
+* `src/app/finance/cashbook/page.tsx`:
+  * Tombol switch jenis mutasi pengeluaran vs pemasukan mengadopsi `transition-all duration-150 ease-standard active:opacity-95`.
+
+---
+
 ## [2026-09-23] - Milestone: Finance Workspace UX Migration (Unified Finance Workspace Layout & Navigation, Charges, Payments Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV Export) (IMPLEMENTED / VERIFIED)
 
 ### Added

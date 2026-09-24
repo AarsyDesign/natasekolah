@@ -206,7 +206,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Main Page Content Area */}
         <main className="flex-1 pb-24 lg:pb-12">
-          {children}
+          <div key={pathname} className="animate-content-enter">
+            {children}
+          </div>
         </main>
 
         {/* Mobile Bottom Navigation Bar (Thumb-Zone Friendly, min-h-[44px]) */}
@@ -218,7 +220,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/dashboard"
               className={cn(
-                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors",
+                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 ease-standard",
                 pathname === "/dashboard" ? "text-teal-700 font-semibold" : "text-stone-500 hover:text-stone-900"
               )}
             >
@@ -229,7 +231,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/teacher"
               className={cn(
-                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors",
+                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 ease-standard",
                 pathname.startsWith("/teacher") ? "text-teal-700 font-semibold" : "text-stone-500 hover:text-stone-900"
               )}
             >
@@ -240,7 +242,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/attendance"
               className={cn(
-                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors",
+                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 ease-standard",
                 pathname.startsWith("/attendance") ? "text-teal-700 font-semibold" : "text-stone-500 hover:text-stone-900"
               )}
             >
@@ -251,7 +253,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/finance"
               className={cn(
-                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors",
+                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 ease-standard",
                 pathname.startsWith("/finance") ? "text-teal-700 font-semibold" : "text-stone-500 hover:text-stone-900"
               )}
             >
@@ -263,7 +265,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
               className={cn(
-                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors",
+                "touch-target flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 ease-standard",
                 isMobileMenuOpen || isMasterDataActive
                   ? "text-teal-700 font-semibold"
                   : "text-stone-500 hover:text-stone-900"
@@ -281,14 +283,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div
             role="dialog"
             aria-modal="true"
-            className="fixed inset-0 z-50 flex flex-col justify-end bg-stone-900/40 backdrop-blur-xs lg:hidden"
+            className="fixed inset-0 z-50 flex flex-col justify-end bg-stone-900/40 backdrop-blur-xs lg:hidden animate-fade-in"
           >
             <div
               className="fixed inset-0"
               onClick={() => setIsMobileMenuOpen(false)}
               aria-hidden="true"
             />
-            <div className="relative z-10 w-full max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-stone-200 bg-white p-5 shadow-lg">
+            <div className="relative z-10 w-full max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-stone-200 bg-white p-5 shadow-lg animate-drawer-slide-up">
               <div className="flex items-center justify-between pb-3 border-b border-stone-100 mb-3">
                 <h3 className="text-sm font-bold text-stone-900">Seluruh Menu NataSekolah</h3>
                 <button

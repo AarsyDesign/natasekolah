@@ -879,7 +879,7 @@ export default function StudentChargesPage() {
             </div>
 
             {bulkPreview ? (
-              <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+              <div className="grid grid-cols-3 gap-2 pt-1 text-center animate-fade-in">
                 <div className="bg-white p-2.5 rounded-md border border-stone-200">
                   <div className="text-xs text-stone-500">Total Santri</div>
                   <div className="text-base font-bold text-stone-900 font-mono">

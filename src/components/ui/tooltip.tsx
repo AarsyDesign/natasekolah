@@ -23,7 +23,7 @@ export function Tooltip({ content, children, className }: TooltipProps) {
         <div
           role="tooltip"
           className={cn(
-            "pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 whitespace-nowrap rounded-md bg-stone-900 px-2.5 py-1 text-[11px] font-medium text-white shadow-xs",
+            "pointer-events-none absolute bottom-full left-1/2 mb-1.5 z-50 whitespace-nowrap rounded-md bg-stone-900 px-2.5 py-1 text-[11px] font-medium text-white shadow-xs animate-tooltip-enter",
             className
           )}
         >

@@ -57,7 +57,7 @@ export function TabsTrigger({ value, className, children, disabled, ...props }: 
       disabled={disabled}
       onClick={() => context.onValueChange(value)}
       className={cn(
-        "touch-target inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-medium transition-colors select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-teal-700 disabled:opacity-50",
+        "touch-target inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-medium transition-all duration-150 ease-standard select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-teal-700 disabled:opacity-50",
         isActive
           ? "bg-white font-semibold text-stone-900 shadow-2xs"
           : "text-stone-600 hover:text-stone-900 hover:bg-stone-200/60",
@@ -81,7 +81,11 @@ export function TabsContent({ value, className, children, ...props }: TabsConten
   if (context.value !== value) return null;
 
   return (
-    <div role="tabpanel" className={cn("w-full focus-visible:outline-hidden", className)} {...props}>
+    <div
+      role="tabpanel"
+      className={cn("w-full focus-visible:outline-hidden animate-fade-in", className)}
+      {...props}
+    >
       {children}
     </div>
   );

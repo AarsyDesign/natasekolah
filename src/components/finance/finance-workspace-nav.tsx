@@ -60,7 +60,7 @@ export function FinanceWorkspaceNav() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "touch-target inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-medium transition-colors whitespace-nowrap select-none",
+                "touch-target inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-medium transition-all duration-150 ease-standard active:opacity-95 whitespace-nowrap select-none",
                 isActive
                   ? "bg-teal-700 text-white font-semibold shadow-2xs"
                   : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"

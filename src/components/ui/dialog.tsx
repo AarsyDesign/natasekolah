@@ -34,17 +34,17 @@ export function Dialog({ isOpen, onClose, children, className }: DialogProps) {
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
     >
-      {/* Backdrop */}
+      {/* Backdrop with subtle fade-in */}
       <div
-        className="fixed inset-0 bg-stone-900/40 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-stone-900/40 backdrop-blur-xs animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Container */}
+      {/* Modal Container with scale & fade enter */}
       <div
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-xl border border-stone-200 bg-white p-6 shadow-md transition-all text-stone-900 max-h-[90vh] overflow-y-auto",
+          "relative z-10 w-full max-w-lg rounded-xl border border-stone-200 bg-white p-6 shadow-md text-stone-900 max-h-[90vh] overflow-y-auto animate-modal-enter",
           className
         )}
       >

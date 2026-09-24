@@ -31,11 +31,45 @@
 | **Milestone** | **NataSekolah Design System & Product UX Reset** (DESIGN.md v2, Design Tokens, Navigation Contract, Data Density, A11y & Anti-Patterns) | **COMPLETE** | 2026-09-23 (303 Tests Pass) |
 | **Milestone** | **UI Foundation & Persistent App Shell** (Design Tokens, 15 Primitives, Persistent AppShell, Mobile Nav, Loading Skeletons, DataTableView, Dashboard Reference) | **COMPLETE** | 2026-09-23 (315 Tests Pass) |
 | **Milestone** | **Finance Workspace UX Migration** (Unified Workspace Navigation, Charges, Payments & Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV, Design Tokens, Anti-Slop Mode 1) | **COMPLETE** | 2026-09-23 (325 Tests Pass) |
+| **Milestone** | **Motion System & Interaction Polish** (Motion Tokens, Micro-Interactions, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) | **COMPLETE** | 2026-09-24 (340 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-24] - Milestone: Motion System & Interaction Polish (Motion Tokens, Reusable Motion Primitives, Shimmer Skeleton, Dialog/Drawer Motion, Cashier Multi-Step Success Feedback, Reduced-Motion WCAG AA) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Membangun dan mengimplementasikan **Motion Language NataSekolah** yang halus, intensional, konsisten, cepat ($\le 240\text{ms}$), dan *non-disruptive* berbasis `DESIGN.md v2.0` (Dial `ENERGY 1 / RHYTHM 2 / MOTION 1`, Anti-Slop Mode 1). Menghilangkan perubahan state yang kaku (*instant snap*) dan mengganti pulse generik dengan shimmer halus, tanpa menambah bobot library pihak ketiga ataupun merombak logika domain/finansial backend.
+* **Implementasi:**
+  1. **Audit Motion & Eliminasi Anti-Patterns:**
+     * Mengidentifikasi dan membasmi seluruh animasi bouncing (`active:scale-95`, `active:scale-98`), efek rotasi berat, dan spinner fullscreen blocking.
+     * Mengklasifikasikan motion menjadi sistem terarah berbasis CSS native dan Tailwind `@theme`.
+  2. **Motion Tokens Semantik (`src/app/globals.css`):**
+     * Durasi terstandarisasi: `--duration-instant: 75ms` (feedback mikro), `--duration-fast: 120ms` (hover/focus), `--duration-standard: 180ms` (dropdown/tab/fade), `--duration-slow: 240ms` (modal/drawer).
+     * Easing cubic-bezier semantik: `--ease-standard: cubic-bezier(0.2, 0, 0, 1)`, `--ease-enter: cubic-bezier(0, 0, 0.2, 1)`, `--ease-exit: cubic-bezier(0.4, 0, 1, 1)`.
+     * Utility classes berkinerja tinggi berbasis GPU (`transform`, `opacity`): `.animate-modal-enter`, `.animate-drawer-slide-up`, `.animate-dropdown-enter`, `.animate-tooltip-enter`, `.animate-fade-in`, `.animate-content-enter`, `.animate-shimmer`, `.animate-checkmark`.
+  3. **Aksesibilitas & Reduced Motion (WCAG 2.1 AA):**
+     * Menerapkan aturan global `@media (prefers-reduced-motion: reduce)` yang menetralkan seluruh durasi animasi dan transisi ke `0.01ms !important`, menjaga 100% kelengkapan fungsionalitas dan keamanan bagi pengguna dengan gangguan vestibular.
+  4. **Komponen Primitif Motion Reusable:**
+     * `Skeleton`: Shimmering sheen tenang berbasis linear gradient tanpa flicker.
+     * `Dialog`: Transisi masuk halus (`animate-fade-in` pada backdrop dan `animate-modal-enter` dengan scale 0.985 -> 1).
+     * `Dropdown` & `Tooltip`: Transisi buka cepat tanpa pantulan (`animate-dropdown-enter`, `animate-tooltip-enter`).
+     * `Tabs` & `Button`: Respons taktil instan (`duration-150 ease-standard active:opacity-95`).
+     * `SuccessCheck` (`src/components/ui/success-check.tsx`): Komponen SVG centang sukses dengan animasi goresan garis (`animate-checkmark`) terintegrasi.
+  5. **App Shell & Navigasi:**
+     * Kontinuitas rute: Transisi konten halaman menggunakan `.animate-content-enter` tanpa me-remount navbar atau shell utama.
+     * Mobile navigation: Reflow drawer bawah menggunakan `.animate-drawer-slide-up` dan transisi tab bilah bawah halus.
+  6. **Reference Implementation — Finance Workspace:**
+     * Kasir Pembayaran (`/finance/payments`): Alur 3-tahap mulus: (1) Form input, (2) Konfirmasi penerimaan kas, (3) Tampilan status sukses dengan micro-animation `SuccessCheck`, detail pembayaran, dan aksi cetak kwitansi langsung.
+     * Tagihan Siswa (`/finance/charges`): Tampilan verifikasi kandidat tagihan massal transisi halus `animate-fade-in` dan modal konfirmasi VOID aman.
+     * Buku Kas (`/finance/cashbook`): Toggle jenis mutasi pengeluaran/pemasukan ber-feedback taktil halus `active:opacity-95 duration-150`.
+  7. **Otomasi Pengujian (`test/motion-system.test.ts`):**
+     * 15 automated contract tests untuk token durasi/easing, prefers-reduced-motion, verifikasi 0 `active:scale-95`, 0 fullscreen blocking spinner, primitif Skeleton shimmer, Dialog modal enter, Dropdown enter, dan alur pembayaran kasir 3-tahap.
+* **Hasil Verifikasi:**
+  * Unit & Contract Test Suite: **340 tests pass** (120 test suites, 0 fail).
+  * TypeScript Compiler (`npx tsc --noEmit`): **0 errors**.
+  * Prisma Schema Validation (`npx prisma validate`): **Valid**.
+  * Production Build (`npm run build`): **100% sukses** (41 rute statically optimized).
 
 ### [2026-09-23] - Milestone: Finance Workspace UX Migration (Unified Finance Workspace Layout & Navigation, Charges, Payments Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV Export) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Memigrasikan seluruh ruang kerja keuangan (`/finance`, `/finance/charges`, `/finance/payments`, `/finance/cashbook`, `/finance/fees`, `/finance/reports`) ke fondasi visual dan UX Design System baru (`DESIGN.md v2.0` & UI Foundation). Mentransformasi modul keuangan menjadi **SATU WORKSPACE TERPADU** yang konsisten, tenang (*calm*), berkecepatan tinggi (*fast*), terstruktur (*organized*), data-dense, dan responsif tanpa merombak logika bisnis, skema Prisma, ataupun aturan transaksi atomik backend yang telah terkunci.

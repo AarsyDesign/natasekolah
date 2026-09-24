@@ -76,7 +76,7 @@ export function DropdownContent({
     <div
       role="menu"
       className={cn(
-        "absolute z-40 mt-1 min-w-[180px] rounded-lg border border-stone-200 bg-white p-1 shadow-md transition-all focus:outline-hidden",
+        "absolute z-40 mt-1 min-w-[180px] rounded-lg border border-stone-200 bg-white p-1 shadow-md focus:outline-hidden animate-dropdown-enter",
         align === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left",
         className
       )}
@@ -115,7 +115,7 @@ export function DropdownItem({
       disabled={disabled}
       onClick={handleClick}
       className={cn(
-        "touch-target flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors text-left disabled:pointer-events-none disabled:opacity-50",
+        "touch-target flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors duration-150 text-left disabled:pointer-events-none disabled:opacity-50",
         destructive
           ? "text-red-700 hover:bg-red-50 hover:text-red-800"
           : "text-stone-700 hover:bg-stone-100 hover:text-stone-900",

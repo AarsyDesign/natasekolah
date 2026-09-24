@@ -31,6 +31,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { SuccessCheck } from "@/components/ui/success-check";
 import { DataTableView, ColumnDef } from "@/components/data-dense/data-table-view";
 import { TableSkeleton } from "@/components/loading/skeletons";
 
@@ -66,7 +67,8 @@ export default function PaymentsPage() {
   const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("ALL");
   const [modalOpen, setModalOpen] = useState(false);
-  const [confirmStep, setConfirmStep] = useState(false);
+  const [step, setStep] = useState<"input" | "confirm" | "success">("input");
+  const [completedPaymentId, setCompletedPaymentId] = useState<string | null>(null);
   const [receiptModal, setReceiptModal] = useState<any | null>(null);
 
   const [students, setStudents] = useState<Array<{ id: string; fullName: string; nis: string }>>([]);
@@ -109,7 +111,8 @@ export default function PaymentsPage() {
     setPaymentAmount("");
     setPaymentMethod("CASH");
     setNote("");
-    setConfirmStep(false);
+    setStep("input");
+    setCompletedPaymentId(null);
     setModalOpen(true);
 
     try {
@@ -203,7 +206,7 @@ export default function PaymentsPage() {
       return;
     }
 
-    setConfirmStep(true);
+    setStep("confirm");
   };
 
   const handleExecutePayment = () => {
@@ -230,10 +233,9 @@ export default function PaymentsPage() {
             type: "success",
             text: "Pembayaran berhasil diterima dan kwitansi sah telah diterbitkan.",
           });
-          setModalOpen(false);
-          setConfirmStep(false);
+          setCompletedPaymentId(res.data.payment.id);
+          setStep("success");
           loadData();
-          handleViewReceipt(res.data.payment.id);
         }
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : String(err);
@@ -493,7 +495,13 @@ export default function PaymentsPage() {
       {/* Cashier Payment Modal */}
       <Dialog
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          if (!isPending) {
+            setModalOpen(false);
+            setStep("input");
+            setCompletedPaymentId(null);
+          }
+        }}
         className="max-w-xl"
       >
         <DialogHeader>
@@ -501,13 +509,15 @@ export default function PaymentsPage() {
             <CreditCard className="w-5 h-5 text-teal-700" /> Kasir Penerimaan Kas
           </DialogTitle>
           <DialogDescription>
-            {confirmStep
+            {step === "success"
+              ? "Transaksi pembayaran selesai dan kwitansi sah telah diterbitkan."
+              : step === "confirm"
               ? "Konfirmasi rincian transaksi sebelum membukukan ke buku kas."
               : "Pilih santri pembayar dan tentukan alokasi pelunasan tagihan."}
           </DialogDescription>
         </DialogHeader>
 
-        {!confirmStep ? (
+        {step === "input" && (
           <form onSubmit={handleProceedToConfirm} className="space-y-4">
             {/* Student Selection */}
             <Select
@@ -658,9 +668,11 @@ export default function PaymentsPage() {
               </Button>
             </DialogFooter>
           </form>
-        ) : (
+        )}
+
+        {step === "confirm" && (
           /* Step 2: Confirmation */
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in">
             <div className="bg-teal-50 border border-teal-200 p-3.5 rounded-lg space-y-1">
               <div className="flex items-center gap-2 text-teal-800 font-semibold text-xs">
                 <ShieldCheck className="w-4 h-4 text-teal-700" />
@@ -725,7 +737,7 @@ export default function PaymentsPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setConfirmStep(false)}
+                onClick={() => setStep("input")}
                 disabled={isPending}
               >
                 Kembali Edit
@@ -740,6 +752,72 @@ export default function PaymentsPage() {
                 {isPending ? "Mengeksekusi Transaksi..." : "Proses & Terbitkan Kwitansi"}
               </Button>
             </DialogFooter>
+          </div>
+        )}
+
+        {step === "success" && (
+          /* Step 3: Success Feedback & Receipt Action */
+          <div className="py-6 flex flex-col items-center text-center space-y-4 animate-fade-in">
+            <SuccessCheck size="lg" className="text-teal-700" />
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-stone-900">Pembayaran Berhasil Diterima</h3>
+              <p className="text-xs text-stone-500 max-w-sm">
+                Transaksi telah dibukukan secara atomik ke buku kas umum dan kwitansi sah telah diterbitkan.
+              </p>
+            </div>
+
+            <div className="w-full max-w-sm rounded-lg border border-teal-200 bg-teal-50/70 p-3.5 text-xs text-left space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-teal-800">Santri:</span>
+                <span className="font-semibold text-teal-950">
+                  {currentStudent?.fullName} (NIS: {currentStudent?.nis})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-teal-800">Metode Pembayaran:</span>
+                <span className="font-medium text-teal-950">{paymentMethod}</span>
+              </div>
+              <div className="flex justify-between border-t border-teal-200/60 pt-1">
+                <span className="text-teal-800 font-semibold">Total Diterima:</span>
+                <span className="font-mono font-bold text-emerald-800 text-sm">
+                  Rp {Number(paymentAmount).toLocaleString("id-ID")}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 w-full max-w-sm pt-2">
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full gap-1.5"
+                onClick={() => {
+                  if (completedPaymentId) {
+                    setModalOpen(false);
+                    setStep("input");
+                    handleViewReceipt(completedPaymentId);
+                  }
+                }}
+              >
+                <Printer className="w-4 h-4" />
+                <span>Lihat & Cetak Kwitansi</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setModalOpen(false);
+                  setStep("input");
+                  setCompletedPaymentId(null);
+                  setSelectedStudentId("");
+                  setUnpaidCharges([]);
+                  setAllocationsMap({});
+                  setPaymentAmount("");
+                }}
+              >
+                Selesai
+              </Button>
+            </div>
           </div>
         )}
       </Dialog>

@@ -468,7 +468,7 @@ export default function CashbookPage() {
               <button
                 type="button"
                 onClick={() => setFormType("EXPENSE")}
-                className={`touch-target px-3 py-2 text-xs font-semibold rounded-md border min-h-[44px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                className={`touch-target px-3 py-2 text-xs font-semibold rounded-md border min-h-[44px] flex items-center justify-center gap-1.5 transition-all duration-150 ease-standard active:opacity-95 cursor-pointer ${
                   formType === "EXPENSE"
                     ? "bg-rose-50 border-rose-300 text-rose-800 font-bold"
                     : "bg-white border-stone-200 text-stone-600 hover:bg-stone-50"
@@ -481,7 +481,7 @@ export default function CashbookPage() {
               <button
                 type="button"
                 onClick={() => setFormType("INCOME")}
-                className={`touch-target px-3 py-2 text-xs font-semibold rounded-md border min-h-[44px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                className={`touch-target px-3 py-2 text-xs font-semibold rounded-md border min-h-[44px] flex items-center justify-center gap-1.5 transition-all duration-150 ease-standard active:opacity-95 cursor-pointer ${
                   formType === "INCOME"
                     ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-bold"
                     : "bg-white border-stone-200 text-stone-600 hover:bg-stone-50"
