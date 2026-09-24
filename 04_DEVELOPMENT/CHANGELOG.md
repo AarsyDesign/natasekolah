@@ -1,5 +1,23 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-24] - Milestone: Master Data Engine - Excel Importer & Auto-Sanitizer (Upload, Auto-Sanitize, Validate, Duplicate Detection, Preview, Confirm & Atomic Import) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/importer/types.ts`: Tipe dan kontrak data (`SanitizedStudentImportData`, `PreviewRow`, `ImportPreviewSummary`, `ImportPreviewResult`, `ImportExecutionResult`).
+* `src/lib/importer/sanitizer.ts`: Auto-sanitizer data pendidikan Indonesia (pembersihan spasi ganda, penanganan placeholder kosong, netralisasi formula injection `'`, normalisasi float Excel untuk NIS/NISN/NIK, normalisasi format nomor HP 08/8/+628 ke kanonikal 628, normalisasi variasi jenis kelamin, parsing tanggal serial Excel dan format DD/MM/YYYY & ISO, serta normalisasi relasi wali murid).
+* `src/lib/importer/parser.ts`: Parser spreadsheet multi-format (`.xlsx`, `.xls`, `.csv`) dengan auto-mapping alias header kolom bahasa Indonesia & Inggris ke canonical keys, serta generator template Excel resmi.
+* `src/lib/importer/validator.ts`: Validasi terpadu Zod (`createStudentInputSchema`), deteksi duplikasi internal dalam file, deteksi *exact duplicate* (NIS terdaftar di institusi), dan deteksi *potential duplicate* (NISN sama atau Nama + Tanggal Lahir sama).
+* `src/lib/importer/importer-service.ts`: Layanan domain impor dengan guard RBAC (`student:create`), isolasi tenant mutlak (`ctx.institutionId`), transaksi database atomic (`prisma.$transaction`), pembuatan otomatis entitas `Guardian` & relasi `GuardianStudent`, penempatan rombel aktif (`Enrollment`) dengan perlindungan *Sacred History*, dan pencatatan riwayat `AuditLog` (`action: "IMPORT"`).
+* `src/actions/importer.ts`: Server Actions terautentikasi (`previewStudentImportAction`, `executeStudentImportAction`, `getStudentImportTemplateAction`).
+* `src/components/importer/student-import-modal.tsx`: Modal interaktif impor spreadsheet responsive 4-tahap (Upload/Dropzone, Prapinjau ringkasan & tabel berfilter, Eksekusi, dan Laporan hasil impor).
+* `test/master-data-importer.test.ts`: Rangkaian 17 automated tests mencakup sanitizer, parser, validator, duplicate detection, eksekusi transaksi, tenant isolation, dan proteksi RBAC (17/17 PASS).
+
+### Changed
+* `src/app/students/page.tsx`: Menambahkan tombol "Impor Excel" pada bilah aksi utama dan mengintegrasikan `StudentImportModal` dengan *real-time table revalidation*.
+* `package.json`: Menambahkan pustaka spreadsheet native `xlsx` (`0.18.5`).
+
+---
+
 ## [2026-09-24] - Milestone: Motion System & Interaction Polish (Motion Tokens, Reusable Motion Primitives, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) (IMPLEMENTED / VERIFIED)
 
 ### Added
