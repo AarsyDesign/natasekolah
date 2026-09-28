@@ -16,6 +16,8 @@ import {
   FormalAcademicError,
 } from "./types";
 import { calculateStudentSubjectGrades } from "./calculation-service";
+import { resolveStudentGuardianRecipient } from "../notification/guardian-resolver";
+import { notifyReportCardPublished } from "../notification/events";
 
 export interface FrozenReportCardSnapshot {
   frozenAt: string;
@@ -320,7 +322,36 @@ export async function publishReportCard(
     },
   });
 
-  return getReportCard(ctx, reportCard.id, db);
+  const publishedReportCard = await getReportCard(ctx, reportCard.id, db);
+
+  // 6. Post-Publish Event: Queue report card notification outbox
+  try {
+    const recipient = await resolveStudentGuardianRecipient(
+      reportCard.studentId,
+      ctx.institutionId,
+      db as any
+    );
+
+    if (recipient) {
+      await notifyReportCardPublished(
+        {
+          recipientPhone: recipient.recipientPhone,
+          studentName: reportCard.student.fullName,
+          reportCardId: reportCard.id,
+          semester: Number(reportCard.semester) || 1,
+          academicYear: reportCard.academicYear.name,
+          classroomName: reportCard.classroom.name,
+          reportUrl: `/wali/akademik/raport/${reportCard.id}`,
+          idempotencyKey: `REPORT_CARD_PUBLISHED:${reportCard.id}`,
+        },
+        db as any
+      );
+    }
+  } catch (notifErr) {
+    console.error("[ReportCardNotification] Failed to queue report card notification:", notifErr);
+  }
+
+  return publishedReportCard;
 }
 
 /**

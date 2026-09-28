@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { prisma } from "../prisma";
 import { requireTenantContext } from "../tenant/context";
 import {
@@ -18,7 +19,31 @@ export class NotificationOutboxError extends Error {
 }
 
 /**
- * Queue a new notification into the Outbox inside or outside an existing Prisma transaction
+ * Generate a deterministic ID for a notification to enforce DB-level idempotency without schema migration.
+ */
+export function generateDeterministicNotificationId(institutionId: string, idempotencyKey: string): string {
+  const hash = crypto
+    .createHash("sha256")
+    .update(`${institutionId}:${idempotencyKey}`)
+    .digest("hex")
+    .slice(0, 20);
+  return `notif_${hash}`;
+}
+
+/**
+ * Determines whether an error message indicates a permanent, un-retryable delivery failure.
+ */
+export function isPermanentNotificationFailure(errorMessage?: string | null): boolean {
+  if (!errorMessage) return false;
+  return /tidak terdaftar|invalid recipient|tidak valid|invalid phone|invalid number|unsupported provider|template tidak dikenal/i.test(
+    errorMessage
+  );
+}
+
+/**
+ * Queue a new notification into the Outbox inside or outside an existing Prisma transaction.
+ * Supports deterministic idempotency: if the same idempotencyKey is submitted again,
+ * returns the existing notification without creating a duplicate.
  */
 export async function queueNotification(
   input: QueueNotificationInput,
@@ -26,44 +51,89 @@ export async function queueNotification(
 ) {
   const context = requireTenantContext();
   const validated = queueNotificationInputSchema.parse(input);
-
   const client = txPrisma || prisma;
 
-  const payloadJson = JSON.stringify(validated.payload);
+  let deterministicId: string | undefined = undefined;
+  if (validated.idempotencyKey) {
+    deterministicId = generateDeterministicNotificationId(context.institutionId, validated.idempotencyKey);
 
-  const notification = await client.notificationOutbox.create({
-    data: {
-      institutionId: context.institutionId,
-      recipient: validated.recipient,
-      templateKey: validated.templateKey,
-      payloadJson: payloadJson,
-      channel: validated.channel,
-      status: "PENDING",
-      attempts: 0,
-      maxAttempts: validated.maxAttempts ?? 5,
-      nextRetryAt: new Date(),
-    },
-  });
+    // Check existing for deduplication
+    const existing = await client.notificationOutbox.findFirst({
+      where: {
+        id: deterministicId,
+        institutionId: context.institutionId,
+      },
+    });
 
-  return notification;
+    if (existing) {
+      return existing;
+    }
+  }
+
+  const payloadWithMeta = {
+    ...validated.payload,
+    ...(validated.idempotencyKey ? { _idempotencyKey: validated.idempotencyKey } : {}),
+  };
+
+  try {
+    const notification = await client.notificationOutbox.create({
+      data: {
+        ...(deterministicId ? { id: deterministicId } : {}),
+        institutionId: context.institutionId,
+        recipient: validated.recipient,
+        templateKey: validated.templateKey,
+        payloadJson: JSON.stringify(payloadWithMeta),
+        channel: validated.channel,
+        status: "PENDING",
+        attempts: 0,
+        maxAttempts: validated.maxAttempts ?? 5,
+        nextRetryAt: new Date(),
+      },
+    });
+
+    return notification;
+  } catch (err: unknown) {
+    // If a concurrent race condition occurred with the same deterministicId, return existing record
+    if (deterministicId) {
+      const isUniqueViolation =
+        (err as { code?: string })?.code === "P2002" ||
+        String(err).includes("Unique constraint") ||
+        String(err).includes("duplicate key");
+
+      if (isUniqueViolation) {
+        const existing = await client.notificationOutbox.findFirst({
+          where: {
+            id: deterministicId,
+            institutionId: context.institutionId,
+          },
+        });
+        if (existing) {
+          return existing;
+        }
+      }
+    }
+
+    throw err;
+  }
 }
 
 /**
- * Process pending/failed notifications in the Outbox with exponential backoff
+ * Process pending/failed notifications in the Outbox with atomic claiming and exponential backoff.
+ * Prevents race conditions across concurrent workers using atomic updates.
  */
 export async function processOutboxQueue(
   batchSize = 10,
-  providerType?: WhatsAppProviderType
+  providerType?: WhatsAppProviderType,
+  targetInstitutionId?: string
 ) {
-  const context = requireTenantContext();
+  const institutionId = targetInstitutionId || requireTenantContext().institutionId;
   const now = new Date();
 
   // Fetch pending or ready-to-retry notifications
   const items = await prisma.notificationOutbox.findMany({
     where: {
-      institutionId: context.institutionId,
+      institutionId,
       status: { in: ["PENDING", "FAILED"] },
-      attempts: { lt: prisma.notificationOutbox.fields.maxAttempts },
       OR: [
         { nextRetryAt: null },
         { nextRetryAt: { lte: now } },
@@ -83,11 +153,39 @@ export async function processOutboxQueue(
   let failedCount = 0;
 
   for (const item of items) {
-    // Mark processing
-    await prisma.notificationOutbox.update({
-      where: { id: item.id },
-      data: { status: "PROCESSING", attempts: { increment: 1 }, lastAttemptAt: new Date() },
+    // Check if max attempts already reached
+    if (item.attempts >= item.maxAttempts) {
+      await prisma.notificationOutbox.update({
+        where: { id: item.id },
+        data: {
+          status: "FAILED",
+          nextRetryAt: null,
+          errorMessage: item.errorMessage || "Maksimal batas percobaan terlampaui",
+        },
+      });
+      failedCount++;
+      results.push({ id: item.id, success: false, error: "Maksimal batas percobaan terlampaui" });
+      continue;
+    }
+
+    // Atomic claim: only one worker can transition from PENDING/FAILED to PROCESSING
+    const claimResult = await prisma.notificationOutbox.updateMany({
+      where: {
+        id: item.id,
+        institutionId,
+        status: { in: ["PENDING", "FAILED"] },
+      },
+      data: {
+        status: "PROCESSING",
+        attempts: { increment: 1 },
+        lastAttemptAt: now,
+      },
     });
+
+    if (claimResult.count === 0) {
+      // Concurrently claimed by another worker; skip
+      continue;
+    }
 
     try {
       const payloadObj = JSON.parse(item.payloadJson || "{}");
@@ -104,24 +202,32 @@ export async function processOutboxQueue(
             providerId: provider.id,
             externalId: sendResult.deepLinkUrl || sendResult.externalId || null,
             errorMessage: null,
+            nextRetryAt: null,
           },
         });
         results.push({ id: item.id, success: true, externalId: sendResult.externalId });
       } else {
         failedCount++;
         const nextAttempts = item.attempts + 1;
+        const isPermanent = sendResult.isPermanentError || isPermanentNotificationFailure(sendResult.errorMessage);
         const isMaxReached = nextAttempts >= item.maxAttempts;
 
-        // Exponential backoff: 2^attempts * 60 seconds (1m, 2m, 4m, 8m...)
-        const backoffMinutes = Math.pow(2, nextAttempts - 1);
-        const nextRetryAt = isMaxReached
-          ? null
-          : new Date(Date.now() + backoffMinutes * 60 * 1000);
+        let nextRetryAt: Date | null = null;
+        let finalStatus: "PENDING" | "FAILED" = "PENDING";
+
+        if (isPermanent || isMaxReached) {
+          finalStatus = "FAILED";
+          nextRetryAt = null;
+        } else {
+          // Exponential backoff: 2^attempts * 60 seconds (1m, 2m, 4m, 8m...)
+          const backoffMinutes = Math.pow(2, nextAttempts - 1);
+          nextRetryAt = new Date(Date.now() + backoffMinutes * 60 * 1000);
+        }
 
         await prisma.notificationOutbox.update({
           where: { id: item.id },
           data: {
-            status: isMaxReached ? "FAILED" : "PENDING",
+            status: finalStatus,
             providerId: provider.id,
             errorMessage: sendResult.errorMessage || "Pengiriman gagal",
             nextRetryAt,
@@ -132,11 +238,27 @@ export async function processOutboxQueue(
     } catch (err: unknown) {
       failedCount++;
       const errorMsg = err instanceof Error ? err.message : String(err);
+      const isPermanent = isPermanentNotificationFailure(errorMsg);
+      const nextAttempts = item.attempts + 1;
+      const isMaxReached = nextAttempts >= item.maxAttempts;
+
+      let nextRetryAt: Date | null = null;
+      let finalStatus: "PENDING" | "FAILED" = "PENDING";
+
+      if (isPermanent || isMaxReached) {
+        finalStatus = "FAILED";
+        nextRetryAt = null;
+      } else {
+        const backoffMinutes = Math.pow(2, nextAttempts - 1);
+        nextRetryAt = new Date(Date.now() + backoffMinutes * 60 * 1000);
+      }
+
       await prisma.notificationOutbox.update({
         where: { id: item.id },
         data: {
-          status: "FAILED",
+          status: finalStatus,
           errorMessage: `System Error: ${errorMsg}`,
+          nextRetryAt,
         },
       });
       results.push({ id: item.id, success: false, error: errorMsg });
@@ -144,7 +266,7 @@ export async function processOutboxQueue(
   }
 
   return {
-    processed: items.length,
+    processed: results.length,
     succeeded: succeededCount,
     failed: failedCount,
     results,

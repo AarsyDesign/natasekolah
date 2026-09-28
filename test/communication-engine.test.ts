@@ -84,6 +84,19 @@ function createMockPrisma() {
         store.set(where.id, record);
         return record;
       },
+      updateMany: async ({ where, data }: { where: any; data: any }) => {
+        const record = store.get(where.id);
+        if (!record) return { count: 0 };
+        if (where.institutionId && record.institutionId !== where.institutionId) return { count: 0 };
+        if (where.status?.in && !where.status.in.includes(record.status)) return { count: 0 };
+
+        if (data.status) record.status = data.status;
+        if (data.attempts?.increment) record.attempts += data.attempts.increment;
+        if (data.lastAttemptAt) record.lastAttemptAt = data.lastAttemptAt;
+        record.updatedAt = new Date();
+        store.set(where.id, record);
+        return { count: 1 };
+      },
     },
     $store: store,
   };
@@ -205,9 +218,11 @@ describe("Phase 4 — Communication Engine & Notification Outbox Tests", () => {
       const { prisma } = await import("../src/lib/prisma");
       const originalFindMany = prisma.notificationOutbox.findMany;
       const originalUpdate = prisma.notificationOutbox.update;
+      const originalUpdateMany = prisma.notificationOutbox.updateMany;
 
       prisma.notificationOutbox.findMany = mockPrisma.notificationOutbox.findMany as any;
       prisma.notificationOutbox.update = mockPrisma.notificationOutbox.update as any;
+      prisma.notificationOutbox.updateMany = mockPrisma.notificationOutbox.updateMany as any;
 
       try {
         const processResult = await processOutboxQueue(10, "DEEPLINK");
@@ -222,6 +237,7 @@ describe("Phase 4 — Communication Engine & Notification Outbox Tests", () => {
       } finally {
         prisma.notificationOutbox.findMany = originalFindMany;
         prisma.notificationOutbox.update = originalUpdate;
+        prisma.notificationOutbox.updateMany = originalUpdateMany;
       }
     });
   });

@@ -1,5 +1,38 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-28] - Milestone: Communication Automation — Cross-Domain Notification Platform & Outbox Engine (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/notification/guardian-resolver.ts`: Layanan resolusi hierarkis kontak wali murid (`resolveStudentGuardianRecipient`, `isValidIndonesianPhone`) berbasis relasi `GuardianStudent` (diurutkan `isPrimary DESC`, `createdAt ASC`) dengan fallback ke `student.parentWaPhone` dan `student.phone`, serta sanitasi nomor seluler Indonesia (`628xxx`). Penanganan anggun menjamin kegagalan kontak tidak menggagalkan transaksi bisnis.
+* `src/app/api/cron/notifications/route.ts`: Endpoint Route Handler terjadwal (`GET`/`POST`) dengan otorisasi `CRON_SECRET` untuk pemrosesan antrean notifikasi outbox otomatis lintas tenant secara berkala.
+* `test/communication-automation.test.ts`: Rangkaian 9 automated unit & integration tests mencakup sanitasi nomor telepon, resolusi wali bertingkat, pembuatan idempotency key deterministik & deduplikasi instan, event semantics keuangan/absensi/raport, atomic claim concurrency guard, klasifikasi permanent vs transient failure, serta penegakan isolasi tenant (9/9 PASS).
+
+### Changed
+* `src/lib/validation/notification.ts`:
+  * Menambahkan `"REPORT_CARD_PUBLISHED"` pada `NOTIFICATION_TEMPLATE_KEYS`.
+  * Menambahkan `idempotencyKey?: string` pada `queueNotificationInputSchema`.
+  * Menjadikan tipe `QueueNotificationInput` sebagai `z.input<typeof queueNotificationInputSchema>` dengan nilai default channel `"WHATSAPP"`.
+* `src/lib/notification/templates.ts`:
+  * Menambahkan template pesan WhatsApp untuk `"REPORT_CARD_PUBLISHED"` (lengkap dengan nama siswa, semester, tahun ajaran, rombel, dan tautan portal wali).
+  * Menyempurnakan template `"ATTENDANCE_ALERT"` untuk menyertakan nama rombel/kelas siswa.
+* `src/lib/notification/events.ts`:
+  * Menambahkan fungsi pembantu event `notifyReportCardPublished`.
+  * Mendukung parameter `idempotencyKey` pada `notifyPaymentCompleted`, `notifyAttendanceAlert`, dan `notifyGuardianInvitation`.
+* `src/lib/notification/outbox-service.ts`:
+  * Implementasi ID deterministik (`generateDeterministicNotificationId`) untuk deduplikasi mutlak di level primary key tanpa perlu migrasi skema database.
+  * Atomic claim dengan `updateMany` pada `processOutboxQueue` untuk mencegah *race condition* antar worker bersamaan.
+  * Klasifikasi kegagalan pengiriman: *permanent error* (nomor/template/provider tidak valid) langsung `FAILED` tanpa infinite retry; *transient error* menjadwalkan ulang dengan *exponential backoff*.
+* `src/lib/finance/payment-service.ts`:
+  * Mengintegrasikan event `notifyPaymentCompleted` secara ketat *post-commit* setelah `prisma.$transaction` selesai dengan idempotency key `PAYMENT_RECEIPT:${payment.id}`. Rollback pembayaran dijamin tidak menghasilkan notifikasi outbox.
+* `src/lib/attendance/session-service.ts`:
+  * Mengintegrasikan event `notifyAttendanceAlert` pada `closeAttendanceSession` saat sesi berstatus `CLOSED`, menerbitkan peringatan terdeduplikasi `ATTENDANCE_ALERT:${record.id}` khusus santri yang tercatat `ABSENT`.
+* `src/lib/formal-academic/report-card-service.ts`:
+  * Mengintegrasikan event `notifyReportCardPublished` pada `publishReportCard` setelah raport dibekukan (frozen) dan berstatus `PUBLISHED`, mengarah ke portal wali `/wali/akademik/raport/${reportCard.id}`.
+* `src/app/notifications/page.tsx`:
+  * Memperkaya bilah filter dengan seleksi template dan channel, menampilkan metadata idempotency key dan jadwal retry, serta memastikan kepatuhan desain responsif mobile.
+
+---
+
 ## [2026-09-28] - Milestone: Master Data Engine - Bulk Promotion Workflow (Review, Classroom Mapping, Candidate Selection, Validation Preview, Sacred History Preservation, Idempotency & Audit Log) (IMPLEMENTED / VERIFIED)
 
 ### Added

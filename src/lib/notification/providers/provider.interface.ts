@@ -3,6 +3,7 @@ export interface SendMessageResult {
   externalId?: string;
   errorMessage?: string;
   deepLinkUrl?: string;
+  isPermanentError?: boolean;
 }
 
 export interface IWhatsAppProvider {

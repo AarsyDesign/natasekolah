@@ -12,6 +12,8 @@ import {
   generateUniqueCashbookNumber,
   generateUniqueReceiptNumber,
 } from "./receipt-service";
+import { resolveStudentGuardianRecipient } from "../notification/guardian-resolver";
+import { notifyPaymentCompleted } from "../notification/events";
 
 export class PaymentError extends Error {
   constructor(message: string, public statusCode = 400) {
@@ -45,7 +47,7 @@ export async function createPaymentTransaction(
   }
 
   // Execute atomic Prisma transaction
-  return await rootClient.$transaction(async (tx) => {
+  const result = await rootClient.$transaction(async (tx) => {
     // 2. Validate Student belongs to current tenant
     const student = await tx.student.findFirst({
       where: { id: validated.studentId, institutionId: context.institutionId },
@@ -191,6 +193,34 @@ export async function createPaymentTransaction(
       student,
     };
   });
+
+  // Post-commit event: Queue payment receipt notification outbox
+  try {
+    const recipient = await resolveStudentGuardianRecipient(
+      result.student.id,
+      context.institutionId,
+      rootClient as any
+    );
+
+    if (recipient) {
+      await notifyPaymentCompleted(
+        {
+          recipientPhone: recipient.recipientPhone,
+          studentName: result.student.fullName,
+          receiptNo: result.receipt.receiptNumber,
+          amount: result.payment.amount,
+          categoryName: "Pembayaran Tagihan Siswa",
+          paymentDate: result.payment.paymentDate.toLocaleDateString("id-ID"),
+          idempotencyKey: `PAYMENT_RECEIPT:${result.payment.id}`,
+        },
+        rootClient as any
+      );
+    }
+  } catch (notifErr) {
+    console.error("[PaymentNotification] Failed to queue payment receipt outbox:", notifErr);
+  }
+
+  return result;
 }
 
 /**
