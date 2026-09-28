@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from "react";
+import Link from "next/link";
 import { NavHeader } from "../../components/nav-header";
 import {
   getClassroomsAction,
@@ -15,6 +16,7 @@ import {
   AlertCircle,
   Calendar,
   X,
+  GraduationCap,
 } from "lucide-react";
 
 export default function ClassroomsPage() {
@@ -106,13 +108,22 @@ export default function ClassroomsPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="touch-target inline-flex items-center gap-2 rounded-lg bg-teal-800 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-teal-700"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Tambah Rombel</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/students/promotions"
+              className="touch-target inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-2xs transition hover:bg-stone-50"
+            >
+              <GraduationCap className="h-4 w-4 text-teal-800" />
+              <span>Kenaikan Kelas</span>
+            </Link>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="touch-target inline-flex items-center gap-2 rounded-lg bg-teal-800 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-teal-700"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Tambah Rombel</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter Bar */}
