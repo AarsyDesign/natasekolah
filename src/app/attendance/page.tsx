@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useTransition, useCallback } from "react";
 import Link from "next/link";
 import { NavHeader } from "../../components/nav-header";
 import {
@@ -16,6 +16,9 @@ import {
   ATTENDANCE_STATUS_LABELS,
   AttendanceStatus,
 } from "../../lib/attendance/types";
+import { AttendanceOfflineStore } from "../../lib/attendance/offline/offline-store";
+import { AttendanceSyncWorker } from "../../lib/attendance/offline/sync-worker";
+import type { OfflineAttendanceMutation } from "../../lib/attendance/offline/types";
 import {
   ClipboardCheck,
   Calendar,
@@ -32,6 +35,10 @@ import {
   ChevronRight,
   History,
   RotateCcw,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
 interface AssignmentWithSession {
@@ -72,7 +79,58 @@ export default function AttendancePage() {
   const [notesOpenStudentId, setNotesOpenStudentId] = useState<string | null>(null);
   const [studentNote, setStudentNote] = useState<string>("");
 
+  // Offline & Sync Engine States
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [mutationsMap, setMutationsMap] = useState<Map<string, OfflineAttendanceMutation>>(new Map());
+  const [conflictModalItem, setConflictModalItem] = useState<OfflineAttendanceMutation | null>(null);
+  const [queueStats, setQueueStats] = useState({ pending: 0, syncing: 0, synced: 0, failed: 0, conflict: 0 });
+
   const [isPending, startTransition] = useTransition();
+
+  const offlineStore = AttendanceOfflineStore.getInstance();
+  const syncWorker = AttendanceSyncWorker.getInstance();
+
+  // Monitor Network & Sync Worker
+  useEffect(() => {
+    setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    const unsubscribe = syncWorker.subscribe((status, msg) => {
+      setIsSyncing(status === "SYNCING");
+      if (status === "SUCCESS" && msg) {
+        setSuccessMessage(msg);
+      } else if (status === "ERROR" && msg) {
+        setErrorMessage(msg);
+      }
+      if (activeSessionId) {
+        refreshLocalMutations(activeSessionId);
+      }
+    });
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      unsubscribe();
+    };
+  }, [activeSessionId]);
+
+  const refreshLocalMutations = useCallback(async (sessionId: string) => {
+    const list = await offlineStore.getAllMutations(sessionId);
+    const map = new Map<string, OfflineAttendanceMutation>();
+    for (const m of list) {
+      map.set(m.studentId, m);
+    }
+    setMutationsMap(map);
+
+    const stats = await offlineStore.getQueueStats(sessionId);
+    setQueueStats(stats);
+  }, []);
 
   // Load today's assignments & sessions
   const loadAssignments = (dateStr: string) => {
@@ -91,15 +149,31 @@ export default function AttendancePage() {
     loadAssignments(selectedDate);
   }, [selectedDate]);
 
-  // Load roster when an active session is selected
+  // Load roster with offline-fallback cache
   const loadRoster = (sessionId: string) => {
     startTransition(async () => {
       setErrorMessage(null);
-      const res = await getAttendanceRosterAction(sessionId);
-      if (res.success && res.data) {
-        setActiveRoster(res.data);
+
+      // Attempt server fetch if online
+      if (navigator.onLine) {
+        const res = await getAttendanceRosterAction(sessionId);
+        if (res.success && res.data) {
+          setActiveRoster(res.data);
+          // Cache roster locally for offline resilience
+          await offlineStore.saveRosterCache(sessionId, "institution_active", res.data);
+          await refreshLocalMutations(sessionId);
+          return;
+        }
+      }
+
+      // Fallback to offline cached roster
+      const cached = await offlineStore.getRosterCache(sessionId);
+      if (cached) {
+        setActiveRoster(cached);
+        await refreshLocalMutations(sessionId);
+        setSuccessMessage("Memuat daftar siswa dari cache lokal (mode offline).");
       } else {
-        setErrorMessage(res.error || "Gagal memuat daftar kehadiran.");
+        setErrorMessage("Tidak ada data presensi offline yang tersedia untuk sesi ini.");
       }
     });
   };
@@ -131,55 +205,97 @@ export default function AttendancePage() {
     });
   };
 
-  // Handle Mark Attendance for a single student
-  const handleMarkStudent = (studentId: string, status: AttendanceStatus, note?: string) => {
+  // Optimistic Offline Attendance Marking (< 60s execution speed)
+  const handleMarkStudent = async (studentId: string, status: AttendanceStatus, note?: string) => {
     if (!activeSessionId || !activeRoster) return;
     if (activeRoster.status === "CLOSED") {
       setErrorMessage("Sesi absensi telah ditutup (immutable) dan tidak dapat diubah.");
       return;
     }
 
-    startTransition(async () => {
-      setErrorMessage(null);
-      const res = await markAttendanceAction({
-        attendanceSessionId: activeSessionId,
-        studentId,
-        status,
-        note: note !== undefined ? note : undefined,
-      });
+    const clientMutationId = `attendance:${activeSessionId}:${studentId}:${Date.now()}`;
+    const baseStudent = activeRoster.roster.find((s) => s.studentId === studentId);
 
-      if (res.success) {
-        loadRoster(activeSessionId);
-      } else {
-        setErrorMessage(res.error || "Gagal mencatat kehadiran.");
+    // 1. Optimistic UI update
+    const updatedRosterList = activeRoster.roster.map((s) => {
+      if (s.studentId === studentId) {
+        return {
+          ...s,
+          status,
+          note: note !== undefined ? note : s.note,
+          markedAt: new Date(),
+        };
       }
+      return s;
     });
+
+    let present = 0, excused = 0, sick = 0, absent = 0, totalMarked = 0;
+    for (const r of updatedRosterList) {
+      if (r.status !== "UNRECORDED") {
+        totalMarked++;
+        if (r.status === "PRESENT") present++;
+        else if (r.status === "EXCUSED") excused++;
+        else if (r.status === "SICK") sick++;
+        else if (r.status === "ABSENT") absent++;
+      }
+    }
+
+    const updatedRoster: AttendanceRosterResult = {
+      ...activeRoster,
+      summary: {
+        totalEligible: updatedRosterList.length,
+        totalMarked,
+        totalUnrecorded: updatedRosterList.length - totalMarked,
+        present,
+        excused,
+        sick,
+        absent,
+      },
+      roster: updatedRosterList,
+    };
+    setActiveRoster(updatedRoster);
+
+    // 2. Queue mutation in local Offline Store
+    const queuedMutation = await offlineStore.queueMutation({
+      clientMutationId,
+      sessionId: activeSessionId,
+      institutionId: "tenant_current",
+      userId: "teacher_current",
+      studentId,
+      attendanceStatus: status,
+      note: note ?? baseStudent?.note ?? null,
+      baseUpdatedAt: baseStudent?.markedAt ? new Date(baseStudent.markedAt).toISOString() : null,
+      clientTimestamp: new Date().toISOString(),
+    });
+
+    await refreshLocalMutations(activeSessionId);
+
+    // 3. If online, trigger background sync
+    if (navigator.onLine) {
+      syncWorker.syncSession(activeSessionId);
+    }
   };
 
   // Handle "Semua Hadir" Bulk Marking
-  const handleMarkAllPresent = () => {
+  const handleMarkAllPresent = async () => {
     if (!activeSessionId || !activeRoster) return;
     if (activeRoster.status === "CLOSED") return;
 
-    startTransition(async () => {
-      setErrorMessage(null);
-      const records = activeRoster.roster.map((s) => ({
-        studentId: s.studentId,
-        status: "PRESENT" as const,
-      }));
+    for (const s of activeRoster.roster) {
+      await handleMarkStudent(s.studentId, "PRESENT");
+    }
+    setSuccessMessage("Seluruh siswa berhasil ditandai HADIR secara lokal.");
+  };
 
-      const res = await markAttendanceBatchAction({
-        attendanceSessionId: activeSessionId,
-        records,
-      });
-
-      if (res.success) {
-        setSuccessMessage("Seluruh siswa berhasil ditandai HADIR.");
-        loadRoster(activeSessionId);
-      } else {
-        setErrorMessage(res.error || "Gagal melakukan absensi massal.");
-      }
-    });
+  // Manual Trigger Sync
+  const handleTriggerSync = async () => {
+    if (!activeSessionId) return;
+    setIsSyncing(true);
+    const result = await syncWorker.syncSession(activeSessionId);
+    setIsSyncing(false);
+    if (result) {
+      loadRoster(activeSessionId);
+    }
   };
 
   // Handle Close Session
@@ -188,6 +304,13 @@ export default function AttendancePage() {
     if (activeRoster.summary.totalUnrecorded > 0) {
       setErrorMessage(
         `Sesi tidak dapat ditutup: Masih ada ${activeRoster.summary.totalUnrecorded} siswa yang belum dicatat.`
+      );
+      return;
+    }
+
+    if (queueStats.pending > 0 || queueStats.conflict > 0) {
+      setErrorMessage(
+        `Harap selesaikan sinkronisasi (${queueStats.pending} antrean, ${queueStats.conflict} konflik) sebelum menutup sesi.`
       );
       return;
     }
@@ -218,6 +341,51 @@ export default function AttendancePage() {
       <NavHeader subtitle="Presensi & Absensi Harian" />
 
       <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-6">
+        {/* Banner Status Konektivitas & Offline Bar */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200/90 bg-white p-3.5 shadow-xs">
+          <div className="flex items-center gap-3">
+            {isOnline ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                <Wifi className="h-3.5 w-3.5 text-emerald-600" />
+                Online
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 border border-amber-200">
+                <WifiOff className="h-3.5 w-3.5 text-amber-600" />
+                Mode Terputus (Offline)
+              </span>
+            )}
+
+            <div className="text-xs text-stone-600 hidden sm:block">
+              {queueStats.pending > 0 ? (
+                <span className="font-semibold text-amber-700">
+                  {queueStats.pending} perubahan tersimpan lokal menunggu sinkronisasi
+                </span>
+              ) : queueStats.conflict > 0 ? (
+                <span className="font-semibold text-rose-700">
+                  {queueStats.conflict} perubahan mengalami konflik
+                </span>
+              ) : (
+                <span className="text-stone-500">Semua perubahan telah tersinkron</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {activeSessionId && (queueStats.pending > 0 || queueStats.conflict > 0 || isSyncing) && (
+              <button
+                type="button"
+                disabled={isSyncing || !isOnline}
+                onClick={handleTriggerSync}
+                className="touch-target inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-teal-800 disabled:opacity-50 transition"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                {isSyncing ? "Menyinkronkan..." : "Sinkronkan Sekarang"}
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Banner Alert Notifikasi */}
         {errorMessage && (
           <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 shadow-xs">
@@ -345,7 +513,7 @@ export default function AttendancePage() {
                       type="button"
                       disabled={isPending}
                       onClick={handleMarkAllPresent}
-                      className="touch-target inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-teal-800 active:scale-[0.98] transition"
+                      className="touch-target inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-teal-800 active:scale-[0.98] transition min-h-[44px]"
                     >
                       <Check className="h-4 w-4" />
                       Tandai Semua Hadir
@@ -355,7 +523,7 @@ export default function AttendancePage() {
                       type="button"
                       disabled={isPending || activeRoster.summary.totalUnrecorded > 0}
                       onClick={handleCloseSession}
-                      className={`touch-target inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition ${
+                      className={`touch-target inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition min-h-[44px] ${
                         activeRoster.summary.totalUnrecorded > 0
                           ? "cursor-not-allowed bg-stone-200 text-stone-400"
                           : "bg-stone-900 text-white shadow-xs hover:bg-black active:scale-[0.98]"
@@ -385,7 +553,11 @@ export default function AttendancePage() {
 
               <div className="divide-y divide-stone-100">
                 {activeRoster.roster.map((item, idx) => {
-                  const isMarked = item.status !== "UNRECORDED";
+                  const mutation = mutationsMap.get(item.studentId);
+                  const isPendingSync = mutation?.syncStatus === "PENDING";
+                  const isSyncingItem = mutation?.syncStatus === "SYNCING";
+                  const isConflict = mutation?.syncStatus === "CONFLICT";
+
                   return (
                     <div
                       key={item.studentId}
@@ -397,11 +569,35 @@ export default function AttendancePage() {
                           {idx + 1}
                         </span>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-bold text-stone-900">{item.fullName}</span>
                             <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600">
                               {item.gender === "L" ? "Laki-laki" : "Perempuan"}
                             </span>
+
+                            {/* Sync Status Badges */}
+                            {isPendingSync && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                <Clock className="h-3 w-3 text-amber-600" />
+                                Menunggu Sinkron
+                              </span>
+                            )}
+                            {isSyncingItem && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded animate-pulse">
+                                <RefreshCw className="h-3 w-3 text-teal-600 animate-spin" />
+                                Menyinkronkan
+                              </span>
+                            )}
+                            {isConflict && (
+                              <button
+                                type="button"
+                                onClick={() => setConflictModalItem(mutation)}
+                                className="touch-target inline-flex items-center gap-1 text-[10px] font-bold text-rose-800 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded hover:bg-rose-100 transition"
+                              >
+                                <AlertTriangle className="h-3 w-3 text-rose-600" />
+                                ⚠ Konflik (Klik Selesaikan)
+                              </button>
+                            )}
                           </div>
                           <p className="text-xs text-stone-500">NIS: {item.nis}</p>
                           {item.note && (
@@ -432,7 +628,7 @@ export default function AttendancePage() {
                               type="button"
                               disabled={isPending || activeRoster.status === "CLOSED"}
                               onClick={() => handleMarkStudent(item.studentId, st, item.note || undefined)}
-                              className={`touch-target rounded-lg border px-3 py-1.5 text-xs font-medium transition ${activeStyle} ${
+                              className={`touch-target rounded-lg border px-3 py-1.5 text-xs font-medium transition min-h-[44px] ${activeStyle} ${
                                 activeRoster.status === "CLOSED" ? "opacity-90 cursor-not-allowed" : ""
                               }`}
                             >
@@ -450,7 +646,7 @@ export default function AttendancePage() {
                               setStudentNote(item.note || "");
                             }}
                             title="Beri catatan kehadiran"
-                            className="touch-target rounded-lg border border-stone-200 p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+                            className="touch-target rounded-lg border border-stone-200 p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900 min-h-[44px] min-w-[44px] flex items-center justify-center"
                           >
                             <FileText className="h-4 w-4" />
                           </button>
@@ -461,6 +657,69 @@ export default function AttendancePage() {
                 })}
               </div>
             </div>
+
+            {/* Modal Resolusi Konflik Presensi */}
+            {conflictModalItem && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+                <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl border border-rose-100">
+                  <div className="flex items-center gap-2 text-rose-700 mb-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    <h3 className="text-base font-bold">Deteksi Konflik Sinkronisasi</h3>
+                  </div>
+
+                  <p className="text-xs text-stone-600 mb-4">
+                    Catatan kehadiran siswa ini telah diubah di server setelah Anda mengambil data awal.
+                  </p>
+
+                  <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs space-y-2 mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-stone-500">Pilihan Lokal Anda:</span>
+                      <span className="font-bold text-teal-800">
+                        {ATTENDANCE_STATUS_LABELS[conflictModalItem.attendanceStatus]}
+                      </span>
+                    </div>
+                    {conflictModalItem.conflictData && (
+                      <div className="flex justify-between">
+                        <span className="text-stone-500">Status Terkini di Server:</span>
+                        <span className="font-bold text-rose-800">
+                          {ATTENDANCE_STATUS_LABELS[conflictModalItem.conflictData.serverStatus]}
+                        </span>
+                      </div>
+                    )}
+                    {conflictModalItem.errorMessage && (
+                      <p className="text-[11px] text-stone-500 italic border-t border-stone-200 pt-1.5">
+                        {conflictModalItem.errorMessage}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await syncWorker.resolveConflict(conflictModalItem.clientMutationId, "KEEP_SERVER");
+                        setConflictModalItem(null);
+                        if (activeSessionId) loadRoster(activeSessionId);
+                      }}
+                      className="touch-target rounded-xl border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 min-h-[44px]"
+                    >
+                      Gunakan Pilihan Server
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await syncWorker.resolveConflict(conflictModalItem.clientMutationId, "FORCE_LOCAL");
+                        setConflictModalItem(null);
+                        if (activeSessionId) loadRoster(activeSessionId);
+                      }}
+                      className="touch-target rounded-xl bg-teal-700 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-teal-800 min-h-[44px]"
+                    >
+                      Timpa ke Server (Force)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Modal Tambah Catatan Siswa */}
             {notesOpenStudentId && (
@@ -481,19 +740,20 @@ export default function AttendancePage() {
                     <button
                       type="button"
                       onClick={() => setNotesOpenStudentId(null)}
-                      className="touch-target rounded-xl border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+                      className="touch-target rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 min-h-[44px]"
                     >
                       Batal
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        const targetStudent = activeRoster.roster.find((s) => s.studentId === notesOpenStudentId);
-                        const currentStatus = targetStudent?.status === "UNRECORDED" ? "PRESENT" : targetStudent?.status || "PRESENT";
-                        handleMarkStudent(notesOpenStudentId, currentStatus, studentNote);
+                        const student = activeRoster.roster.find((s) => s.studentId === notesOpenStudentId);
+                        if (student && student.status !== "UNRECORDED") {
+                          handleMarkStudent(student.studentId, student.status, studentNote);
+                        }
                         setNotesOpenStudentId(null);
                       }}
-                      className="touch-target rounded-xl bg-teal-700 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-800"
+                      className="touch-target rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 min-h-[44px]"
                     >
                       Simpan Catatan
                     </button>
@@ -513,7 +773,7 @@ export default function AttendancePage() {
                     Presensi & Absensi Harian
                   </h1>
                   <p className="mt-1 text-xs sm:text-sm text-stone-600">
-                    Sistem absensi berbasis penugasan mengajar dan histori Enrollment resmi.
+                    Sistem absensi berbasis penugasan mengajar dan histori Enrollment resmi dengan sinkronisasi offline.
                   </p>
                 </div>
 
@@ -530,7 +790,7 @@ export default function AttendancePage() {
 
                   <Link
                     href="/attendance/history"
-                    className="touch-target inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-stone-700 hover:bg-stone-50"
+                    className="touch-target inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-stone-700 hover:bg-stone-50 min-h-[44px]"
                   >
                     <History className="h-4 w-4 text-stone-500" />
                     Histori
@@ -547,7 +807,7 @@ export default function AttendancePage() {
                 </h2>
                 <button
                   onClick={() => loadAssignments(selectedDate)}
-                  className="touch-target text-xs font-semibold text-teal-800 hover:underline flex items-center gap-1"
+                  className="touch-target text-xs font-semibold text-teal-800 hover:underline flex items-center gap-1 min-h-[44px]"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Segarkan
@@ -621,7 +881,7 @@ export default function AttendancePage() {
                             <button
                               type="button"
                               onClick={() => setActiveSessionId(session.id)}
-                              className="touch-target w-full inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-teal-800 transition"
+                              className="touch-target w-full inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-teal-800 transition min-h-[44px]"
                             >
                               <ClipboardCheck className="h-4 w-4" />
                               {isClosed ? "Lihat Catatan Absensi" : "Lanjutkan Absensi"}
@@ -631,7 +891,7 @@ export default function AttendancePage() {
                               type="button"
                               disabled={isPending}
                               onClick={() => handleOpenSession(assignment.id)}
-                              className="touch-target w-full inline-flex items-center justify-center gap-2 rounded-xl border border-teal-700 bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-teal-800 shadow-xs hover:bg-teal-50 transition"
+                              className="touch-target w-full inline-flex items-center justify-center gap-2 rounded-xl border border-teal-700 bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-teal-800 shadow-xs hover:bg-teal-50 transition min-h-[44px]"
                             >
                               <ClipboardCheck className="h-4 w-4 text-teal-700" />
                               Buka Sesi Absensi

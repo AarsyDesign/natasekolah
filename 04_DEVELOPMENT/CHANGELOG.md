@@ -1,5 +1,28 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-28] - Milestone: Offline Attendance & Sync Engine — Local IndexedDB Storage & Conflict Resolution (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/attendance/offline/types.ts`: Kontrak data offline (`OfflineAttendanceMutation`, `CachedAttendanceRoster`, `BatchSyncInput`, `BatchSyncItemInput`, `BatchSyncItemResult`, `BatchSyncResult`, `OfflineSyncStatus`).
+* `src/lib/attendance/offline/offline-store.ts`: Abstraksi penyimpanan data lokal IndexedDB `AttendanceOfflineStore` (`natasekolah_offline_v1`) dengan fallback otomatis ke *in-memory storage* saat server-side rendering atau runtime pengujian Node.js. Menangani operasi antrean mutasi presensi, pengambilan berurutan, pelacakan transisi status, pembersihan mutasi tersinkron, penghitungan statistik antrean, dan *caching* roster siswa.
+* `src/lib/attendance/offline/sync-service.ts`: Layanan server-side batch sync `syncAttendanceBatch` dengan validasi skema Zod `batchSyncInputSchema`, sanitasi anti-tampering `sanitizeClientInput`, verifikasi batas tenant sesi, RBAC guard (`attendance:manage`), teacher scope check, proteksi immutabilitas sesi `CLOSED`, penentuan enrollment aktif yang sah, deteksi konflik per baris (`baseUpdatedAt` vs server `updatedAt`), opsi override eksplisit guru (`forceOverwrite: true`), dan deduplikasi mutasi mutlak (*idempotent*).
+* `src/lib/attendance/offline/sync-worker.ts`: Worker sinkronisasi client `AttendanceSyncWorker` yang mendeteksi perubahan koneksi browser (`online`/`offline`), menjalankan background batch sync, memberikan callback status progres, dan menyediakan mekanisme resolusi konflik bagi pengguna ("KEEP_SERVER" vs "FORCE_LOCAL").
+* `test/offline-attendance-sync.test.ts`: Rangkaian 13 unit & integration test komprehensif mencakup abstraksi penyimpanan offline, pemrosesan batch sync & idempotensi server, deteksi konflik tanpa silent-overwrite, penegakan immutabilitas sesi closed, override konflik terkontrol, otorisasi RBAC & teacher scope, isolasi tenant lintas institusi, penolakan mutasi siswa luar rombel, serta penghitungan akurat statistik antrean (13/13 PASS).
+
+### Changed
+* `src/actions/attendance.ts`: Menambahkan Server Action `syncAttendanceBatchAction` yang memanggil `syncAttendanceBatch` secara terautentikasi dan melakukan `revalidatePath("/attendance")`.
+* `src/lib/attendance/index.ts`: Mengekspor tipe offline, `AttendanceOfflineStore`, `syncAttendanceBatch`, dan `AttendanceSyncWorker`.
+* `src/app/attendance/page.tsx`:
+  * Mengintegrasikan `AttendanceOfflineStore` dan `AttendanceSyncWorker`.
+  * Menambahkan indikator status jaringan real-time (`● Online` / `○ Mode Terputus (Offline)`).
+  * Menambahkan penghitung antrean offline aktif (`X perubahan menunggu sinkronisasi`) dan tombol manual "Sinkronkan Sekarang".
+  * Mendukung update lokal optimistik dan penyimpanan antrean offline seketika saat presensi ditandai.
+  * Menampilkan lencana status per baris siswa (`✓ Tersinkron`, `◷ Menunggu Sinkron`, `↻ Menyinkronkan`, `⚠ Konflik`).
+  * Dialog modal resolusi konflik saat terdeteksi perbedaan data server dengan pilihan "Gunakan Pilihan Server" atau "Timpa ke Server".
+  * Memenuhi panduan `DESIGN.md` (target sentuh min 44px, kontras WCAG AA, bebas horizontal overflow, mobile-first).
+
+---
+
 ## [2026-09-28] - Milestone: Communication Automation — Cross-Domain Notification Platform & Outbox Engine (IMPLEMENTED / VERIFIED)
 
 ### Added
