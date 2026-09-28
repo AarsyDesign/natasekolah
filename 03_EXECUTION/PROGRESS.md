@@ -32,11 +32,51 @@
 | **Milestone** | **UI Foundation & Persistent App Shell** (Design Tokens, 15 Primitives, Persistent AppShell, Mobile Nav, Loading Skeletons, DataTableView, Dashboard Reference) | **COMPLETE** | 2026-09-23 (315 Tests Pass) |
 | **Milestone** | **Finance Workspace UX Migration** (Unified Workspace Navigation, Charges, Payments & Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV, Design Tokens, Anti-Slop Mode 1) | **COMPLETE** | 2026-09-23 (325 Tests Pass) |
 | **Milestone** | **Motion System & Interaction Polish** (Motion Tokens, Micro-Interactions, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) | **COMPLETE** | 2026-09-24 (340 Tests Pass) |
+| **Milestone** | **Master Data Engine — Excel Importer & Auto-Sanitizer** (Upload, Auto-Sanitize, Validate, Duplicate Detection, Preview, Confirm & Atomic Import) | **COMPLETE** | 2026-09-24 (17 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-24] - Milestone: Master Data Engine — Excel Importer & Auto-Sanitizer (Upload, Auto-Sanitize, Validate, Duplicate Detection, Preview, Confirm & Atomic Import) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Mengembangkan workflow import master data siswa dan wali murid yang aman, tangguh, dan reusable berbasis Master PRD v5.0 Phase 1 dengan alur: **Upload → Parse → Sanitize → Validate → Preview → Confirm → Import → Result**.
+* **Implementasi:**
+  1. **Spreadsheet Parser & Template Generator (`src/lib/importer/parser.ts`):**
+     * Membaca file `.xlsx`, `.xls`, dan `.csv` menggunakan pustaka `xlsx`.
+     * Menangani auto-mapping alias kolom fleksibel bahasa Indonesia/Inggris (NIS, Nama Lengkap, JK, NISN, NIK, Tempat/Tanggal Lahir, Nomor HP, Nama Wali, Rombel/Kelas).
+     * Generator template file Excel berformat standar resmi siap unduh.
+  2. **Indonesian Educational Data Auto-Sanitizer (`src/lib/importer/sanitizer.ts`):**
+     * Pembersihan spasi berlebih, penanganan placeholder kosong (`-`, `null`, `N/A`).
+     * Netralisasi formula injection (prefix kutip `'` pada sel yang diawali `=,+,-,@`).
+     * Normalisasi nomor identitas dari float Excel (`1001.0` -> `1001`) dan stripping tanda hubung.
+     * Normalisasi nomor telepon seluler Indonesia (`08...`, `8...`, `+628...` -> canonical `628...`) dengan validasi panjang 10–14 digit.
+     * Normalisasi variasi jenis kelamin (`L`/`P`, `Laki-laki`, `Perempuan`, `Pria`, `Wanita`).
+     * Konversi tanggal multi-format (Excel serial numbers, format Indonesia `DD/MM/YYYY`, `YYYY-MM-DD`, dan validasi batas kalender).
+     * Normalisasi variasi hubungan wali (`AYAH`, `IBU`, `WALI`, `LAINNYA`).
+  3. **Validator & Duplicate Detection (`src/lib/importer/validator.ts`):**
+     * Integrasi skema validasi Zod (`createStudentInputSchema`).
+     * Klasifikasi baris: `VALID`, `WARNING`, `ERROR` dengan rencana aksi `CREATE`, `SKIP_DUPLICATE`, `REJECT`.
+     * Deteksi duplikasi internal (NIS sama dalam 1 file) sebagai `ERROR`.
+     * Deteksi *Exact Duplicate* (NIS terdaftar di database institusi) sebagai `SKIP_DUPLICATE`.
+     * Deteksi *Potential Duplicate* (NISN sama atau Nama + Tanggal Lahir sama dengan NIS berbeda) sebagai `WARNING`.
+  4. **Atomic Transaction Importer Service (`src/lib/importer/importer-service.ts`):**
+     * Guard izin RBAC (`student:create`) dan batas tenant mutlak dari context terautentikasi (`ctx.institutionId`).
+     * Eksekusi dalam `prisma.$transaction`.
+     * Pembuatan otomatis entitas `Guardian` & relasi `GuardianStudent`.
+     * Penempatan rombel otomatis (`Enrollment`) pada tahun ajaran aktif dengan penjagaan *Sacred History*.
+     * Pencatatan histori ke `AuditLog` (`action: "IMPORT"`).
+  5. **Server Actions & UI Integration (`src/actions/importer.ts`, `src/components/importer/student-import-modal.tsx`, `src/app/students/page.tsx`):**
+     * Server Actions terautentikasi: `previewStudentImportAction`, `executeStudentImportAction`, `getStudentImportTemplateAction`.
+     * Modal interaktif 4-tahap: Upload (Drag & Drop + download template), Prapinjau metrik ringkasan & tabel data berfilter, Eksekusi, dan Kartu ringkasan hasil impor.
+     * Tombol aksi "Impor Excel" pada halaman Buku Induk Siswa.
+* **Verifikasi:**
+  * Typecheck: `npx tsc --noEmit` lulus 100% (0 errors).
+  * Unit & Integration Tests: `test/master-data-importer.test.ts` (17/17 tests PASS).
+  * Full Regression Suite: 53 tests PASS (Buku Induk, Communication Engine, Master Data Importer, Tenant Isolation).
+  * Build: `npm run build` sukses 100% (41 rute statically/dynamically generated).
+
+---
 
 ### [2026-09-24] - Milestone: Motion System & Interaction Polish (Motion Tokens, Reusable Motion Primitives, Shimmer Skeleton, Dialog/Drawer Motion, Cashier Multi-Step Success Feedback, Reduced-Motion WCAG AA) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Membangun dan mengimplementasikan **Motion Language NataSekolah** yang halus, intensional, konsisten, cepat ($\le 240\text{ms}$), dan *non-disruptive* berbasis `DESIGN.md v2.0` (Dial `ENERGY 1 / RHYTHM 2 / MOTION 1`, Anti-Slop Mode 1). Menghilangkan perubahan state yang kaku (*instant snap*) dan mengganti pulse generik dengan shimmer halus, tanpa menambah bobot library pihak ketiga ataupun merombak logika domain/finansial backend.
