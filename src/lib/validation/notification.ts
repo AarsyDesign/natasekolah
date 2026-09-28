@@ -6,6 +6,7 @@ export type NotificationChannel = typeof NOTIFICATION_CHANNELS[number];
 export const NOTIFICATION_TEMPLATE_KEYS = [
   "PAYMENT_RECEIPT",
   "ATTENDANCE_ALERT",
+  "REPORT_CARD_PUBLISHED",
   "GUARDIAN_INVITE",
   "ANNOUNCEMENT",
   "CUSTOM_ALERT",
@@ -49,11 +50,12 @@ export const queueNotificationInputSchema = z.object({
     message: "Template notifikasi tidak dikenal",
   }),
   payload: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
-  channel: z.enum(NOTIFICATION_CHANNELS).default("WHATSAPP"),
+  channel: z.enum(NOTIFICATION_CHANNELS).optional().default("WHATSAPP"),
   maxAttempts: z.number().int().min(1).max(10).optional(),
+  idempotencyKey: z.string().trim().max(128).optional(),
 });
 
-export type QueueNotificationInput = z.infer<typeof queueNotificationInputSchema>;
+export type QueueNotificationInput = z.input<typeof queueNotificationInputSchema>;
 
 export const notificationFilterSchema = z.object({
   status: z.enum(NOTIFICATION_STATUSES).optional(),

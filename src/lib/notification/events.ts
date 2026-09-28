@@ -9,6 +9,7 @@ export async function notifyPaymentCompleted(
     amount: number;
     categoryName: string;
     paymentDate?: string;
+    idempotencyKey?: string;
   },
   txPrisma?: typeof prisma
 ) {
@@ -24,6 +25,7 @@ export async function notifyPaymentCompleted(
         paymentDate: params.paymentDate || new Date().toLocaleDateString("id-ID"),
       },
       channel: "WHATSAPP",
+      idempotencyKey: params.idempotencyKey,
     },
     txPrisma
   );
@@ -36,6 +38,8 @@ export async function notifyAttendanceAlert(
     status: "PRESENT" | "EXCUSED" | "SICK" | "ABSENT";
     date?: string;
     subjectName?: string;
+    classroomName?: string;
+    idempotencyKey?: string;
   },
   txPrisma?: typeof prisma
 ) {
@@ -48,8 +52,42 @@ export async function notifyAttendanceAlert(
         status: params.status,
         date: params.date || new Date().toLocaleDateString("id-ID"),
         subjectName: params.subjectName || null,
+        classroomName: params.classroomName || null,
       },
       channel: "WHATSAPP",
+      idempotencyKey: params.idempotencyKey,
+    },
+    txPrisma
+  );
+}
+
+export async function notifyReportCardPublished(
+  params: {
+    recipientPhone: string;
+    studentName: string;
+    reportCardId: string;
+    semester: number;
+    academicYear: string;
+    classroomName?: string;
+    reportUrl?: string;
+    idempotencyKey?: string;
+  },
+  txPrisma?: typeof prisma
+) {
+  return queueNotification(
+    {
+      recipient: params.recipientPhone,
+      templateKey: "REPORT_CARD_PUBLISHED",
+      payload: {
+        studentName: params.studentName,
+        reportCardId: params.reportCardId,
+        semester: params.semester,
+        academicYear: params.academicYear,
+        classroomName: params.classroomName || null,
+        reportUrl: params.reportUrl || `/wali/akademik/raport/${params.reportCardId}`,
+      },
+      channel: "WHATSAPP",
+      idempotencyKey: params.idempotencyKey || `REPORT_CARD_PUBLISHED:${params.reportCardId}`,
     },
     txPrisma
   );
@@ -61,6 +99,7 @@ export async function notifyGuardianInvitation(
     guardianName: string;
     studentName: string;
     inviteUrl: string;
+    idempotencyKey?: string;
   },
   txPrisma?: typeof prisma
 ) {
@@ -74,6 +113,7 @@ export async function notifyGuardianInvitation(
         inviteUrl: params.inviteUrl,
       },
       channel: "WHATSAPP",
+      idempotencyKey: params.idempotencyKey,
     },
     txPrisma
   );

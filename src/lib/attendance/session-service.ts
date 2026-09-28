@@ -19,6 +19,8 @@ import {
   formatAttendanceDate,
   normalizeAttendanceDate,
 } from "./types";
+import { resolveStudentGuardianRecipient } from "../notification/guardian-resolver";
+import { notifyAttendanceAlert } from "../notification/events";
 
 /**
  * Layanan Domain Sesi Absensi (Attendance Session Service) NataSekolah.
@@ -344,7 +346,7 @@ export async function closeAttendanceSession(
   }
 
   // 7. Eksekusi Penutupan Sesi (Kunci Status menjadi CLOSED & Rekam Timestamp closedAt)
-  return prisma.attendanceSession.update({
+  const closedSession = await prisma.attendanceSession.update({
     where: {
       id_institutionId: {
         id: attendanceSessionId,
@@ -371,6 +373,49 @@ export async function closeAttendanceSession(
       },
     },
   });
+
+  // 8. Event Notification: Kirim notifikasi kehadiran untuk santri/siswa yang ABSENT
+  try {
+    const absentRecords = await prisma.attendanceRecord.findMany({
+      where: {
+        attendanceSessionId: attendanceSessionId,
+        institutionId: ctx.institutionId,
+        status: "ABSENT",
+      },
+      include: {
+        student: true,
+      },
+    });
+
+    for (const rec of absentRecords) {
+      try {
+        const recipient = await resolveStudentGuardianRecipient(
+          rec.studentId,
+          ctx.institutionId
+        );
+
+        if (recipient) {
+          await notifyAttendanceAlert({
+            recipientPhone: recipient.recipientPhone,
+            studentName: rec.student.fullName,
+            status: "ABSENT",
+            date: closedSession.attendanceDate
+              ? formatAttendanceDate(closedSession.attendanceDate)
+              : undefined,
+            subjectName: closedSession.teacherAssignment?.subject?.name,
+            classroomName: closedSession.teacherAssignment?.classroom?.name,
+            idempotencyKey: `ATTENDANCE_ALERT:${rec.id}`,
+          });
+        }
+      } catch (notifErr) {
+        console.error(`[AttendanceNotification] Failed to queue alert for record ${rec.id}:`, notifErr);
+      }
+    }
+  } catch (err) {
+    console.error("[AttendanceNotification] Failed to query absent records for outbox:", err);
+  }
+
+  return closedSession;
 }
 
 /**

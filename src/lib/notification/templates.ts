@@ -27,6 +27,7 @@ export function renderNotificationMessage(
       const status = payload.status || "ALPA";
       const date = payload.date || new Date().toLocaleDateString("id-ID");
       const subject = payload.subjectName ? ` (Mata Pelajaran: ${payload.subjectName})` : "";
+      const classroom = payload.classroomName ? ` (Kelas: ${payload.classroomName})` : "";
       const statusText =
         status === "ABSENT" || status === "ALPA"
           // eslint-disable-next-line antislop/no-slop-words
@@ -37,8 +38,23 @@ export function renderNotificationMessage(
 
       return `[NataSekolah] PEMBERITAHUAN KEHADIRAN SISWA\n\n` +
         `Yth. Wali dari ${studentName},\n` +
-        `Diberitahukan bahwa putra/putri Anda tercatat ${statusText} pada tanggal ${date}${subject}.\n\n` +
+        `Diberitahukan bahwa putra/putri Anda tercatat ${statusText} pada tanggal ${date}${classroom}${subject}.\n\n` +
         `Apabila ada kekeliruan atau permohonan izin resmi, mohon menghubungi pihak sekolah/madrasah.`;
+    }
+
+    case "REPORT_CARD_PUBLISHED": {
+      const studentName = payload.studentName || "Siswa";
+      const semester = payload.semester ? `Semester ${payload.semester}` : "";
+      const academicYear = payload.academicYear || "";
+      const term = [semester, academicYear].filter(Boolean).join(" ");
+      const classroom = payload.classroomName ? `Kelas ${payload.classroomName}` : "";
+      const reportUrl = payload.reportUrl ? `\n\nAkses Raport Digital:\n${payload.reportUrl}` : "";
+
+      return `[NataSekolah] RAPORT SISWA TELAH TERBIT\n\n` +
+        `Yth. Wali dari ${studentName},\n` +
+        `Diberitahukan bahwa raport hasil belajar siswa untuk ${term || "semester ini"}${classroom ? ` (${classroom})` : ""} telah resmi diterbitkan.\n` +
+        `Silakan masuk ke Portal Wali NataSekolah untuk melihat lembar hasil belajar siswa.${reportUrl}\n\n` +
+        `Terima kasih atas perhatian dan kerja sama Bapak/Ibu.`;
     }
 
     case "GUARDIAN_INVITE": {

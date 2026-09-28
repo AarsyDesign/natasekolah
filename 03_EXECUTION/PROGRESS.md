@@ -34,12 +34,43 @@
 | **Milestone** | **Motion System & Interaction Polish** (Motion Tokens, Micro-Interactions, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) | **COMPLETE** | 2026-09-24 (340 Tests Pass) |
 | **Milestone** | **Master Data Engine — Excel Importer & Auto-Sanitizer** (Upload, Auto-Sanitize, Validate, Duplicate Detection, Preview, Confirm & Atomic Import) | **COMPLETE** | 2026-09-24 (17 Tests Pass) |
 | **Milestone** | **Master Data Engine — Bulk Promotion Workflow** (Kenaikan Kelas Massal, Review, Validation, Mapping, Sacred History, Idempotency & Audit Log) | **COMPLETE** | 2026-09-28 (13 Tests Pass) |
+| **Milestone** | **Communication Automation** (Cross-Domain Notification Outbox, Deterministic Idempotency, Guardian Precedence Resolution, Worker Atomic Claim & Exponential Backoff, Admin Workspace) | **COMPLETE** | 2026-09-28 (14 Tests Pass) |
 
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-28] - Milestone: Communication Automation — Cross-Domain Notification Platform & Outbox Engine (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Membangun platform notifikasi otomatis lintas domain terpusat berbasis Outbox Pattern untuk NataSekolah sesuai PRD Phase 4, dengan alur: `Business Event -> Notification Event -> Notification Outbox -> Worker -> Provider -> Delivery Status`.
+* **Implementasi:**
+  1. **Deterministic Idempotency Key:**
+     * Menghasilkan ID deterministik berbasis hash SHA-256 (`notif_${hash(institutionId:idempotencyKey)}`) pada primary key `NotificationOutbox.id`.
+     * Menjamin deduplikasi mutlak pada layer basis data tanpa penambahan skema migrasi baru (Zero DB Migration).
+     * Mencegah duplikasi akibat server retry, network glitch, atau double submit pengguna.
+  2. **Guardian Precedence Resolution (`src/lib/notification/guardian-resolver.ts`):**
+     * Resolusi hierarkis nomor WhatsApp wali: `GuardianStudent` (primary -> created awal) -> `Student.parentWaPhone` -> `Student.phone`.
+     * Validasi nomor seluler Indonesia (`628xxx`, 10–14 digit) dan sanitasi otomatis.
+     * Penanganan anggun (*graceful skip*): kegagalan kontak wali tidak membatalkan atau merusak transaksi bisnis utama.
+  3. **Integrasi Event Lintas Domain:**
+     * **Keuangan (Payment):** Terpemicu secara ketat *post-commit* setelah `prisma.$transaction` selesai (`PAYMENT_RECEIPT:${payment.id}`). Jika payment rollback, notifikasi tidak dibuat.
+     * **Kehadiran (Attendance):** Terpemicu saat sesi absensi ditutup (`status: "CLOSED"`), menerbitkan `ATTENDANCE_ALERT:${record.id}` khusus santri berstatus `ABSENT`.
+     * **Akademik (Raport):** Terpemicu saat raport dibekukan dan diterbitkan (`status: "PUBLISHED"`), menerbitkan `REPORT_CARD_PUBLISHED:${reportCard.id}` lengkap dengan tautan portal wali (`/wali/akademik/raport/${reportCard.id}`).
+  4. **Worker Hardening & Concurrency Protection:**
+     * Atomic claim menggunakan `updateMany` pada status `PENDING`/`FAILED`, mencegah *race condition* antar worker bersamaan.
+     * Klasifikasi kegagalan: *permanent failure* (nomor tidak valid, provider tidak didukung) langsung `FAILED` tanpa retry; *transient failure* menerapkan exponential backoff (`2^attempts * 60s`).
+     * Route handler terjadwal `src/app/api/cron/notifications/route.ts` dengan proteksi `CRON_SECRET`.
+  5. **Admin Workspace UX (`src/app/notifications/page.tsx`):**
+     * Filter lengkap berdasarkan status, template key, dan channel komunikasi.
+     * Observabilitas metadata (idempotency key, jadwal retry, batas percobaan).
+     * Desain responsif berstandar WCAG AA, touch target >= 44px, dan kepatuhan `DESIGN.md`.
+* **Verifikasi:**
+  * 14 unit & integration tests (`test/communication-automation.test.ts` & `test/communication-engine.test.ts`) lolos 100%.
+  * Total 384 tests di seluruh suite pengujian repositori lolos 100%.
+  * Typecheck `npx tsc --noEmit` bersih (0 error).
+  * Build produksi `npm run build` sukses dengan Turbopack.
+  * Prisma schema validasi `npx prisma validate` sukses.
 
 ### [2026-09-24] - Milestone: Master Data Engine — Excel Importer & Auto-Sanitizer (Upload, Auto-Sanitize, Validate, Duplicate Detection, Preview, Confirm & Atomic Import) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Mengembangkan workflow import master data siswa dan wali murid yang aman, tangguh, dan reusable berbasis Master PRD v5.0 Phase 1 dengan alur: **Upload → Parse → Sanitize → Validate → Preview → Confirm → Import → Result**.
