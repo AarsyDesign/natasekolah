@@ -135,6 +135,13 @@ export default function StudentsPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <Link
+              href="/students/promotions"
+              className="touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-2xs transition hover:bg-stone-50"
+            >
+              <GraduationCap className="h-4 w-4 text-teal-800" />
+              <span>Kenaikan Kelas</span>
+            </Link>
             <button
               type="button"
               onClick={() => setIsImportModalOpen(true)}
