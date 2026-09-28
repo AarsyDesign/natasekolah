@@ -1,5 +1,22 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-28] - Milestone: Master Data Engine - Bulk Promotion Workflow (Review, Classroom Mapping, Candidate Selection, Validation Preview, Sacred History Preservation, Idempotency & Audit Log) (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/academic/promotion-types.ts`: Kontrak data domain (`PromotionPreviewRow`, `PromotionPreviewSummary`, `ClassroomMapping`, `PromotionExecutionResult`, dan `PromotionValidationError`).
+* `src/lib/validation/promotion.ts`: Skema validasi Zod (`previewBulkPromotionInputSchema`, `executeBulkPromotionInputSchema`, `promotionCandidateFilterSchema`) dengan penegakan tahun ajaran asal vs target berbeda dan minimal 1 rombel terpetakan.
+* `src/lib/academic/promotion-service.ts`: Layanan domain promosi massal (`getPromotionCandidates`, `previewBulkPromotion`, `executeBulkPromotion`) dengan guard RBAC (`academic:manage`), isolasi tenant dari sesi (`ctx.institutionId`), transaksi atomik `prisma.$transaction`, penjagaan *Sacred History* tanpa menimpa atau menghapus enrollment lama, deteksi idempotency, dan pencatatan audit trail ke `AuditLog` (`action: "BULK_PROMOTION"`).
+* `src/actions/promotion.ts`: Server Actions terautentikasi (`getPromotionCandidatesAction`, `previewBulkPromotionAction`, `executeBulkPromotionAction`).
+* `src/app/students/promotions/page.tsx`: Halaman workflow kenaikan kelas 4-tahap (Setup Tahun & Pemetaan Rombel, Pemilihan Siswa Massal, Prapinjau Validasi & Konfirmasi Dialog, dan Kartu Hasil Sukses).
+* `test/bulk-promotion.test.ts`: Rangkaian 13 automated tests mencakup validasi aturan input, paginasi calon siswa, deteksi konflik prapinjau (READY/WARNING/ERROR), integritas Sacred History, idempotency pencegahan duplikasi, proteksi RBAC, dan pencegahan serangan lintas tenant (13/13 PASS).
+
+### Changed
+* `src/lib/academic/index.ts`: Re-export domain types dan promotion-service.
+* `src/app/students/page.tsx`: Menambahkan tombol aksi navigasi cepat "Kenaikan Kelas" menuju `/students/promotions`.
+* `src/app/classrooms/page.tsx`: Menambahkan tombol aksi navigasi cepat "Kenaikan Kelas" menuju `/students/promotions`.
+
+---
+
 ## [2026-09-24] - Milestone: Motion System & Interaction Polish (Motion Tokens, Reusable Motion Primitives, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) (IMPLEMENTED / VERIFIED)
 
 ### Added

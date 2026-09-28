@@ -131,13 +131,22 @@ export default function StudentsPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-teal-800 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-teal-700"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Tambah Siswa</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/students/promotions"
+              className="touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-2xs transition hover:bg-stone-50"
+            >
+              <GraduationCap className="h-4 w-4 text-teal-800" />
+              <span>Kenaikan Kelas</span>
+            </Link>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-teal-800 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-teal-700"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Tambah Siswa</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter & Search Bar */}

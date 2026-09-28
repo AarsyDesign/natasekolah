@@ -47,7 +47,7 @@ PHASE 7 (AI & Automation)
 * [ ] Staff & Teacher Assignment
 * [ ] Sacred History Enrollment Engine
 * [ ] Excel Importer & Auto-Sanitizer (Phone, Dates)
-* [ ] Bulk Promotion Workflow (Kenaikan Kelas Massal)
+* [x] Bulk Promotion Workflow (Kenaikan Kelas Massal)
 
 ### Phase 2 Gate — Daily Operations
 * [ ] Attendance Engine (< 60 detik)

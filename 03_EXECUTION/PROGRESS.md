@@ -32,11 +32,39 @@
 | **Milestone** | **UI Foundation & Persistent App Shell** (Design Tokens, 15 Primitives, Persistent AppShell, Mobile Nav, Loading Skeletons, DataTableView, Dashboard Reference) | **COMPLETE** | 2026-09-23 (315 Tests Pass) |
 | **Milestone** | **Finance Workspace UX Migration** (Unified Workspace Navigation, Charges, Payments & Cashier Counter, Cashbook BKU, Fee Categories, Reports & CSV, Design Tokens, Anti-Slop Mode 1) | **COMPLETE** | 2026-09-23 (325 Tests Pass) |
 | **Milestone** | **Motion System & Interaction Polish** (Motion Tokens, Micro-Interactions, Shimmer Skeletons, Modal/Drawer Primitives, Cashier Success Micro-Animation, WCAG AA Reduced Motion) | **COMPLETE** | 2026-09-24 (340 Tests Pass) |
+| **Milestone** | **Master Data Engine — Bulk Promotion Workflow** (Kenaikan Kelas Massal, Review, Validation, Mapping, Sacred History, Idempotency & Audit Log) | **COMPLETE** | 2026-09-28 (13 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-09-28] - Milestone: Master Data Engine — Bulk Promotion Workflow (Review, Classroom Mapping, Candidate Selection, Validation Preview, Sacred History Preservation, Idempotency & Audit Log) (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Mengembangkan workflow kenaikan kelas siswa secara massal (*Bulk Promotion Workflow*) berbasis Master PRD v5.0 Bagian 15 dengan urutan alur: **Review → Preview → Validate → Promote → Audit** serta penegakan integritas data sakral (*Sacred History*).
+* **Implementasi:**
+  1. **Domain Types & Error Contracts (`src/lib/academic/promotion-types.ts`):**
+     * Kontrak tipe `PromotionPreviewRow`, `PromotionPreviewSummary`, `ClassroomMapping`, `PromotionExecutionResult`, dan galat domain `PromotionValidationError`.
+  2. **Zod Validation Schemas (`src/lib/validation/promotion.ts`):**
+     * Skema `previewBulkPromotionInputSchema`: validasi CUID tahun ajaran asal & target (`sourceAcademicYearId !== targetAcademicYearId`), array pemetaan rombel minimal 1 baris, dan filter opsional ID siswa terpilih.
+     * Skema `executeBulkPromotionInputSchema`: validasi array eksekusi promosi `studentId` dan `targetClassroomId`.
+     * Skema `promotionCandidateFilterSchema`: paginasi, pencarian nama/NIS, filter rombel asal dan penandaan konflik tahun target.
+  3. **Domain Service Engine (`src/lib/academic/promotion-service.ts`):**
+     * `getPromotionCandidates`: Pengambilan calon siswa dengan paginasi server-side dan deteksi otomatis apakah siswa telah terdaftar pada tahun target (`isAlreadyEnrolledInTarget`).
+     * `previewBulkPromotion`: Prapinjau validasi tanpa mutasi basis data. Mengklasifikasikan siswa ke dalam status `READY`, `WARNING` (siswa non-ACTIVE), dan `ERROR` (sudah terdaftar di tahun target / ketidaksesuaian tahun ajaran rombel). Menghasilkan metrik ringkasan metrik Total, Ready, Warning, dan Error.
+     * `executeBulkPromotion`: Eksekusi atomik dalam `prisma.$transaction`. Memeriksa idempotency pencegahan duplikasi target enrollment, membuat baris baru `Enrollment` pada tahun ajaran target dengan status `ENROLLED`, **mempertahankan rekaman histori lama tanpa mengubah atau menghapusnya (Sacred History)**, serta mencatat entri riwayat ke `AuditLog` (`action: "BULK_PROMOTION"`).
+  4. **Server Actions Terautentikasi (`src/actions/promotion.ts`):**
+     * `getPromotionCandidatesAction`, `previewBulkPromotionAction`, dan `executeBulkPromotionAction` dengan guard otorisasi RBAC (`academic:manage`), isolasi tenant dari sesi terautentikasi (`ctx.institutionId`), dan auto revalidation path (`/students`, `/classrooms`, `/academic-years`).
+  5. **Antarmuka Responsive Kenaikan Kelas (`src/app/students/promotions/page.tsx`):**
+     * Workflow 4 tahap interaktif: (1) Setup Tahun Ajaran & Pemetaan Rombel dinamis, (2) Pemilihan Siswa massal dengan checkbox, filter kelas, dan pencarian instan, (3) Prapinjau validasi metrik ringkasan kartu, filter status, tabel detail, dan dialog modal konfirmasi eksplisit, (4) Kartu hasil sukses dengan micro-animation `SuccessCheck`, ringkasan metrik, ID jejak audit, dan navigasi cepat.
+     * Integrasi tombol pintas "Kenaikan Kelas" pada bilah aksi utama `/students` dan `/classrooms`.
+* **Verifikasi:**
+  * Typecheck: `npx tsc --noEmit` lulus 100% (0 errors).
+  * Build: `npm run build` berhasil dengan pembuatan rute `/students/promotions` (42 static/dynamic routes).
+  * Unit & Integration Tests: `test/bulk-promotion.test.ts` (13/13 PASS).
+  * Full Regression Tests: `test/academic-core.test.ts` (21/21 PASS) & `test/tenant-isolation.test.ts` (10/10 PASS).
+  * Schema & Database: `npx prisma validate` valid 100%, 0 migrasi skema diperlukan.
+
+---
 
 ### [2026-09-24] - Milestone: Motion System & Interaction Polish (Motion Tokens, Reusable Motion Primitives, Shimmer Skeleton, Dialog/Drawer Motion, Cashier Multi-Step Success Feedback, Reduced-Motion WCAG AA) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Membangun dan mengimplementasikan **Motion Language NataSekolah** yang halus, intensional, konsisten, cepat ($\le 240\text{ms}$), dan *non-disruptive* berbasis `DESIGN.md v2.0` (Dial `ENERGY 1 / RHYTHM 2 / MOTION 1`, Anti-Slop Mode 1). Menghilangkan perubahan state yang kaku (*instant snap*) dan mengganti pulse generik dengan shimmer halus, tanpa menambah bobot library pihak ketiga ataupun merombak logika domain/finansial backend.

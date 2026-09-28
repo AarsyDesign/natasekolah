@@ -79,7 +79,15 @@
   - [x] 126 total automated tests PASS (100%).
   - [x] TypeScript 0 error (`tsc --noEmit`).
   - [x] Next.js Turbopack build PASS (`next build`).
-  - [x] Prisma validation PASS (`prisma validate`).
+- [x] **1.6 Master Data Engine — Bulk Promotion Workflow (Kenaikan Kelas Massal):**
+  - [x] Kontrak tipe domain & galat (`src/lib/academic/promotion-types.ts`).
+  - [x] Skema validasi Zod (`src/lib/validation/promotion.ts`).
+  - [x] Layanan domain `promotion-service.ts` (`getPromotionCandidates`, `previewBulkPromotion`, `executeBulkPromotion`).
+  - [x] Penegakan Sacred History: tidak menghapus atau menimpa enrollment masa lalu.
+  - [x] Transaksi atomik `prisma.$transaction`, pencegahan duplikasi idempotency, dan jejak `AuditLog`.
+  - [x] Server Actions `src/actions/promotion.ts` dengan guard otorisasi RBAC & isolasi tenant.
+  - [x] Antarmuka mobile-first 4-tahap `/students/promotions` (Setup Rombel, Pilih Siswa, Prapinjau Validasi, Hasil Eksekusi).
+  - [x] 13 automated tests baru di `test/bulk-promotion.test.ts` (100% PASS).
 
 ---
 
