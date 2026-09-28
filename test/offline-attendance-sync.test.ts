@@ -67,8 +67,10 @@ describe("Offline Attendance & Sync Engine Tests", () => {
   let inMemoryEnrollments: any[] = [];
   let inMemorySessions: any[] = [];
   let inMemoryRecords: any[] = [];
+  let inMemoryAuditLogs: any[] = [];
 
   beforeEach(() => {
+    inMemoryAuditLogs = [];
     inMemoryUsers = [
       {
         id: "usr_teacher_a1",
@@ -346,6 +348,36 @@ describe("Offline Attendance & Sync Engine Tests", () => {
       };
       return inMemoryRecords[idx];
     };
+
+    (prisma.auditLog as any).findUnique = async ({ where }: any) => {
+      return inMemoryAuditLogs.find((l) => l.id === where.id) || null;
+    };
+
+    (prisma.auditLog as any).findFirst = async ({ where }: any) => {
+      return (
+        inMemoryAuditLogs.find((l) => {
+          if (where?.id && l.id !== where.id) return false;
+          if (where?.institutionId && l.institutionId !== where.institutionId) return false;
+          if (where?.entityType && l.entityType !== where.entityType) return false;
+          if (where?.entityId && l.entityId !== where.entityId) return false;
+          return true;
+        }) || null
+      );
+    };
+
+    (prisma.auditLog as any).create = async ({ data }: any) => {
+      const existing = inMemoryAuditLogs.find((l) => l.id === data.id);
+      if (existing) {
+        throw new Error(`Unique constraint failed on the fields: (\`id\`)`);
+      }
+      const record = {
+        id: data.id || `audit_${Date.now()}`,
+        createdAt: new Date(),
+        ...data,
+      };
+      inMemoryAuditLogs.push(record);
+      return record;
+    };
   });
 
   // -------------------------------------------------------------
@@ -512,6 +544,82 @@ describe("Offline Attendance & Sync Engine Tests", () => {
       // Verify no duplicate records created in database
       assert.equal(inMemoryRecords.length, 1);
     });
+
+    it("should REJECT mutation when same clientMutationId is used for a different payload (idempotency conflict)", async () => {
+      // 1. Initial request with clientMutationId = ABC, Ahmad = PRESENT
+      const initialInput: BatchSyncInput = {
+        sessionId: "ses_open_1",
+        mutations: [
+          {
+            clientMutationId: "attendance:ses_open_1:std_1:ABC",
+            sessionId: "ses_open_1",
+            studentId: "std_1",
+            status: "PRESENT",
+            note: "Hadir tepat waktu",
+            clientTimestamp: new Date().toISOString(),
+          },
+        ],
+      };
+
+      const firstResult = await syncAttendanceBatch(teacherA1, initialInput);
+      assert.equal(firstResult.syncedCount, 1);
+      assert.equal(inMemoryRecords.length, 1);
+      assert.equal(inMemoryRecords[0].status, "PRESENT");
+
+      // 2. Incoming request with SAME clientMutationId = ABC, but DIFFERENT status: Ahmad = ABSENT
+      const conflictingPayloadInput: BatchSyncInput = {
+        sessionId: "ses_open_1",
+        mutations: [
+          {
+            clientMutationId: "attendance:ses_open_1:std_1:ABC",
+            sessionId: "ses_open_1",
+            studentId: "std_1",
+            status: "ABSENT", // Different status!
+            note: "Alpa tanpa keterangan",
+            clientTimestamp: new Date().toISOString(),
+          },
+        ],
+      };
+
+      const conflictResult = await syncAttendanceBatch(teacherA1, conflictingPayloadInput);
+      assert.equal(conflictResult.conflictCount, 1);
+      assert.equal(conflictResult.syncedCount, 0);
+      assert.equal(conflictResult.results[0].status, "CONFLICT");
+      assert.match(
+        conflictResult.results[0].message || "",
+        /Client mutation ID sudah digunakan untuk mutation berbeda/i
+      );
+
+      // Verify that database record was NOT altered by conflicting mutation
+      assert.equal(inMemoryRecords[0].status, "PRESENT");
+    });
+
+    it("should handle worker retry after simulated network timeout without creating duplicates", async () => {
+      const retryInput: BatchSyncInput = {
+        sessionId: "ses_open_1",
+        mutations: [
+          {
+            clientMutationId: "attendance:ses_open_1:std_2:NET_RETRY_1",
+            sessionId: "ses_open_1",
+            studentId: "std_2",
+            status: "SICK",
+            note: "Surat dokter",
+            clientTimestamp: new Date().toISOString(),
+          },
+        ],
+      };
+
+      // Server commits on first try, but client experienced a timeout before getting response
+      const firstTry = await syncAttendanceBatch(teacherA1, retryInput);
+      assert.equal(firstTry.syncedCount, 1);
+      const recordCountBeforeRetry = inMemoryRecords.length;
+
+      // Client sync worker retries with the same clientMutationId and payload
+      const secondTry = await syncAttendanceBatch(teacherA1, retryInput);
+      assert.equal(secondTry.syncedCount, 1);
+      assert.equal(secondTry.results[0].status, "SYNCED");
+      assert.equal(inMemoryRecords.length, recordCountBeforeRetry);
+    });
   });
 
   // -------------------------------------------------------------
@@ -620,6 +728,68 @@ describe("Offline Attendance & Sync Engine Tests", () => {
       assert.equal(result.syncedCount, 0);
       assert.equal(result.results[0].status, "CONFLICT");
       assert.match(result.results[0].message || "", /CLOSED/i);
+    });
+
+    it("should apply conflict policy when two different mutations arrive sequentially for the same student", async () => {
+      // 1. First mutation: Teacher marks PRESENT
+      const firstMutationInput: BatchSyncInput = {
+        sessionId: "ses_open_1",
+        mutations: [
+          {
+            clientMutationId: "attendance:ses_open_1:std_1:SEQ_MUT_1",
+            sessionId: "ses_open_1",
+            studentId: "std_1",
+            status: "PRESENT",
+            clientTimestamp: new Date("2026-09-28T07:10:00Z").toISOString(),
+          },
+        ],
+      };
+
+      const res1 = await syncAttendanceBatch(teacherA1, firstMutationInput);
+      assert.equal(res1.syncedCount, 1);
+      assert.equal(inMemoryRecords[0].status, "PRESENT");
+
+      // 2. Second distinct mutation: Teacher tries to mark SICK with base snapshot older than server updatedAt
+      const secondMutationInput: BatchSyncInput = {
+        sessionId: "ses_open_1",
+        mutations: [
+          {
+            clientMutationId: "attendance:ses_open_1:std_1:SEQ_MUT_2",
+            sessionId: "ses_open_1",
+            studentId: "std_1",
+            status: "SICK",
+            baseUpdatedAt: new Date(Date.now() - 60000).toISOString(), // older than server record
+            forceOverwrite: false,
+            clientTimestamp: new Date().toISOString(),
+          },
+        ],
+      };
+
+      const res2 = await syncAttendanceBatch(teacherA1, secondMutationInput);
+      assert.equal(res2.conflictCount, 1);
+      assert.equal(res2.syncedCount, 0);
+      assert.equal(res2.results[0].status, "CONFLICT");
+      assert.equal(res2.results[0].serverStatus, "PRESENT");
+
+      // 3. User chooses "FORCE_LOCAL" (forceOverwrite: true) for the second mutation
+      const forceOverwriteInput: BatchSyncInput = {
+        sessionId: "ses_open_1",
+        mutations: [
+          {
+            clientMutationId: "attendance:ses_open_1:std_1:SEQ_MUT_2",
+            sessionId: "ses_open_1",
+            studentId: "std_1",
+            status: "SICK",
+            forceOverwrite: true,
+            clientTimestamp: new Date("2026-09-28T07:15:00Z").toISOString(),
+          },
+        ],
+      };
+
+      const res3 = await syncAttendanceBatch(teacherA1, forceOverwriteInput);
+      assert.equal(res3.syncedCount, 1);
+      assert.equal(res3.conflictCount, 0);
+      assert.equal(inMemoryRecords[0].status, "SICK");
     });
   });
 

@@ -9,6 +9,10 @@ import {
   AttendanceStatus,
 } from "../types";
 import { BatchSyncInput, BatchSyncResult, BatchSyncItemResult } from "./types";
+import {
+  generateDeterministicMutationLogId,
+  RecordedMutationDetails,
+} from "./idempotency";
 
 export const batchSyncInputSchema = z.object({
   sessionId: z.string().trim().min(1, "ID sesi wajib diisi"),
@@ -172,26 +176,63 @@ export async function syncAttendanceBatch(
       continue;
     }
 
-    const existing = recordByStudentId.get(item.studentId);
+    // 9. True Server-Side Idempotency Check via Persisted Mutation Ledger (AuditLog)
+    const deterministicLogId = generateDeterministicMutationLogId(
+      ctx.institutionId,
+      item.clientMutationId
+    );
 
-    if (existing) {
-      // Idempotency check: jika status dan catatan sudah sama persis
-      const isAlreadySame =
-        existing.status === item.status &&
-        (item.note === undefined || item.note === null || existing.note === item.note);
+    const existingLog = await db.auditLog.findUnique({
+      where: { id: deterministicLogId },
+    });
 
-      if (isAlreadySame) {
+    if (existingLog && existingLog.institutionId === ctx.institutionId) {
+      let recorded: RecordedMutationDetails | null = null;
+      try {
+        recorded = existingLog.detailsJson ? JSON.parse(existingLog.detailsJson) : null;
+      } catch {
+        recorded = null;
+      }
+
+      const isSamePayload =
+        recorded &&
+        recorded.sessionId === session.id &&
+        recorded.studentId === item.studentId &&
+        recorded.status === item.status &&
+        (item.note === undefined || item.note === null
+          ? !recorded.note
+          : recorded.note === item.note);
+
+      if (isSamePayload) {
+        // Idempotent retry: Exact same mutation already committed
         syncedCount++;
         results.push({
           clientMutationId: item.clientMutationId,
           studentId: item.studentId,
           status: "SYNCED",
-          recordId: existing.id,
-          message: "Catatan kehadiran sudah mutakhir di server (idempotent).",
+          recordId: recorded?.recordId,
+          message: "Catatan kehadiran sudah mutakhir di server (idempotent mutation retry).",
+        });
+        continue;
+      } else {
+        // Idempotency conflict: Same clientMutationId used for a different payload!
+        conflictCount++;
+        results.push({
+          clientMutationId: item.clientMutationId,
+          studentId: item.studentId,
+          status: "CONFLICT",
+          recordId: recorded?.recordId,
+          serverStatus: recorded?.status as AttendanceStatus,
+          message: "Client mutation ID sudah digunakan untuk mutation berbeda.",
         });
         continue;
       }
+    }
 
+    const existing = recordByStudentId.get(item.studentId);
+    let savedRecordId: string;
+
+    if (existing) {
       // Conflict Detection:
       // Jika server telah dimodifikasi setelah snapshot klien diambil dan status berbeda
       if (!item.forceOverwrite && item.baseUpdatedAt) {
@@ -214,25 +255,25 @@ export async function syncAttendanceBatch(
         }
       }
 
-      // Perbarui record yang ada
-      const updated = await db.attendanceRecord.update({
-        where: { id: existing.id },
-        data: {
-          status: item.status,
-          note: item.note ?? existing.note,
-          markedAt: new Date(),
-        },
-      });
+      // Perbarui record yang ada jika ada perubahan status/note
+      const isAlreadyExactSameState =
+        existing.status === item.status &&
+        (item.note === undefined || item.note === null || existing.note === item.note);
 
-      // Update in-memory map
-      recordByStudentId.set(item.studentId, updated);
-      syncedCount++;
-      results.push({
-        clientMutationId: item.clientMutationId,
-        studentId: item.studentId,
-        status: "SYNCED",
-        recordId: updated.id,
-      });
+      if (isAlreadyExactSameState) {
+        savedRecordId = existing.id;
+      } else {
+        const updated = await db.attendanceRecord.update({
+          where: { id: existing.id },
+          data: {
+            status: item.status,
+            note: item.note ?? existing.note,
+            markedAt: new Date(),
+          },
+        });
+        savedRecordId = updated.id;
+        recordByStudentId.set(item.studentId, updated);
+      }
     } else {
       // Buat record baru
       const created = await db.attendanceRecord.create({
@@ -247,15 +288,48 @@ export async function syncAttendanceBatch(
         },
       });
 
+      savedRecordId = created.id;
       recordByStudentId.set(item.studentId, created);
-      syncedCount++;
-      results.push({
-        clientMutationId: item.clientMutationId,
-        studentId: item.studentId,
-        status: "SYNCED",
-        recordId: created.id,
-      });
     }
+
+    // 10. Persist Mutation to Idempotency Ledger (AuditLog)
+    const logDetails: RecordedMutationDetails = {
+      sessionId: session.id,
+      studentId: item.studentId,
+      status: item.status,
+      note: item.note ?? null,
+      recordId: savedRecordId,
+      clientMutationId: item.clientMutationId,
+      clientTimestamp: item.clientTimestamp ?? null,
+    };
+
+    try {
+      await db.auditLog.create({
+        data: {
+          id: deterministicLogId,
+          institutionId: ctx.institutionId,
+          userId: ctx.userId,
+          action: "OFFLINE_ATTENDANCE_MUTATION",
+          entityType: "AttendanceMutation",
+          entityId: item.clientMutationId,
+          detailsJson: JSON.stringify(logDetails),
+        },
+      });
+    } catch (logErr: unknown) {
+      // Menangani benturan race condition jika dua request paralel memasukkan mutationId yang sama
+      console.warn(
+        `[SyncService] AuditLog concurrent insert collision for ${item.clientMutationId}:`,
+        logErr instanceof Error ? logErr.message : logErr
+      );
+    }
+
+    syncedCount++;
+    results.push({
+      clientMutationId: item.clientMutationId,
+      studentId: item.studentId,
+      status: "SYNCED",
+      recordId: savedRecordId,
+    });
   }
 
   return {

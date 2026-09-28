@@ -35,7 +35,7 @@
 | **Milestone** | **Master Data Engine — Excel Importer & Auto-Sanitizer** (Upload, Auto-Sanitize, Validate, Duplicate Detection, Preview, Confirm & Atomic Import) | **COMPLETE** | 2026-09-24 (17 Tests Pass) |
 | **Milestone** | **Master Data Engine — Bulk Promotion Workflow** (Kenaikan Kelas Massal, Review, Validation, Mapping, Sacred History, Idempotency & Audit Log) | **COMPLETE** | 2026-09-28 (13 Tests Pass) |
 | **Milestone** | **Communication Automation** (Cross-Domain Notification Outbox, Deterministic Idempotency, Guardian Precedence Resolution, Worker Atomic Claim & Exponential Backoff, Admin Workspace) | **COMPLETE** | 2026-09-28 (14 Tests Pass) |
-| **Milestone** | **Offline Attendance & Sync Engine** (Local IndexedDB `AttendanceOfflineStore`, Offline Queue, Batch Sync `syncAttendanceBatch`, Server Idempotency & Conflict Detection, Mobile Attendance UX) | **COMPLETE** | 2026-09-28 (13 Tests Pass, 397 Total Tests) |
+| **Milestone** | **Offline Attendance & Sync Engine** (Local IndexedDB `AttendanceOfflineStore`, Offline Queue, Batch Sync `syncAttendanceBatch`, True Server-Side Idempotency Ledger via `AuditLog`, Conflict Detection, Mobile Attendance UX) | **COMPLETE** | 2026-09-28 (16 Tests Pass, 400 Total Tests) |
 
 | **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
 
@@ -46,14 +46,16 @@
 ### [2026-09-28] - Milestone: Offline Attendance & Sync Engine — Local IndexedDB Storage & Conflict Resolution (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Membangun *Offline Attendance & Sync Engine* agar guru dapat melakukan presensi kelas secara lancar (< 60 detik) saat koneksi internet lambat atau terputus sementara, dengan alur: `Teacher -> Attendance Session -> Local IndexedDB -> Offline Queue -> Connection Restored -> Sync Engine -> Server Validation -> Idempotent Commit -> Sync Result`.
 * **Prinsip & Arsitektur (Extension dari Attendance Engine Existing):**
-  1. **Zero Database Migration:** Memanfaatkan `AttendanceRecord` yang telah memiliki konstrain unik `@@unique([attendanceSessionId, studentId])` serta metadata `updatedAt` otomatis. Tidak ada perubahan skema database prisma (0 migrasi).
+  1. **Zero Database Migration (Reuse Existing Mechanism):** Memanfaatkan model ledger `AuditLog` yang telah ada di skema untuk mencatat mutasi offline dengan kunci deterministik `audit_mut_${hash(institutionId:clientMutationId)}`, serta `AttendanceRecord` yang memiliki constraint `@@unique([attendanceSessionId, studentId])`. Tidak ada perubahan skema database prisma (0 migrasi).
   2. **Storage Abstraction (`AttendanceOfflineStore`):**
      * Abstraksi penyimpanan IndexedDB browser (`natasekolah_offline_v1`) dengan fallback otomatis ke *in-memory storage* saat server-side rendering atau runtime pengujian Node.js.
      * Mengelola tabel objek `attendance_mutations` dan `roster_cache`.
      * Tidak menyimpan kata sandi, token otentikasi, atau data rahasia institusi secara lokal.
-  3. **Client Mutation ID & Idempotency:**
-     * Setiap mutasi memiliki ID stabil: `attendance:{sessionId}:{studentId}:{uuid/hash}`.
-     * Server memverifikasi mutasi: jika status dan catatan kehadiran di server sudah sama, server mengembalikan status `SYNCED` secara idempotent tanpa membuat record ganda atau melempar error.
+  3. **True Server-Side Idempotency Ledger (`AuditLog`):**
+     * `clientMutationId` di-generate secara deterministik dan stabil menggunakan fungsi hashing isomorfik (`generateClientMutationId`).
+     * Server memverifikasi mutasi terhadap ledger `AuditLog`:
+       - **Retry Identik:** Jika `clientMutationId` sama dan payload sama (status & catatan identik), server mengembalikan `status: "SYNCED"` secara idempotent tanpa membuat mutasi ganda ke basis data.
+       - **Idempotency Conflict:** Jika `clientMutationId` sama tetapi payload berbeda (misal status atau catatan berbeda), server **menolak keras sebagai konflik idempotency** (`status: "CONFLICT"`, pesan: *"Client mutation ID sudah digunakan untuk mutation berbeda."*), bukan dianggap request baru.
   4. **Deteksi Konflik & Kebijakan No-Silent-Overwrite:**
      * Jika data di server telah diperbarui oleh pengguna lain (misalnya admin atau guru piket) setelah snapshot klien diambil (`serverTime > baseUpdatedAt + 1000ms`), server menolak overwrite diam-diam dan mengembalikan status `CONFLICT` lengkap dengan `serverStatus` dan `serverUpdatedAt`.
      * Guru diberikan pilihan di UI: "Gunakan Pilihan Server" (membatalkan mutasi lokal) atau "Timpa ke Server" (`forceOverwrite: true`).
@@ -67,8 +69,8 @@
      * Lencana status per baris siswa (`✓ Tersinkron`, `◷ Menunggu Sinkron`, `↻ Menyinkronkan`, `⚠ Konflik`).
      * Target sentuh tombol presensi min 44px, bebas overflow horizontal, kontras WCAG AA, dan kepatuhan `DESIGN.md`.
 * **Verifikasi:**
-  * 13 unit & integration tests (`test/offline-attendance-sync.test.ts`) lolos 100%.
-  * 397 total tests di seluruh suite pengujian repositori lolos 100% tanpa regresi.
+  * 16 unit & integration tests (`test/offline-attendance-sync.test.ts`) lolos 100%.
+  * 400 total tests di seluruh suite pengujian repositori lolos 100% tanpa regresi.
   * Typecheck `npx tsc --noEmit` lolos bersih (0 error).
   * Validasi skema Prisma `npx prisma validate` lolos bersih.
   * Build produksi `npm run build` sukses dengan Turbopack (43 routes terkompilasi).

@@ -18,6 +18,7 @@ import {
 } from "../../lib/attendance/types";
 import { AttendanceOfflineStore } from "../../lib/attendance/offline/offline-store";
 import { AttendanceSyncWorker } from "../../lib/attendance/offline/sync-worker";
+import { generateClientMutationId } from "../../lib/attendance/offline/idempotency";
 import type { OfflineAttendanceMutation } from "../../lib/attendance/offline/types";
 import {
   ClipboardCheck,
@@ -213,8 +214,16 @@ export default function AttendancePage() {
       return;
     }
 
-    const clientMutationId = `attendance:${activeSessionId}:${studentId}:${Date.now()}`;
     const baseStudent = activeRoster.roster.find((s) => s.studentId === studentId);
+    const baseUpdatedAt = baseStudent?.markedAt
+      ? new Date(baseStudent.markedAt).toISOString()
+      : null;
+
+    const clientMutationId = generateClientMutationId(activeSessionId, studentId, {
+      status,
+      note: note ?? null,
+      baseUpdatedAt,
+    });
 
     // 1. Optimistic UI update
     const updatedRosterList = activeRoster.roster.map((s) => {
