@@ -18,7 +18,9 @@ import {
   CheckCircle2,
   X,
   User,
+  FileSpreadsheet,
 } from "lucide-react";
+import { StudentImportModal } from "../../components/importer/student-import-modal";
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
@@ -30,6 +32,7 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   // Form state
@@ -131,7 +134,7 @@ export default function StudentsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Link
               href="/students/promotions"
               className="touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-2xs transition hover:bg-stone-50"
@@ -140,6 +143,16 @@ export default function StudentsPage() {
               <span>Kenaikan Kelas</span>
             </Link>
             <button
+              type="button"
+              onClick={() => setIsImportModalOpen(true)}
+              className="touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-stone-800 shadow-xs transition hover:bg-stone-50"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-teal-800" />
+              <span>Impor Excel</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setIsModalOpen(true)}
               className="touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-teal-800 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-teal-700"
             >
@@ -452,6 +465,15 @@ export default function StudentsPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Impor Excel */}
+      <StudentImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          fetchStudents();
+        }}
+      />
     </div>
   );
 }
