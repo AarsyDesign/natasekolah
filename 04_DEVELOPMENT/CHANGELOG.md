@@ -1,5 +1,42 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - Critical: Bootstrap Pembuatan Lembaga & Akun SUPER_ADMIN (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`scripts/seed-core.ts` + `scripts/seed.ts` + script `npm run seed`** — satu-satunya
+  (dan yang pertama) jalur pembuatan akun di aplikasi ini.
+* `test/seed-bootstrap.test.ts` — 7 pengujian: pembuatan lembaga+admin, sifat idempoten,
+  login sungguhan lewat `authenticateCredentials`/`loginUser`, sesi tervalidasi,
+  penolakan kata sandi lemah, dan penolakan slug tidak sah.
+
+### Problem (temuan audit 2026-10-01)
+* `grep` menyeluruh atas `src/` menemukan **nol** `institution.create`, **nol**
+  `user.create`, `hashPassword` **tidak pernah dipanggil**, tidak ada halaman
+  onboarding/pendaftaran, dan tidak ada seed bawaan. Konsekuensinya: pada database
+  kosong **tidak mungkin login** — aplikasi belum dapat dipakai sama sekali.
+* Temuan ini juga menjelaskan mengapa ketiga baris data lokal hanya berasal dari
+  fixture pengujian.
+
+### Design
+* **Idempoten** — dijalankan berapa kali pun tidak pernah menggandakan data, dan
+  run ulang **tidak pernah menimpa** kata sandi akun yang sudah ada.
+* **Tervalidasi Zod** — slug format ketat (`a-z0-9` + tanda hubung), email valid,
+  kata sandi minimal 12 karakter; validasi gagal = tidak ada data yang ditulis
+  (transaksional per langkah: lembaga dulu, baru akun).
+* **Keamanan kredensial** — kata sandi hanya dibaca dari environment variable
+  (tidak pernah argv, karena argv terlihat di `ps`), di-hash bcrypt cost 12,
+  dan **tidak pernah dicetak** — output CLI hanya slug, id, dan bendera hasil
+  (diverifikasi: kedua run tidak mengandung string kata sandi maupun email).
+* Peran `SUPER_ADMIN` ditulis sebagai JSON sesuai `ROLE_PERMISSIONS`.
+
+### Verification
+* `tsc --noEmit` 0 error · `npm test` **402/402** (395 + 7 baru) ·
+  `npm run seed` tanpa env → exit 1 dengan daftar variabel yang kurang (tanpa
+  kebocoran) · run 1 → "dibuat baru", run 2 → "sudah ada, tidak diubah" ·
+  data uji dibersihkan setelah pengujian.
+
+---
+
 ## [2026-10-01] - Integrity: FK `SetNull` → `Restrict`, kebersihan repo & konfigurasi (IMPLEMENTED / VERIFIED)
 
 ### Fixed

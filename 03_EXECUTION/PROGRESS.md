@@ -42,6 +42,23 @@
 
 ## 2. Catatan Log Aktivitas Kronologis
 
+### [2026-10-01] - Critical: Bootstrap Akun (IMPLEMENTED & VERIFIED)
+* **Temuan:** aplikasi **tidak punya jalur pembuatan akun sama sekali** — nol
+  `institution.create` / `user.create` di `src/`, `hashPassword` tidak pernah
+  dipanggil, tidak ada onboarding maupun seed. Pada DB kosong mustahil login.
+* **Perbaikan:** `npm run seed` (`scripts/seed-core.ts` + `scripts/seed.ts`) —
+  membuat lembaga + akun `SUPER_ADMIN`; idempoten; validasi Zod (password ≥12
+  karakter, slug ketat); kata sandi hanya dari env, tidak pernah argv/cetak;
+  run ulang tidak menimpa akun lama.
+* **Verifikasi:** `tsc --noEmit` **0 error** · `npm test` **402/402**
+  (395 + 7 test baru yang membuktikan akun hasil seed **bisa login** lewat jalur
+  autentikasi resmi + sesi tervalidasi) · CLI diuji nyata: run 1 "dibuat baru",
+  run 2 "sudah ada", output bebas kata sandi/email, tanpa-env exit 1.
+* **Sisa (belum):** belum ada cara membuat staf/guru **dari dalam aplikasi**
+  (`user.create` tetap nol di `src/`) — pembuatan user lewat UI/RBAC jadi task
+  berikutnya. Status task ini: **PARTIALLY COMPLETE** untuk sisi "penambahan
+  akun dari aplikasi"; bootstrap itu sendiri DONE.
+
 ### [2026-10-01] - Integritas FK + Kebersihan Repo & Konfigurasi (IMPLEMENTED & VERIFIED)
 * **3 warning Prisma `onDelete: SetNull`** berasal dari FK komposit
   `StudentCharge.academicYear`, `CashbookEntry.paymentTransaction`,
