@@ -55,6 +55,8 @@ model Institution {
   dormitories         Dormitory[]
   dormitoryRooms      DormitoryRoom[]
   dormitoryAssignments StudentDormitoryAssignment[]
+  questions            Question[]
+  questionOptions      QuestionOption[]
 
   @@index([slug])
   @@index([type])
@@ -83,6 +85,7 @@ model User {
   issuedReceipts      Receipt[]
   publishedReportCards ReportCard[]
   recordedTahfidz     TahfidzRecord[]
+  createdQuestions    Question[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, email])
@@ -332,6 +335,7 @@ model Subject {
   institution         Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   teacherAssignments  TeacherAssignment[]
   reportCardSubjects  ReportCardSubject[]
+  questions           Question[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, code])
@@ -815,6 +819,60 @@ model StudentDormitoryAssignment {
   @@index([institutionId, studentId, status])
   @@index([institutionId, roomId, status])
   @@map("student_dormitory_assignments")
+}
+
+// -------------------------------------------------------------
+// PHASE 7 — QUESTION BANK CORE
+// -------------------------------------------------------------
+
+// Question (Butir Soal pada Bank Soal Terpusat per Lembaga)
+model Question {
+  id              String         @id @default(cuid())
+  institutionId   String
+  subjectId       String         // Foreign key to Subject (kategori wajib)
+  createdById     String         // Foreign key to User (guru/staf pembuat)
+  type            String         // MULTIPLE_CHOICE | SHORT_ANSWER | ESSAY
+  difficulty      String         @default("MEDIUM") // EASY | MEDIUM | HARD
+  topic           String?        // bab / topik, bebas
+  stem            String         // Text butir soal
+  explanation     String?        // pembahasan / kunci penskoran
+  shortAnswerKey  String?        // kunci jawaban untuk SHORT_ANSWER
+  status          String         @default("DRAFT") // DRAFT | ACTIVE | ARCHIVED
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution      Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  subject          Subject        @relation(fields: [subjectId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  createdBy        User           @relation(fields: [createdById, institutionId], references: [id, institutionId], onDelete: Cascade)
+  options          QuestionOption[]
+
+  @@unique([id, institutionId])
+  @@index([institutionId, subjectId])
+  @@index([institutionId, status])
+  @@index([institutionId, type])
+  @@index([institutionId, createdById])
+  @@map("questions")
+}
+
+// QuestionOption (Opsi Jawaban untuk Soal Pilihan Ganda; tabel, bukan JSON,
+// agar bisa divalidasi ketat dan di-query)
+model QuestionOption {
+  id              String         @id @default(cuid())
+  institutionId   String
+  questionId      String
+  label           String         // A | B | C | D
+  content         String         // teks opsi
+  isCorrect       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution      Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  question         Question       @relation(fields: [questionId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([questionId, label])
+  @@index([institutionId, questionId])
+  @@map("question_options")
 }
 
 
