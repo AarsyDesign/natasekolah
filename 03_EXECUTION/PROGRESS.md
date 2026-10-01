@@ -42,6 +42,18 @@
 
 ## 2. Catatan Log Aktivitas Kronologis
 
+### [2026-10-01] - Fix keamanan dependensi: audit 0 (VERIFIED)
+* **Temuan:** 3 advisory high — `deepmerge-ts@7.1.5` di rantai
+  `prisma → @prisma/config`. Catatan lama bilang "butuh prisma major 8" — TERNYATA
+  TIDAK: `npm audit fix` memang klaim fix tapi dry-run "up to date" (rentang pin),
+  sedangkan **override `deepmerge-ts ^8.0.2`** langsung beres tanpa menyentuh prisma.
+* **Risiko diuji sungguhan** sebelum dinyatakan aman: v8 dual-format (tetap bisa
+  `require`), `@prisma/config` hanya pakai ekspor `deepmerge`, lalu dijalankan
+  `prisma validate/generate/migrate status/migrate diff` — semua jalan,
+  `migrate diff` tetap "No difference detected".
+* **Hasil:** `npm audit` 0 (total & prod), 410/410, tsc 0, build hijau.
+
+
 ### [2026-10-01] - Fitur: Tambah Pengguna Staf/Guru (IMPLEMENTED & VERIFIED)
 * **Temuan lanjutan gap akun:** `src/` juga nol `user.create` — ada halaman
   `/settings/users` (list/ubah-peran/nonaktifkan) tapi TIDAK ADA cara membuat

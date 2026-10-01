@@ -1,5 +1,21 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - Fix: 3 high vulnerability npm audit (VERIFIED)
+### Changed
+* **`package.json` → `overrides: { "deepmerge-ts": "^8.0.2" }`** — menutup 3 advisory
+  high `GHSA-ggr8-5vv4-36mx` (stack exhaustion saat merge objek rekursif) di rantai
+  `prisma → @prisma/config → deepmerge-ts@7.1.5`. `npm audit fix` TIDAK bekerja di sini
+  (rentang pin eksak, dry-run "up to date") dan solusi sebelumnya "butuh prisma 8"
+  ternyata tidak perlu — cukup override. v8 masih dual-format (CJS/ESM, `main` CJS,
+  node ≥16) dan `@prisma/config` hanya memakai ekspor `deepmerge` yang tetap ada.
+### Verification
+* `npm audit` **0 vulnerabilities** (total & `--omit=dev`).
+* Prisma CLI tetap hidup dengan v8: `prisma validate` ✓, `prisma generate` ✓,
+  `prisma migrate status` ✓ (exit 1 = drift `db push` lama, wajar & terdokumentasi),
+  `prisma migrate diff --from-migrations --to-schema-datamodel` → "No difference detected".
+* `tsc --noEmit` 0 · `npm test` **410/410** · `npm run build` exit 0.
+
+
 ## [2026-10-01] - Fitur: Tambah Pengguna (Staf/Guru) dari Dalam Aplikasi (IMPLEMENTED / VERIFIED)
 
 ### Added
