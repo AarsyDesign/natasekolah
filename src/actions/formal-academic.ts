@@ -29,6 +29,7 @@ import type {
   PublishReportCardInput,
   ReportCardFilterQuery,
 } from "../lib/validation/formal-academic";
+import { rethrowIfSessionExpired } from "../lib/auth/action-session";
 
 async function getContext(): Promise<TenantContext> {
   return getAuthenticatedTenantContext();
@@ -45,6 +46,7 @@ export async function createAssessmentAction(input: CreateAssessmentInput) {
     revalidatePath("/assessments");
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal membuat penilaian.",
@@ -60,6 +62,7 @@ export async function updateAssessmentAction(id: string, input: UpdateAssessment
     revalidatePath(`/assessments/${id}`);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memperbarui penilaian.",
@@ -74,6 +77,7 @@ export async function deleteAssessmentAction(id: string) {
     revalidatePath("/assessments");
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal menghapus penilaian.",
@@ -87,6 +91,7 @@ export async function getAssessmentAction(id: string) {
     const result = await getAssessment(ctx, id);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat detail penilaian.",
@@ -100,6 +105,7 @@ export async function listAssessmentsAction(query?: AssessmentFilterQuery) {
     const result = await listAssessments(ctx, query);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat daftar penilaian.",
@@ -117,6 +123,7 @@ export async function getAssessmentRosterAction(assessmentId: string) {
     const result = await getAssessmentRoster(ctx, assessmentId);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat roster penilaian siswa.",
@@ -132,6 +139,7 @@ export async function recordScoreAction(input: RecordScoreInput) {
     revalidatePath("/grades");
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal menyimpan nilai siswa.",
@@ -147,6 +155,7 @@ export async function recordBatchScoresAction(input: RecordBatchScoresInput) {
     revalidatePath("/grades");
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal menyimpan nilai massal.",
@@ -160,6 +169,7 @@ export async function listScoresAction(query?: ScoreFilterQuery) {
     const result = await listScores(ctx, query);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat daftar nilai.",
@@ -178,6 +188,7 @@ export async function generateDraftReportCardAction(input: GenerateReportCardInp
     revalidatePath("/reports");
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal menghasilkan draf raport.",
@@ -192,6 +203,7 @@ export async function publishReportCardAction(input: PublishReportCardInput) {
     revalidatePath("/reports");
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal menerbitkan dan membekukan raport.",
@@ -205,6 +217,7 @@ export async function getReportCardAction(id: string) {
     const result = await getReportCard(ctx, id);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat data buku raport.",
@@ -218,6 +231,7 @@ export async function listReportCardsAction(query?: ReportCardFilterQuery) {
     const result = await listReportCards(ctx, query);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat daftar buku raport.",

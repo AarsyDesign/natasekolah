@@ -189,16 +189,25 @@ export async function getAuthenticatedTenantContext(
 ): Promise<TenantContext> {
   const token = rawToken || (await getSessionCookie());
   if (!token) {
-    throw new TenantContextMissingError("Sesi otentikasi tidak ditemukan. Harap masuk terlebih dahulu.");
+    throw new TenantContextMissingError(
+      "Sesi otentikasi tidak ditemukan. Harap masuk terlebih dahulu.",
+      "SESSION_MISSING"
+    );
   }
 
   const payload: ValidatedSessionPayload | null = await validateSessionToken(token);
   if (!payload) {
-    throw new TenantContextMissingError("Sesi Anda tidak valid atau telah kedaluwarsa. Harap masuk kembali.");
+    throw new TenantContextMissingError(
+      "Sesi Anda tidak valid atau telah kedaluwarsa. Harap masuk kembali.",
+      "SESSION_INVALID"
+    );
   }
 
   if (payload.subjectType !== "INTERNAL_USER" || !payload.user) {
-    throw new TenantContextMissingError("Sesi ini bukan sesi pengguna internal lembaga.");
+    throw new TenantContextMissingError(
+      "Sesi ini bukan sesi pengguna internal lembaga.",
+      "NOT_INTERNAL"
+    );
   }
 
   return buildTenantContextFromUser(payload.user, payload.institution);

@@ -20,6 +20,7 @@ import {
   generateQuestionImportTemplateBuffer,
   exportQuestionsCSV,
 } from "../lib/question-bank";
+import { rethrowIfSessionExpired } from "../lib/auth/action-session";
 
 /**
  * Server Actions Bank Soal (Question Bank) — Phase 7.
@@ -45,6 +46,7 @@ export async function getQuestionsAction(query?: unknown) {
     const result = await listQuestions(ctx, query);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat daftar soal." };
   }
 }
@@ -55,6 +57,7 @@ export async function getQuestionByIdAction(id: string) {
     const question = await getQuestion(ctx, id);
     return { success: true, data: question };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat detail soal." };
   }
 }
@@ -70,6 +73,7 @@ export async function createQuestionAction(input: unknown) {
     revalidatePath(QUESTION_BANK_ROUTE);
     return { success: true, data: question };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal membuat soal." };
   }
 }
@@ -81,6 +85,7 @@ export async function updateQuestionAction(id: string, input: unknown) {
     revalidatePath(QUESTION_BANK_ROUTE);
     return { success: true, data: question };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memperbarui soal." };
   }
 }
@@ -92,6 +97,7 @@ export async function updateQuestionStatusAction(id: string, input: unknown) {
     revalidatePath(QUESTION_BANK_ROUTE);
     return { success: true, data: question };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mengubah status soal.",
@@ -106,6 +112,7 @@ export async function archiveQuestionAction(id: string) {
     revalidatePath(QUESTION_BANK_ROUTE);
     return { success: true, data: question };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal mengarsipkan soal." };
   }
 }
@@ -118,6 +125,7 @@ export async function deleteQuestionAction(id: string) {
     revalidatePath(QUESTION_BANK_ROUTE);
     return { success: true, data: question };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal menghapus soal." };
   }
 }
@@ -132,6 +140,7 @@ export async function getQuestionBankSummaryAction() {
     const summary = await getQuestionBankSummary(ctx);
     return { success: true, data: summary };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat ringkasan bank soal." };
   }
 }
@@ -142,6 +151,7 @@ export async function getQuestionCategoriesAction() {
     const categories = await listQuestionCategories(ctx);
     return { success: true, data: categories };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat kategori soal." };
   }
 }
@@ -152,6 +162,7 @@ export async function getQuestionTopicsAction(subjectId?: string) {
     const topics = await listQuestionTopics(ctx, subjectId);
     return { success: true, data: topics };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat daftar topik." };
   }
 }
@@ -162,6 +173,7 @@ export async function getQuestionDifficultyDistributionAction() {
     const distribution = await getQuestionDifficultyDistribution(ctx);
     return { success: true, data: distribution };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat distribusi kesulitan soal.",
@@ -193,6 +205,7 @@ export async function previewQuestionImportAction(formData: FormData) {
     const preview = await generateQuestionImportPreview(ctx, buffer, file.name);
     return { success: true, data: preview };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memproses file spreadsheet soal.",
@@ -208,6 +221,7 @@ export async function executeQuestionImportAction(rows: unknown) {
     revalidatePath(QUESTION_BANK_ROUTE);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mengeksekusi impor soal.",
@@ -229,6 +243,7 @@ export async function getQuestionImportTemplateAction() {
       },
     };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal membuat template impor soal.",
@@ -247,6 +262,7 @@ export async function exportQuestionsCsvAction(query?: unknown) {
     const result = await exportQuestionsCSV(ctx, query);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mengekspor data soal.",

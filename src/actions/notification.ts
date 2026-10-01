@@ -1,6 +1,6 @@
 "use server";
 
-import { getAuthenticatedTenantContext } from "../lib/auth/service";
+import { requireActionSession } from "../lib/auth/action-session";
 import { runWithTenantContext } from "../lib/tenant/context";
 import { requirePermission } from "../lib/auth/permissions";
 import {
@@ -16,7 +16,7 @@ import {
 } from "../lib/validation/notification";
 
 export async function queueNotificationAction(input: QueueNotificationInput) {
-  const context = await getAuthenticatedTenantContext();
+  const context = await requireActionSession();
   return runWithTenantContext(context, async () => {
     requirePermission(context as any, "academic:manage");
     const notification = await queueNotification(input);
@@ -25,7 +25,7 @@ export async function queueNotificationAction(input: QueueNotificationInput) {
 }
 
 export async function processOutboxQueueAction(batchSize = 10, providerType?: WhatsAppProviderType) {
-  const context = await getAuthenticatedTenantContext();
+  const context = await requireActionSession();
   return runWithTenantContext(context, async () => {
     requirePermission(context as any, "academic:manage");
     const result = await processOutboxQueue(batchSize, providerType);
@@ -34,7 +34,7 @@ export async function processOutboxQueueAction(batchSize = 10, providerType?: Wh
 }
 
 export async function listNotificationsAction(input?: Partial<NotificationFilterInput>) {
-  const context = await getAuthenticatedTenantContext();
+  const context = await requireActionSession();
   return runWithTenantContext(context, async () => {
     const result = await listOutboxNotifications(input);
     return { success: true, data: result };
@@ -42,7 +42,7 @@ export async function listNotificationsAction(input?: Partial<NotificationFilter
 }
 
 export async function cancelNotificationAction(id: string) {
-  const context = await getAuthenticatedTenantContext();
+  const context = await requireActionSession();
   return runWithTenantContext(context, async () => {
     requirePermission(context as any, "academic:manage");
     const result = await cancelNotification(id);

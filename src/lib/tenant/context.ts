@@ -26,13 +26,29 @@ export class TenantAccessDeniedError extends Error {
   }
 }
 
+/**
+ * Alasan sebuah TenantContext tidak tersedia. Dipakai lapisan server action
+ * untuk membedakan "sesi berakhir" (wajib diarahkan ke login) dari kasus lain
+ * yang tetap harus ditampilkan sebagai kegagalan biasa.
+ */
+export type SessionFailureReason =
+  | "SESSION_MISSING"
+  | "SESSION_INVALID"
+  | "NOT_INTERNAL"
+  | "NO_CONTEXT";
+
 export class TenantContextMissingError extends Error {
   readonly code = "TENANT_CONTEXT_MISSING";
   readonly status = 401;
+  readonly reason: SessionFailureReason;
 
-  constructor(message = "Konteks lembaga tidak ditemukan. Operasi ini memerlukan sesi terotentikasi.") {
+  constructor(
+    message = "Konteks lembaga tidak ditemukan. Operasi ini memerlukan sesi terotentikasi.",
+    reason: SessionFailureReason = "NO_CONTEXT"
+  ) {
     super(message);
     this.name = "TenantContextMissingError";
+    this.reason = reason;
   }
 }
 

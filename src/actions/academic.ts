@@ -21,6 +21,7 @@ import {
   getStudentEnrollments,
   getCurrentEnrollment,
 } from "../lib/academic";
+import { rethrowIfSessionExpired } from "../lib/auth/action-session";
 
 async function getContext(): Promise<TenantContext> {
   return getAuthenticatedTenantContext();
@@ -36,6 +37,7 @@ export async function getStudentsAction(query?: unknown) {
     const result = await listStudents(ctx, query);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat data siswa." };
   }
 }
@@ -56,6 +58,7 @@ export async function getStudentByIdAction(id: string) {
       },
     };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat profil siswa." };
   }
 }
@@ -67,6 +70,7 @@ export async function createStudentAction(input: unknown) {
     revalidatePath("/students");
     return { success: true, data: student };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal mendaftarkan siswa." };
   }
 }
@@ -79,6 +83,7 @@ export async function updateStudentAction(id: string, input: unknown) {
     revalidatePath(`/students/${id}`);
     return { success: true, data: updated };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memperbarui data siswa." };
   }
 }
@@ -91,6 +96,7 @@ export async function archiveStudentAction(id: string, input: unknown) {
     revalidatePath(`/students/${id}`);
     return { success: true, data: archived };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal mengarsipkan siswa." };
   }
 }
@@ -105,6 +111,7 @@ export async function getAcademicYearsAction() {
     const list = await listAcademicYears(ctx);
     return { success: true, data: list };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat tahun ajaran." };
   }
 }
@@ -117,6 +124,7 @@ export async function createAcademicYearAction(input: unknown) {
     revalidatePath("/classrooms");
     return { success: true, data: year };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal membuat tahun ajaran." };
   }
 }
@@ -130,6 +138,7 @@ export async function setActiveAcademicYearAction(id: string) {
     revalidatePath("/students");
     return { success: true, data: year };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal mengaktifkan tahun ajaran." };
   }
 }
@@ -144,6 +153,7 @@ export async function getClassroomsAction(academicYearId?: string) {
     const list = await listClassrooms(ctx, academicYearId);
     return { success: true, data: list };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat daftar rombel." };
   }
 }
@@ -155,6 +165,7 @@ export async function createClassroomAction(input: unknown) {
     revalidatePath("/classrooms");
     return { success: true, data: classroom };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal membuat rombel." };
   }
 }
@@ -172,6 +183,7 @@ export async function enrollStudentAction(input: unknown) {
     revalidatePath("/classrooms");
     return { success: true, data: enrollment };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal menempatkan siswa ke rombel." };
   }
 }

@@ -19,6 +19,7 @@ import {
   toggleUserActiveStatus,
   createManagedUser,
 } from "../lib/settings/user-service";
+import { rethrowIfSessionExpired } from "../lib/auth/action-session";
 
 /**
  * Server action: Mengambil konfigurasi lengkap lembaga (Profil, Terminologi, Operasional).
@@ -29,6 +30,7 @@ export async function getInstitutionSettingsAction() {
     const data = await getInstitutionSettings(ctx);
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat konfigurasi lembaga.",
@@ -48,6 +50,7 @@ export async function updateInstitutionProfileAction(input: unknown) {
     revalidatePath("/dashboard");
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memperbarui profil lembaga.",
@@ -67,6 +70,7 @@ export async function updateInstitutionTerminologyAction(input: unknown) {
     revalidatePath("/dashboard");
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memperbarui terminologi lembaga.",
@@ -85,6 +89,7 @@ export async function updateInstitutionOperationalSettingsAction(input: unknown)
     revalidatePath("/settings/operations");
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memperbarui aturan operasional.",
@@ -101,6 +106,7 @@ export async function getInstitutionPluginsAction() {
     const data = await getInstitutionPlugins(ctx.institutionId);
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat konfigurasi plugin.",
@@ -121,6 +127,7 @@ export async function updateInstitutionPluginsAction(input: unknown) {
     revalidatePath("/dashboard");
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memperbarui konfigurasi plugin.",
@@ -140,6 +147,7 @@ export async function listManagedUsersAction() {
     const canManage = hasPermission(ctx, "staff:manage");
     return { success: true, data: { users, canManage } };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat daftar pengguna.",
@@ -157,6 +165,7 @@ export async function updateUserRolesAction(targetUserId: string, input: unknown
     revalidatePath("/settings/users");
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memperbarui peran pengguna.",
@@ -174,6 +183,7 @@ export async function toggleUserActiveAction(targetUserId: string, input: unknow
     revalidatePath("/settings/users");
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mengubah status aktif pengguna.",
@@ -192,6 +202,7 @@ export async function createManagedUserAction(input: unknown) {
     revalidatePath("/settings/users");
     return { success: true, data };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal membuat pengguna baru.",

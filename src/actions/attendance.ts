@@ -18,6 +18,7 @@ import {
 } from "../lib/attendance";
 import { listTeacherAssignments } from "../lib/teaching";
 import { prisma } from "../lib/prisma";
+import { rethrowIfSessionExpired } from "../lib/auth/action-session";
 
 async function getContext(): Promise<TenantContext> {
   return getAuthenticatedTenantContext();
@@ -79,6 +80,7 @@ export async function getTodayAssignmentsWithAttendanceAction(targetDateStr?: st
       },
     };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat daftar absensi hari ini.",
@@ -94,6 +96,7 @@ export async function createAttendanceSessionAction(input: unknown) {
     revalidatePath("/attendance/history");
     return { success: true, data: session };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal membuat sesi absensi.",
@@ -107,6 +110,7 @@ export async function getAttendanceSessionAction(sessionId: string) {
     const session = await getAttendanceSession(ctx, sessionId);
     return { success: true, data: session };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat sesi absensi.",
@@ -120,6 +124,7 @@ export async function getAttendanceRosterAction(sessionId: string) {
     const roster = await getAttendanceRoster(ctx, sessionId);
     return { success: true, data: roster };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat daftar siswa absensi.",
@@ -134,6 +139,7 @@ export async function markAttendanceAction(input: unknown) {
     revalidatePath("/attendance");
     return { success: true, data: record };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mencatat kehadiran.",
@@ -148,6 +154,7 @@ export async function markAttendanceBatchAction(input: unknown) {
     revalidatePath("/attendance");
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mencatat kehadiran massal.",
@@ -163,6 +170,7 @@ export async function closeAttendanceSessionAction(input: unknown) {
     revalidatePath("/attendance/history");
     return { success: true, data: session };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal menutup sesi absensi.",
@@ -176,6 +184,7 @@ export async function listAttendanceSessionsAction(query?: unknown) {
     const result = await listAttendanceSessions(ctx, query);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat histori absensi.",
@@ -191,6 +200,7 @@ export async function createLivingAttendanceSessionAction(input: unknown) {
     revalidatePath("/dormitories");
     return { success: true, data: session };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal membuka sesi absensi asrama.",

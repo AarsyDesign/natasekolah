@@ -25,6 +25,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sessionExpired = searchParams.get("expired") === "1";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,6 +75,12 @@ function LoginForm() {
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          {sessionExpired && !error ? (
+            <p aria-live="polite" className="rounded-lg border border-[#99f6e4] bg-[#f0fdfa] p-3 text-sm leading-5 text-[#115e59]" role="status">
+              Sesi Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.
+            </p>
+          ) : null}
+
           <label className="block space-y-2" htmlFor="institutionSlug">
             <span className="text-sm font-semibold text-[#18181b]">Kode lembaga</span>
             <input

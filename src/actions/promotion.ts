@@ -8,6 +8,7 @@ import {
   previewBulkPromotion,
   executeBulkPromotion,
 } from "../lib/academic";
+import { rethrowIfSessionExpired } from "../lib/auth/action-session";
 
 async function getContext(): Promise<TenantContext> {
   return getAuthenticatedTenantContext();
@@ -22,6 +23,7 @@ export async function getPromotionCandidatesAction(query: unknown) {
     const result = await getPromotionCandidates(ctx, query);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memuat calon siswa kenaikan kelas.",
@@ -38,6 +40,7 @@ export async function previewBulkPromotionAction(input: unknown) {
     const result = await previewBulkPromotion(ctx, input);
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memproses prapinjau kenaikan kelas.",
@@ -57,6 +60,7 @@ export async function executeBulkPromotionAction(input: unknown) {
     revalidatePath("/academic-years");
     return { success: true, data: result };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mengeksekusi kenaikan kelas massal.",

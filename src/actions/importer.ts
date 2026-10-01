@@ -8,6 +8,7 @@ import {
   generateStudentImportTemplateBuffer,
   type SanitizedStudentImportData,
 } from "../lib/importer";
+import { rethrowIfSessionExpired } from "../lib/auth/action-session";
 
 /**
  * Server Action: Unggah & Preview File Spreadsheet Siswa.
@@ -36,6 +37,7 @@ export async function previewStudentImportAction(formData: FormData) {
       data: preview,
     };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal memproses file spreadsheet.",
@@ -66,6 +68,7 @@ export async function executeStudentImportAction(
       data: result,
     };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mengeksekusi impor data siswa.",
@@ -90,6 +93,7 @@ export async function getStudentImportTemplateAction() {
       },
     };
   } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal membuat template spreadsheet.",
