@@ -1,5 +1,40 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - Integrity: FK `SetNull` → `Restrict`, kebersihan repo & konfigurasi (IMPLEMENTED / VERIFIED)
+
+### Fixed
+* **3 warning Prisma `onDelete: SetNull` pada FK komposit** — `StudentCharge.academicYear`,
+  `CashbookEntry.paymentTransaction`, `ReportCard.publishedBy` semuanya ber-FK
+  `(…, institutionId)`, dan `institutionId` **wajib not-null** (penjaga tenant).
+  `ON DELETE SET NULL` pada kolom not-null gagal di tingkat database. Diubah menjadi
+  **`Restrict`**: induk (AcademicYear / PaymentTransaction / User penerbit) tidak boleh
+  dihapus selama masih dirujuk — sejalan dengan prinsip "histori data suci". Kode aplikasi
+  tidak melakukan hard delete pada ketiga induk tersebut, jadi tidak ada alur yang terganggu.
+* File migrasi `prisma/migrations/20261001004500_restrict_setnull_integrity/migration.sql`
+  dibuat dan **diterapkan ke database lokal** (verifikasi: `information_schema` kini
+  menunjukkan `RESTRICT`, dan `migrate diff --from-url … --to-schema-datamodel`
+  menghasilkan *diff kosong*).
+
+### Removed
+* `SESSION_SECRET` dari `.env.example` — var itu **tidak pernah dibaca kode mana pun**;
+  desain sesi tidak memerlukannya (token acak 256-bit + hash SHA-256 di DB, cookie
+  HttpOnly/Secure/SameSite-Lax/__Host-). Dokumentasi `CRON_SECRET` (yang memang dipakai
+  `/api/cron/*`) ditambahkan menggantikannya.
+* `tsconfig.tsbuildinfo` dilepas dari tracking Git dan dimasukkan ke `.gitignore`
+  (artefak build, 163KB, terus-menerus muncul sebagai perubahan).
+
+### Changed (GitHub)
+* **PR #4 ditutup** sebagai duplikat PR #5 (sudah di-merge 2026-09-28). Bukti: seluruh
+  isi 13 file yang diubah PR #4 identik dengan `staging` (beda hanya catatan
+  `PROGRESS.md`/`CHANGELOG.md` yang memang lebih baru di `staging`) → tidak ada kode
+  yang hilang. Kini **0 PR terbuka**.
+
+### Verification
+* `prisma validate`: **0 warning** (sebelumnya 3) · `tsc --noEmit` 0 error ·
+  `npm test` **395/395**.
+
+---
+
 ## [2026-10-01] - Security: Rate Limiting Brute-Force pada Login (IMPLEMENTED / VERIFIED)
 
 ### Added

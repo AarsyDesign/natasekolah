@@ -42,6 +42,25 @@
 
 ## 2. Catatan Log Aktivitas Kronologis
 
+### [2026-10-01] - Integritas FK + Kebersihan Repo & Konfigurasi (IMPLEMENTED & VERIFIED)
+* **3 warning Prisma `onDelete: SetNull`** berasal dari FK komposit
+  `StudentCharge.academicYear`, `CashbookEntry.paymentTransaction`,
+  `ReportCard.publishedBy` — semuanya memuat `institutionId` **not-null**
+  (penjaga tenant), sehingga `SET NULL` mustahil di DB. Diubah ke **`Restrict`**
+  (data suci: induk tak boleh dihapus selama dirujuk); kode aplikasi tidak pernah
+  hard delete ketiga induk itu. Migrasi `20261001004500_restrict_setnull_integrity`
+  dibuat **dan diterapkan**; `migrate diff` DB vs schema = kosong.
+* **`SESSION_SECRET` dihapus dari `.env.example`** (tidak pernah dibaca kode);
+  `CRON_SECRET` (nyata dipakai `/api/cron/*`) didokumentasikan.
+* **`tsconfig.tsbuildinfo`** dilepas dari tracking + masuk `.gitignore`.
+* **PR #4 ditutup** sebagai duplikat PR #5 — diverifikasi isi 13 file-nya identik
+  dengan `staging`; kini 0 PR terbuka.
+* **Temuan baru (belum ditangani):** `prisma migrate status` melaporkan migrasi
+  `20260924012230_init` **belum pernah di-apply** — DB lokal dibuat lewat
+  `db push`, bukan migrasi. Konsekuensi: `prisma migrate dev` akan menawarkan
+  **reset database**; jangan dijalankan. Jalur yang dipakai: tulis migrasi +
+  apply manual via SQL. Status ini dicatat sebagai backlog.
+
 ### [2026-10-01] - Security: Rate Limiting Brute-Force Login (IMPLEMENTED & VERIFIED)
 * **Masalah:** audit menemukan **0 rate limiting** pada login — `loginAction`
   menjalankan verifikasi bcrypt tanpa batas, jadi password bisa ditebak

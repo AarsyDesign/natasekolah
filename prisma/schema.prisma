@@ -502,7 +502,7 @@ model StudentCharge {
   institution     Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   student         Student             @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
   feeCategory     FeeCategory         @relation(fields: [feeCategoryId, institutionId], references: [id, institutionId], onDelete: Cascade)
-  academicYear    AcademicYear?       @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: SetNull)
+  academicYear    AcademicYear?       @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Restrict)
   allocations     PaymentAllocation[]
 
   @@unique([id, institutionId])
@@ -575,7 +575,7 @@ model CashbookEntry {
   updatedAt            DateTime            @updatedAt
 
   institution          Institution         @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: SetNull)
+  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId, institutionId], references: [id, institutionId], onDelete: Restrict)
   createdBy            User                @relation(fields: [createdById, institutionId], references: [id, institutionId], onDelete: Cascade)
 
   @@unique([id, institutionId])
@@ -682,7 +682,7 @@ model ReportCard {
   enrollment          Enrollment          @relation(fields: [enrollmentId, institutionId], references: [id, institutionId], onDelete: Cascade)
   academicYear        AcademicYear        @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
   classroom           Classroom           @relation(fields: [classroomId, academicYearId, institutionId], references: [id, academicYearId, institutionId], onDelete: Cascade)
-  publishedBy         User?               @relation(fields: [publishedById, institutionId], references: [id, institutionId], onDelete: SetNull)
+  publishedBy         User?               @relation(fields: [publishedById, institutionId], references: [id, institutionId], onDelete: Restrict)
   subjects            ReportCardSubject[]
 
   @@unique([id, institutionId])
