@@ -440,6 +440,17 @@ function createMockPrismaFinanceOperations() {
       },
     },
 
+    notificationOutbox: {
+      create: async ({ data }: any) => {
+        const id = `notif_${autoId++}`;
+        const record = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
+        return record;
+      },
+      findFirst: async ({ where }: any) => {
+        return null; // Not used in these tests
+      },
+    },
+
     $transaction: async (fn: any) => {
       return await fn(mock);
     },
