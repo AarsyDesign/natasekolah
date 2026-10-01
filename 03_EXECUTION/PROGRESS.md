@@ -1,5 +1,12 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-01 - Skill anti-slop repo (6 file) + format laporan profesional
+* **Rujukan mati diperbaiki:** `antislop.md` + 5 `skills/antislop-*` yang dirujuk
+  `AGENTS.md`/`GEMINI.md` (18 sebutan) tidak pernah ada - kini dibuat dari materi
+  asli `DESIGN.md`; semua rujuran hidup. tsc 0, `412/412`.
+* **Skill Hermes `professional-report`** dibuat: template laporan (tugas/server/
+  insiden/jawaban singkat) + filter anti-slop, dipakai untuk laporan chat Arsyad.
+
 > **Unified Education Management Platform**  
 > Mengikuti Master PRD v5.0, Panduan Visual `DESIGN.md`, dan Filter Anti-Slop Mode 1 (DURING).
 

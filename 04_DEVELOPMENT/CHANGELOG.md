@@ -1,5 +1,15 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - FEAT: Skill anti-slop repo (6 file), rujukan mati dipulihkan (VERIFIED)
+
+### Added
+* **`antislop.md`** (filter inti): 4 Core Principles, dials `ENERGY 1 / RHYTHM 2 / MOTION 1`,
+  indeks pemilihan skill, definisi gagal audit. Selama ini dirujuk `AGENTS.md`/`GEMINI.md`
+  (18 rujukan) tapi file-nya tidak pernah ada di repo maupun riwayat git.
+* **5 skill turunan** di `skills/antislop-{ui,copywriting,human,layoutmobile,code}/SKILL.md`
+  - semua aturan diambil dari `DESIGN.md` (§3, §16, §17, §20, §21, §22, §23, §24), bukan karangan.
+* Verifikasi: seluruh rujukan `AGENTS.md` kini hidup; `tsc` 0; `412/412` test hijau.
+
 ## [2026-10-01] - QA Login End-to-End + Perbaikan Temuan (VERIFIED)
 ### QA End-to-End (browser, tanpa menangani password)
 * **Login sukses terbukti di UI** lewat sesi server (`createSession` + cookie
