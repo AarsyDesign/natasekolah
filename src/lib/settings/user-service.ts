@@ -2,8 +2,13 @@ import { prisma } from "../prisma";
 import type { TenantContext } from "../tenant/context";
 import { requirePermission, Role, ROLES } from "../auth/permissions";
 import { validate } from "../validation/common";
-import { updateUserRolesSchema, toggleUserActiveSchema } from "./validation";
+import {
+  updateUserRolesSchema,
+  toggleUserActiveSchema,
+  createManagedUserSchema,
+} from "./validation";
 import { revokeAllUserSessions } from "../auth/service";
+import { hashPassword } from "../auth/password";
 import type { ManagedUser } from "./types";
 
 /**
@@ -125,6 +130,78 @@ export async function updateUserRoles(
     isActive: updated.isActive,
     lastLoginAt: updated.lastLoginAt,
     createdAt: updated.createdAt,
+  };
+}
+
+/**
+ * Membuat akun staf/guru baru di dalam lembaga konteks.
+ * Memerlukan izin staff:manage.
+ *
+ * Jaminan keamanan:
+ * - `institutionId` SELALU diambil dari sesi server (`ctx`), tidak pernah dari input klien.
+ * - Pencegahan eskalasi hak: hanya SUPER_ADMIN yang boleh membuat akun berperan SUPER_ADMIN.
+ * - Email unik per lembaga (dicek sebelum insert agar pesan jelas, bukan error mentah DB).
+ * - Kata sandi di-hash bcrypt (cost 12) dan tidak pernah disimpan/dikembalikan mentah.
+ */
+export async function createManagedUser(
+  ctx: TenantContext,
+  rawInput: unknown
+): Promise<ManagedUser> {
+  requirePermission(ctx, "staff:manage");
+
+  const validated = validate(createManagedUserSchema, rawInput);
+
+  if (validated.roles.includes("SUPER_ADMIN") && !ctx.isSuperAdmin) {
+    throw new Error("Hanya Super Admin yang berhak membuat akun SUPER_ADMIN.");
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: {
+      institutionId_email: {
+        institutionId: ctx.institutionId,
+        email: validated.email,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    throw new Error("Email sudah terdaftar di lembaga ini.");
+  }
+
+  const passwordHash = await hashPassword(validated.password);
+
+  const created = await prisma.user.create({
+    data: {
+      institutionId: ctx.institutionId,
+      name: validated.name,
+      email: validated.email,
+      phoneWa: validated.phoneWa ?? null,
+      passwordHash,
+      roles: JSON.stringify(validated.roles),
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phoneWa: true,
+      roles: true,
+      isActive: true,
+      lastLoginAt: true,
+      createdAt: true,
+    },
+  });
+
+  return {
+    id: created.id,
+    name: created.name,
+    email: created.email,
+    phoneWa: created.phoneWa,
+    roles: validated.roles as Role[],
+    isActive: created.isActive,
+    lastLoginAt: created.lastLoginAt,
+    createdAt: created.createdAt,
   };
 }
 

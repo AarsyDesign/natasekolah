@@ -7,6 +7,7 @@ import {
   ShieldAlert,
   UserCheck,
   UserX,
+  UserPlus,
   RefreshCw,
   AlertCircle,
   CheckCircle2,
@@ -19,6 +20,7 @@ import {
   listManagedUsersAction,
   updateUserRolesAction,
   toggleUserActiveAction,
+  createManagedUserAction,
 } from "../../../actions/settings";
 import {
   ASSIGNABLE_ROLES as ROLES,
@@ -39,6 +41,63 @@ export default function UsersSettingsPage() {
 
   // Confirmation toggle active
   const [togglingUser, setTogglingUser] = useState<ManagedUser | null>(null);
+
+  // Modal tambah pengguna baru (staf/guru)
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phoneWa: "",
+    password: "",
+  });
+
+  const setField = (key: keyof typeof form, value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const openCreateModal = () => {
+    setForm({ name: "", email: "", phoneWa: "", password: "" });
+    setSelectedRoles(["TEACHER"]);
+    setErrorMsg(null);
+    setCreating(true);
+  };
+
+  const handleCreateUser = () => {
+    setSuccessMsg(null);
+    setErrorMsg(null);
+
+    // Validasi ringan di sisi klien agar umpan balik instan;
+    // sumber kebenaran tetap validasi server saat action dipanggil.
+    if (!form.name.trim() || !form.email.trim()) {
+      setErrorMsg("Nama dan email wajib diisi.");
+      return;
+    }
+    if (form.password.length < 12) {
+      setErrorMsg("Kata sandi minimal 12 karakter.");
+      return;
+    }
+    if (selectedRoles.length === 0) {
+      setErrorMsg("Pilih minimal satu peran.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await createManagedUserAction({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phoneWa: form.phoneWa.trim() || undefined,
+        password: form.password,
+        roles: selectedRoles,
+      });
+
+      if (res.success && res.data) {
+        setUsers((prev) => [res.data!, ...prev]);
+        setSuccessMsg(`Akun ${res.data.name} berhasil dibuat.`);
+        setCreating(false);
+      } else {
+        setErrorMsg(res.error || "Gagal membuat akun pengguna.");
+      }
+    });
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -185,15 +244,26 @@ export default function UsersSettingsPage() {
               {users.length} akun terdaftar di lembaga ini
             </p>
           </div>
-          <button
-            type="button"
-            onClick={loadUsers}
-            disabled={isPending}
-            className="touch-target inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
-            <span>Segarkan</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openCreateModal}
+              disabled={isPending}
+              className="touch-target inline-flex items-center gap-1.5 rounded-lg bg-teal-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>Tambah Pengguna</span>
+            </button>
+            <button
+              type="button"
+              onClick={loadUsers}
+              disabled={isPending}
+              className="touch-target inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
+              <span>Segarkan</span>
+            </button>
+          </div>
         </div>
 
         <div className="divide-y divide-stone-100">
@@ -271,6 +341,158 @@ export default function UsersSettingsPage() {
           ))}
         </div>
       </div>
+
+      {/* Modal Tambah Pengguna Baru */}
+      {creating && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Tambah pengguna baru"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs"
+        >
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl border border-stone-200 bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-stone-900">Tambah Pengguna Baru</h3>
+                <p className="text-xs text-stone-500">Buat akun staf atau guru di lembaga ini</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreating(false)}
+                className="rounded-md p-1 text-stone-400 hover:bg-stone-100"
+                aria-label="Tutup"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {errorMsg && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-900"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="new-user-name" className="block text-xs font-semibold text-stone-700 mb-1">
+                  Nama Lengkap *
+                </label>
+                <input
+                  id="new-user-name"
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  placeholder="Contoh: Ahmad Fauzi"
+                  autoComplete="off"
+                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="new-user-email" className="block text-xs font-semibold text-stone-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  id="new-user-email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  placeholder="nama@lembaga.sch.id"
+                  autoComplete="off"
+                  inputMode="email"
+                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="new-user-phone" className="block text-xs font-semibold text-stone-700 mb-1">
+                  Nomor WhatsApp <span className="font-normal text-stone-400">(opsional)</span>
+                </label>
+                <input
+                  id="new-user-phone"
+                  type="tel"
+                  value={form.phoneWa}
+                  onChange={(e) => setField("phoneWa", e.target.value)}
+                  placeholder="08xxxxxxxxxx"
+                  autoComplete="off"
+                  inputMode="tel"
+                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="new-user-password" className="block text-xs font-semibold text-stone-700 mb-1">
+                  Kata Sandi *
+                </label>
+                <input
+                  id="new-user-password"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setField("password", e.target.value)}
+                  placeholder="Minimal 12 karakter"
+                  autoComplete="new-password"
+                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                />
+                <p className="mt-1 text-[11px] text-stone-500">
+                  Minimal 12 karakter. Sampaikan kata sandi ini kepada pengguna lewat jalur pribadi, lalu minta ia segera menggantinya.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-stone-700">
+                Peran (paling sedikit 1):
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {ROLES.map((role) => {
+                  const isChecked = selectedRoles.includes(role as Role);
+                  return (
+                    <label
+                      key={role}
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 cursor-pointer text-xs font-medium transition ${
+                        isChecked
+                          ? "border-teal-400 bg-teal-50/50 text-teal-950"
+                          : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleRoleSelection(role as Role)}
+                        className="h-3.5 w-3.5 rounded-xs border-stone-300 text-teal-700 focus:ring-teal-500"
+                      />
+                      <span>{role}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-100">
+              <button
+                type="button"
+                onClick={() => setCreating(false)}
+                className="touch-target rounded-lg border border-stone-200 px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateUser}
+                disabled={isPending}
+                className="touch-target inline-flex items-center gap-2 rounded-lg bg-teal-800 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+              >
+                {isPending && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                <span>Buat Akun</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Role Edit Modal */}
       {editingUser && (

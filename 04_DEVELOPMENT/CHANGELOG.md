@@ -1,5 +1,17 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - Fitur: Tambah Pengguna (Staf/Guru) dari Dalam Aplikasi (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`src/lib/settings/user-service.ts` — `createManagedUser(ctx, input)`**: membuat akun staff/guru. `institutionId` SELALU dari sesi server (payload `.strict()` → kunci asing seperti `institutionId` dari klien langsung ditolak `ValidationError`), RBAC `staff:manage` (hanya SUPER_ADMIN / FOUNDATION_HEAD), aturan anti-escalation (hanya SUPER_ADMIN boleh membuat akun SUPER_ADMIN), cek email ganda per-tenant, hash bcrypt (work factor 12), roles di-`JSON.stringify` mengikuti `updateUserRoles`.
+* **`src/lib/settings/validation.ts` — `createManagedUserSchema`**: nama 2–120, email, sandi 12–128, `phoneSchema` opsional, roles enum `ROLES` minimal 1 tanpa duplikat — semua `.strict()` + pesan Bahasa Indonesia.
+* **`src/actions/settings.ts` — `createManagedUserAction`**: mengikuti pola action settings yang ada (error → `{ success: false, error }`, sukses → `ManagedUser`).
+* **UI `/settings/users`**: tombol **Tambah Pengguna** (header), modal form (nama, email, WA opsional, sandi + hint minimal 12 & edukasi "sampaikan lewat jalur pribadi", pilihan peran), banner error di dalam modal (page banner tertutup overlay), state `errorMsg`/`successMsg` + daftar langsung diperbarui.
+* **`test/user-management.test.ts` — 8 test**: akun menempel lembaga sesi; payload `institutionId` asing ditolak + tidak ada baris terbuat; akun hasil pembuatan **bisa login** (`authenticateCredentials`); RBAC tanpa `staff:manage` ditolak; eskalasi SUPER_ADMIN ditolak (ctx FOUNDATION_HEAD agar menembus RBAC dulu); email ganda ditolak; sandi lemah & peran asing ditolak; isolasi tenant (lembaga lain tak melihat).
+
+### Verification
+* `tsc --noEmit` exit 0 · `npm test` **410/410** · `npm run build` exit 0.
+
 ## [2026-10-01] - Critical: Bootstrap Pembuatan Lembaga & Akun SUPER_ADMIN (IMPLEMENTED / VERIFIED)
 
 ### Added

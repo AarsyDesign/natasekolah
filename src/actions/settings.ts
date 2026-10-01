@@ -17,6 +17,7 @@ import {
   listManagedUsers,
   updateUserRoles,
   toggleUserActiveStatus,
+  createManagedUser,
 } from "../lib/settings/user-service";
 
 /**
@@ -173,6 +174,24 @@ export async function toggleUserActiveAction(targetUserId: string, input: unknow
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal mengubah status aktif pengguna.",
+    };
+  }
+}
+
+/**
+ * Server action: Membuat akun staf/guru baru di lembaga sesi berjalan.
+ * `institutionId` berasal dari sesi server — klien tidak bisa memilih lembaga lain.
+ */
+export async function createManagedUserAction(input: unknown) {
+  try {
+    const ctx = await getAuthenticatedTenantContext();
+    const data = await createManagedUser(ctx, input);
+    revalidatePath("/settings/users");
+    return { success: true, data };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal membuat pengguna baru.",
     };
   }
 }

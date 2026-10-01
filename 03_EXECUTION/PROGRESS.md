@@ -42,6 +42,20 @@
 
 ## 2. Catatan Log Aktivitas Kronologis
 
+### [2026-10-01] - Fitur: Tambah Pengguna Staf/Guru (IMPLEMENTED & VERIFIED)
+* **Temuan lanjutan gap akun:** `src/` juga nol `user.create` — ada halaman
+  `/settings/users` (list/ubah-peran/nonaktifkan) tapi TIDAK ADA cara membuat
+  akun staf/guru dari aplikasi; selama ini akun hanya bisa lahir dari skrip
+  bootstrap, dan `staff:manage` hanya dimiliki SUPER_ADMIN + FOUNDATION_HEAD
+  (ADMIN cuma `staff:view` — fakta yang ditemukan saat menulis test eskalasi).
+* **Implementasi:** `createManagedUser` (tenant dari sesi, skema `.strict()`
+  menolak `institutionId` klien, anti-escalation, email ganda, bcrypt) +
+  `createManagedUserAction` + modal form di `/settings/users` dengan validasi
+  ringan klien dan error banner di dalam modal.
+* **Verifikasi:** `test/user-management.test.ts` 8/8 — termasuk bukti akun baru
+  **benar-benar bisa login** dan lembaga lain tidak melihatnya; full suite
+  **410/410**; `tsc` 0; `npm run build` exit 0.
+
 ### [2026-10-01] - Critical: Bootstrap Akun (IMPLEMENTED & VERIFIED)
 * **Temuan:** aplikasi **tidak punya jalur pembuatan akun sama sekali** — nol
   `institution.create` / `user.create` di `src/`, `hashPassword` tidak pernah

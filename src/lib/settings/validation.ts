@@ -109,3 +109,44 @@ export const toggleUserActiveSchema = z.object({
 });
 
 export type ToggleUserActiveInput = z.infer<typeof toggleUserActiveSchema>;
+
+/**
+ * Skema pembuatan akun staf/guru baru dari dalam aplikasi.
+ *
+ * Latar: sebelumnya tidak ada satu pun `user.create` di `src/` — akun hanya bisa
+ * lahir dari skrip bootstrap, sehingga admin tidak bisa menambahkan guru/staf.
+ * Password minimal 12 karakter (selaras dengan bootstrap) dan peran wajib valid
+ * sesuai ROLES; pencegahan eskalasi hak (SUPER_ADMIN) ditangani di lapisan service.
+ */
+export const createManagedUserSchema = z
+  .object({
+    name: z
+      .string({ message: "Nama wajib diisi" })
+      .trim()
+      .min(2, "Nama minimal 2 karakter")
+      .max(120, "Nama maksimal 120 karakter"),
+    email: z
+      .string({ message: "Email wajib diisi" })
+      .trim()
+      .toLowerCase()
+      .email("Format email tidak valid")
+      .max(190, "Email maksimal 190 karakter"),
+    phoneWa: phoneSchema.optional(),
+    password: z
+      .string({ message: "Kata sandi wajib diisi" })
+      .min(12, "Kata sandi minimal 12 karakter")
+      .max(128, "Kata sandi maksimal 128 karakter"),
+    roles: z
+      .array(
+        z.string().refine((val): val is Role => isValidRole(val), {
+          message: `Peran harus salah satu dari: ${ROLES.join(", ")}`,
+        })
+      )
+      .min(1, "Pengguna minimal harus memiliki 1 peran")
+      .refine((roles) => new Set(roles).size === roles.length, {
+        message: "Peran tidak boleh duplikat",
+      }),
+  })
+  .strict(); // menolak payload tak dikenal (mis. institutionId dari klien)
+
+export type CreateManagedUserInput = z.infer<typeof createManagedUserSchema>;
