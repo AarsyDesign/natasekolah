@@ -21,7 +21,7 @@ import {
 } from './types';
 import { checkAIGenerationQuota, recordAIGenerationUsage } from './usage-service';
 import { ValidationError } from '@/lib/validation';
-import { getAIProvider } from '@/lib/ai-providers/provider-factory';
+import { getAIProvider } from '@/lib/ai-providers';
 
 /**
  * Build prompt untuk AI provider
@@ -91,16 +91,11 @@ export async function callAIProvider(
   prompt: string,
   params: AIGenerationPromptParams
 ): Promise<AIGenerationJobResult> {
-  const aiProvider = getAIProvider(provider);
-  const result = await aiProvider.generateQuestions(prompt, model, params);
+  const aiProvider = getAIProvider();
   
-  if (!result.success) {
-    throw new ValidationError(`AI Provider (${provider}) error: ${result.errorMessage}`);
-  }
-  
-  if (!result.questions || result.questions.length === 0) {
-    throw new ValidationError('AI tidak mengembalikan soal apapun');
-  }
+  // Override model if needed (provider uses env var by default)
+  // For now, we pass params directly which includes all needed info
+  const result = await aiProvider.generate(params);
   
   return {
     questions: result.questions,
