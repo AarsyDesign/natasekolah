@@ -26,16 +26,21 @@ export async function listTeachers(
   // 1. RBAC Guard: academic:view atau staff:view
   requirePermission(ctx, "academic:view");
 
-  // 2. Query seluruh pengguna aktif dalam institusi
+  // 2. Query pengguna dengan peran TEACHER — filter di JS karena roles JSON
+  // Optimasi: hanya include _count untuk teacherAssignments setelah filter
   const users = await prisma.user.findMany({
     where: {
       institutionId: ctx.institutionId,
       isActive: true,
     },
-    include: {
-      _count: {
-        select: { teacherAssignments: true },
-      },
+    select: {
+      id: true,
+      institutionId: true,
+      name: true,
+      email: true,
+      phoneWa: true,
+      roles: true,
+      isActive: true,
     },
     orderBy: {
       name: "asc",
@@ -43,6 +48,7 @@ export async function listTeachers(
   });
 
   // 3. Filter pengguna yang memiliki peran TEACHER
+  const teacherIds = [];
   const teachers: SafeTeacher[] = [];
   for (const user of users) {
     let roles: string[] = [];
@@ -53,6 +59,7 @@ export async function listTeachers(
     }
 
     if (roles.includes("TEACHER")) {
+      teacherIds.push(user.id);
       teachers.push({
         id: user.id,
         institutionId: user.institutionId,
@@ -61,8 +68,26 @@ export async function listTeachers(
         phoneWa: user.phoneWa,
         roles,
         isActive: user.isActive,
-        assignmentCount: user._count.teacherAssignments,
+        assignmentCount: 0, // placeholder, diisi batch di bawah
       });
+    }
+  }
+
+  // 4. Batch fetch assignment counts HANYA untuk teacher (bukan semua user)
+  if (teacherIds.length > 0) {
+    const counts = await prisma.teacherAssignment.groupBy({
+      by: ["teacherId"],
+      where: {
+        teacherId: { in: teacherIds },
+      },
+      _count: {
+        teacherId: true,
+      },
+    });
+
+    const countMap = new Map(counts.map(c => [c.teacherId, c._count.teacherId]));
+    for (const t of teachers) {
+      t.assignmentCount = countMap.get(t.id) ?? 0;
     }
   }
 
