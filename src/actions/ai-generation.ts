@@ -10,6 +10,10 @@ import {
   listAIGenerationJobs,
   getAIGenerationJobDetail,
 } from "@/lib/ai-generation/ai-generation-service";
+import {
+  checkAIGenerationQuota,
+  getAIGenerationUsageStats,
+} from "@/lib/ai-generation/usage-service";
 import { rethrowIfSessionExpired } from "@/lib/auth/action-session";
 import type {
   CreateAIGenerationJobInput,
@@ -100,5 +104,39 @@ export async function getAIGenerationJobDetailAction(
   } catch (err: unknown) {
     rethrowIfSessionExpired(err);
     return { success: false, error: err instanceof Error ? err.message : "Gagal memuat detail job generate AI." };
+  }
+}
+
+/**
+ * Get AI generation quota status for current user
+ */
+export async function getAIGenerationQuotaAction(): Promise<{
+  success: true;
+  data: { allowed: boolean; currentCount: number; limit: number; cooldownRemaining?: number; nextAvailableAt?: Date };
+} | { success: false; error: string }> {
+  try {
+    const ctx = await getContext();
+    const result = await checkAIGenerationQuota(ctx, ctx.userId);
+    return { success: true, data: result };
+  } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
+    return { success: false, error: err instanceof Error ? err.message : "Gagal memuat status quota AI." };
+  }
+}
+
+/**
+ * Get AI generation usage history for current user (last 30 days)
+ */
+export async function getAIGenerationUsageHistoryAction(): Promise<{
+  success: true;
+  data: Array<{ date: Date; count: number }>;
+} | { success: false; error: string }> {
+  try {
+    const ctx = await getContext();
+    const result = await getAIGenerationUsageStats(ctx, ctx.userId, 30);
+    return { success: true, data: result };
+  } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
+    return { success: false, error: err instanceof Error ? err.message : "Gagal memuat riwayat penggunaan AI." };
   }
 }

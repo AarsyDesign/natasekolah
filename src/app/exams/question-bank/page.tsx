@@ -27,8 +27,10 @@ import {
   reviewAIGenerationJobAction,
   listAIGenerationJobsAction,
   getAIGenerationJobDetailAction,
+  getAIGenerationQuotaAction,
+  getAIGenerationUsageHistoryAction,
 } from "@/actions/ai-generation";
-import type { AIGenerationJobResult } from "@/lib/ai-generation/types";
+import type { AIGenerationJobResult, AIGenerationQuotaResult, AIGenerationUsageHistoryEntry } from "@/lib/ai-generation/types";
 import { getSubjectsAction } from "@/actions/teaching";
 import { downloadCSV } from "@/lib/finance/export-utils";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -141,6 +143,10 @@ export default function QuestionBankPage() {
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Fair-use UI state
+  const [quota, setQuota] = useState<AIGenerationQuotaResult | null>(null);
+  const [usageHistory, setUsageHistory] = useState<AIGenerationUsageHistoryEntry[]>([]);
+
   // Pencarian debounce 350ms (DESIGN.md §19 & §23)
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -244,6 +250,25 @@ export default function QuestionBankPage() {
       active = false;
     };
   }, [metaKey]);
+
+  // Load quota & usage history on mount
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const [quotaRes, historyRes] = await Promise.all([
+          getAIGenerationQuotaAction(),
+          getAIGenerationUsageHistoryAction(),
+        ]);
+        if (!active) return;
+        if (quotaRes.success) setQuota(quotaRes.data);
+        if (historyRes.success) setUsageHistory(historyRes.data);
+      } catch {
+        // silent fail
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const reload = () => setReloadKey((prev) => prev + 1);
   const reloadMeta = () => setMetaKey((prev) => prev + 1);
@@ -645,6 +670,29 @@ export default function QuestionBankPage() {
               caption={`${summary.byStatus.ARCHIVED} soal diarsipkan`}
               icon={<BookOpen className="h-4 w-4 text-teal-700" />}
             />
+            {/* AI Quota Badge */}
+            {quota && (
+              <MetricCard
+                label="Sisa Generate AI"
+                value={Math.max(0, quota.limit - quota.currentCount)}
+                caption={quota.allowed
+                  ? `${quota.currentCount}/${quota.limit} hari ini`
+                  : quota.cooldownRemaining
+                  ? `Cooldown: ${quota.cooldownRemaining}s`
+                  : `Limit harian tercapai (reset besok)`}
+                icon={
+                  <span
+                    className={`h-4 w-4 rounded-full ${
+                      quota.allowed
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-rose-100 text-rose-700"
+                    }`}
+                  >
+                    {quota.allowed ? "✓" : "⏱"}
+                  </span>
+                }
+              />
+            )}
           </>
         ) : null}
         </section>
@@ -936,6 +984,24 @@ export default function QuestionBankPage() {
         {aiGenerateStep === "form" && (
           <form onSubmit={(e) => { e.preventDefault(); handleAiGenerateStart(); }}>
             <div className="grid gap-4 py-4">
+              {/* Quota indicator in form */}
+              {quota && (
+                <div
+                  className={`flex items-center gap-2 rounded-lg p-3 text-sm ${
+                    quota.allowed
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border-rose-200 bg-rose-50 text-rose-800"
+                  }`}
+                >
+                  <span className="font-medium">
+                    {quota.allowed
+                      ? `✓ Sisa: ${quota.limit - quota.currentCount}/${quota.limit} hari ini`
+                      : quota.cooldownRemaining
+                      ? `⏳ Cooldown: ${quota.cooldownRemaining}s`
+                      : `✗ Limit harian tercapai — coba besok`}
+                  </span>
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="ai-subject" className="block text-sm font-medium text-stone-700 mb-1">

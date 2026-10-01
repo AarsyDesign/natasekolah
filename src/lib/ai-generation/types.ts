@@ -71,6 +71,13 @@ export interface AIGenerationUsageCheckResult {
   nextAvailableAt?: Date;
 }
 
+export interface AIGenerationUsageHistoryEntry {
+  date: Date;
+  count: number;
+}
+
+export type AIGenerationQuotaResult = AIGenerationUsageCheckResult;
+
 export interface GenerateQuestionsActionInput {
   subjectId: string;
   type: 'MULTIPLE_CHOICE' | 'SHORT_ANSWER' | 'ESSAY';

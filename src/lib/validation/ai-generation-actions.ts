@@ -55,3 +55,20 @@ export type ExecuteAIGenerationInput = z.infer<typeof executeAIGenerationInputSc
 export type ReviewAIGenerationJobInput = z.infer<typeof reviewAIGenerationJobInputSchema>;
 export type ListAIGenerationJobsFilter = z.infer<typeof listAIGenerationJobsFilterSchema>;
 export type AIGenerationPromptParams = z.infer<typeof aiGenerationPromptParamsSchema>;
+
+// Quota check result (for UI)
+export const aiGenerationQuotaResultSchema = z.object({
+  allowed: z.boolean(),
+  currentCount: z.number().int().min(0),
+  limit: z.number().int().min(1),
+  cooldownRemaining: z.number().int().min(0).optional(),
+  nextAvailableAt: z.date().optional(),
+});
+export type AIGenerationQuotaResult = z.infer<typeof aiGenerationQuotaResultSchema>;
+
+// Usage history entry
+export const aiGenerationUsageHistoryEntrySchema = z.object({
+  date: z.date(),
+  count: z.number().int().min(0),
+});
+export type AIGenerationUsageHistoryEntry = z.infer<typeof aiGenerationUsageHistoryEntrySchema>;
