@@ -67,6 +67,10 @@ export const PERMISSIONS = [
   "academic:view",
   "academic:manage",
 
+  // Exam & Question Bank Domain
+  "exam:view",
+  "exam:manage",
+
   // Attendance Domain
   "attendance:view",
   "attendance:manage",
@@ -129,6 +133,8 @@ const LEGACY_PERMISSION_MAP: Record<string, Permission[]> = {
   "finance:write": ["finance:manage"],
   "user:read": ["staff:view"],
   "user:write": ["staff:manage"],
+  "exam:read": ["exam:view"],
+  "exam:write": ["exam:manage"],
   "audit:read": ["institution:view"],
   "receipt:issue": ["finance:manage"],
   "institution:delete": ["institution:manage"],
@@ -143,6 +149,8 @@ const MODERN_TO_LEGACY_MAP: Record<string, string[]> = {
   "student:edit": ["student:write"],
   "academic:view": ["academic:read"],
   "academic:manage": ["academic:write"],
+  "exam:view": ["exam:read"],
+  "exam:manage": ["exam:write"],
   "attendance:view": ["attendance:read"],
   "attendance:manage": ["attendance:write"],
   "finance:view": ["finance:read"],
@@ -173,6 +181,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "student:archive",
     "academic:view",
     "academic:manage",
+    "exam:view",
+    "exam:manage",
     "attendance:view",
     "attendance:manage",
     "finance:view",
@@ -197,6 +207,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   FOUNDATION_HEAD: [
     "student:view",
     "academic:view",
+    "exam:view",
     "attendance:view",
     "finance:view",
     "finance:manage",
@@ -219,6 +230,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "student:edit",
     "academic:view",
     "academic:manage",
+    "exam:view",
+    "exam:manage",
     "attendance:view",
     "attendance:manage",
     "finance:view", // View only, no finance:manage
@@ -242,6 +255,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "student:archive",
     "academic:view",
     "academic:manage",
+    "exam:view",
+    "exam:manage",
     "attendance:view",
     "attendance:manage",
     "staff:view",
@@ -260,6 +275,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   TEACHER: [
     "student:view",
     "academic:view",
+    "exam:view",
+    "exam:manage",
     "attendance:view",
     "attendance:manage",
     "classroom:view",

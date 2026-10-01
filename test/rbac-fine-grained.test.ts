@@ -573,4 +573,115 @@ describe("Phase 0.2 — Fine-Grained RBAC Tests", () => {
       assert.equal(superAdminSession.subjectType, "INTERNAL_USER");
     });
   });
+
+  describe("10. Exam Domain (Question Bank) Permission Matrix — Phase 7", () => {
+    it("exam:view dan exam:manage harus terdaftar sebagai izin granular resmi domain exam", () => {
+      assert(PERMISSIONS.includes("exam:view"));
+      assert(PERMISSIONS.includes("exam:manage"));
+      assert.equal(isValidPermission("exam:view"), true);
+      assert.equal(isValidPermission("exam:manage"), true);
+      // exam:write bukan konvensi repo (konvensi 11 domain lain adalah :view/:manage)
+      assert.equal(isValidPermission("exam:write"), false);
+    });
+
+    it("matriks exam:* per peran harus sesuai keputusan R6 (6 peran resmi)", () => {
+      const expected: Record<string, { view: boolean; manage: boolean }> = {
+        SUPER_ADMIN: { view: true, manage: true },
+        FOUNDATION_HEAD: { view: true, manage: false },
+        PRINCIPAL: { view: true, manage: true },
+        ADMIN: { view: true, manage: true },
+        TEACHER: { view: true, manage: true },
+        FINANCE_STAFF: { view: false, manage: false },
+      };
+
+      for (const [role, want] of Object.entries(expected)) {
+        const perms = ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS];
+        assert.equal(perms.includes("exam:view"), want.view, `${role} -> exam:view`);
+        assert.equal(perms.includes("exam:manage"), want.manage, `${role} -> exam:manage`);
+      }
+    });
+
+    it("FINANCE_STAFF -> exam:view dan exam:manage = DENY", () => {
+      const financeSession = createMockUserSession({
+        userId: "usr_fin_02",
+        institutionId: instA.id,
+        roles: ["FINANCE_STAFF"],
+      });
+
+      assert.equal(hasPermission(financeSession, "exam:view"), false);
+      assert.equal(hasPermission(financeSession, "exam:manage"), false);
+      assert.throws(
+        () => requirePermission(financeSession, "exam:manage"),
+        (err: unknown) => {
+          assert(err instanceof AuthorizationError);
+          assert.equal(err.status, 403);
+          assert.equal(err.requiredPermission, "exam:manage");
+          return true;
+        }
+      );
+    });
+
+    it("FOUNDATION_HEAD -> exam:view ALLOW tetapi exam:manage DENY (pengawas, baca saja)", () => {
+      const foundationSession = createMockUserSession({
+        userId: "usr_found_01",
+        institutionId: instA.id,
+        roles: ["FOUNDATION_HEAD"],
+      });
+
+      assert.equal(hasPermission(foundationSession, "exam:view"), true);
+      assert.equal(hasPermission(foundationSession, "exam:manage"), false);
+      assert.throws(
+        () => requirePermission(foundationSession, "exam:manage"),
+        (err: unknown) => {
+          assert(err instanceof AuthorizationError);
+          assert.equal(err.requiredPermission, "exam:manage");
+          return true;
+        }
+      );
+    });
+
+    it("TEACHER -> exam:view dan exam:manage ALLOW (resource scope guru ditegakkan di domain service)", () => {
+      const teacherSession = createMockUserSession({
+        userId: "usr_guru_exam",
+        institutionId: instA.id,
+        roles: ["TEACHER"],
+      });
+
+      assert.equal(hasPermission(teacherSession, "exam:view"), true);
+      assert.equal(hasPermission(teacherSession, "exam:manage"), true);
+      assert.doesNotThrow(() => requirePermission(teacherSession, "exam:view"));
+      assert.doesNotThrow(() => requirePermission(teacherSession, "exam:manage"));
+    });
+
+    it("peta legacy exam:read / exam:write diterjemahkan ke izin modern exam:view / exam:manage", () => {
+      // Legacy alias diterima saat mengecek izin modern
+      assert.equal(hasPermission(["exam:read"], "exam:view"), true);
+      assert.equal(hasPermission(["exam:write"], "exam:manage"), true);
+
+      // Resolver peran menyuntikkan sinonim legacy agar konsumen lama tetap hidup
+      const adminPerms = resolvePermissionsFromRoles(["ADMIN"]);
+      assert(adminPerms.includes("exam:view"));
+      assert(adminPerms.includes("exam:manage"));
+      assert(adminPerms.includes("exam:read"));
+      assert(adminPerms.includes("exam:write"));
+    });
+
+    it("sesi GUARDIAN selalu ditolak dari domain exam", () => {
+      const guardianSession = createMockGuardianSession({
+        guardianId: "grd_exam_01",
+        institutionId: instA.id,
+      });
+
+      assert.equal(hasPermission(guardianSession, "exam:view"), false);
+      assert.equal(hasPermission(guardianSession, "exam:manage"), false);
+      assert.throws(
+        () => requirePermission(guardianSession, "exam:view"),
+        (err: unknown) => {
+          assert(err instanceof AuthorizationError);
+          assert.equal(err.status, 403);
+          return true;
+        }
+      );
+    });
+  });
 });

@@ -1,5 +1,13 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-01 - Phase 7 Question Bank: Tahap 2-6 selesai (backend lengkap)
+* Zod + domain service (invariant soal, resource scope guru, AuditLog) + kategori
+  + importer/exporter + 15 server action `async`. RBAC `exam:view`/`exam:manage`
+  di 6 peran + peta legacy.
+* Verifikasi independen Mizan: tsc 0, **464/464**, `/login` 200, diff bersih
+  (schema/migrasi/.github tak tersentuh). Sisa: Tahap 7 (UI `/exams/question-bank`)
+  & Tahap 8 (dokumentasi gate).
+
 ## 2026-10-01 - Skill anti-slop repo (6 file) + format laporan profesional
 * **Rujukan mati diperbaiki:** `antislop.md` + 5 `skills/antislop-*` yang dirujuk
   `AGENTS.md`/`GEMINI.md` (18 sebutan) tidak pernah ada - kini dibuat dari materi

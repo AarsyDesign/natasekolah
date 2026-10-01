@@ -1,5 +1,33 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - FEAT: Phase 7 Question Bank Tahap 2-6 (VERIFIED)
+
+### Added
+* **Validasi Zod** `src/lib/validation/question-bank.ts` (strict): create/update/
+  filter/import/status + invariant tipe soal via `superRefine` (PG wajib 4 opsi & 1
+  kunci, SHORT_ANSWER wajib kunci teks, ESSAY tanpa opsi).
+* **Domain** `src/lib/question-bank/`: `question-service` (CRUD + siklus DRAFT→ACTIVE→
+  ARCHIVED + hapus lunak, guard Session→Tenant→RBAC→Plugin→Domain, resource scope guru
+  via `academic:manage`, AuditLog tiap mutasi), `category-service` (agregat metrik),
+  `importer` (preview VALID/ERROR + deteksi kunci ganda + template xlsx/csv),
+  `exporter` (CSV 16 kolom, hanya soal lembaga ctx), `types` (error domain).
+* **Server action** `src/actions/question-bank.ts`: 15 action, semua `async`,
+  `revalidatePath("/exams/question-bank")`.
+* **Test +52** (412→464): `test/question-bank.test.ts` 45 test (CRUD/invariant,
+  RBAC+scope guru, tenant isolation A/B, plugin guard, kategori, impor/ekspor,
+  cek async) + 7 kasus matriks `exam:*` di `rbac-fine-grained.test.ts`.
+
+### Changed
+* `src/lib/auth/permissions.ts`: +`exam:view`/`exam:manage`, matriks 6 peran
+  (FINANCE_STAFF nihil, FOUNDATION_HEAD view-only), peta legacy `exam:read`/`exam:write`.
+* Zod v4 pitfall: `.partial()` mengaktifkan `.default()` → skema update ditulis
+  eksplisit; `status` hanya lewat endpoint transisi.
+
+### Verified
+`npx tsc --noEmit` 0 · `npm test` **464/464** · `GET /login` HTTP 200 ·
+`npm run build` hijau (verifikasi subagent; build ulang penuh menyusul di tahap 7/8).
+
+
 ## [2026-10-01] - FEAT: Skill anti-slop repo (6 file), rujukan mati dipulihkan (VERIFIED)
 
 ### Added
