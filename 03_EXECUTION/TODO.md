@@ -325,5 +325,120 @@
   - [x] Next.js Turbopack build PASS (`next build`, 23 static & dynamic routes).
   - [x] Prisma validation PASS (`prisma validate`).
 
+  ---
+
+  ## Phase 7 — Question Bank (PRIVATE_INSTITUTION Tier) — **SELESAI**
+
+  - [x] **7.0 Schema & Migration:**
+    - [x] Model `Question` (UUID, institutionId, subjectId, creatorId, type, difficulty, topic, stem, explanation, shortAnswerKey, status, version, archivedAt).
+    - [x] Model `QuestionOption` (UUID, questionId, label A-D, content, isCorrect).
+    - [x] Compound FK PostgreSQL: `[institutionId, subjectId]`, `[institutionId, creatorId]`.
+    - [x] Migrasi manual `20261001032000_question_bank_core` applied, `migrate diff` nihil.
+
+  - [x] **7.1 Zod Validation & Domain Services:**
+    - [x] Strict schemas + `superRefine` invariant (PG 4 opsi/1 kunci, SHORT_ANSWER wajib kunci, ESSAY tanpa opsi).
+    - [x] `question-service.ts`: CRUD + siklus DRAFT→ACTIVE→ARCHIVED + hapus lunak, resource scope guru, AuditLog.
+    - [x] `category-service.ts`: agregat metrik per kategori.
+    - [x] `importer.ts`: preview VALID/ERROR, deteksi kunci ganda, template xlsx/csv.
+    - [x] `exporter.ts`: CSV 16 kolom.
+
+  - [x] **7.2 Server Actions & RBAC:**
+    - [x] 15 server action async (`src/actions/question-bank.ts`).
+    - [x] Permission `exam:view` / `exam:manage` di 6 peran + peta legacy.
+    - [x] Test `test/rbac-fine-grained.test.ts` 7 kasus `exam:*`.
+
+  - [x] **7.3 UI Mobile-First (Tahap 7):**
+    - [x] `/exams/question-bank`: metric bar, filter debounce, tabel/ResourceList, pagination, empty/loading/error.
+    - [x] `/exams/question-bank/[id]`: edit, transisi status, arsip konfirmasi.
+    - [x] Modal impor 4 langkah (`QuestionImportModal`).
+    - [x] Nav "Bank Soal" (`nav-header` + `app-shell`).
+    - [x] QA E2E eksploratif: create soal PG sukses (toast + row + metrik Draf=1), detail page OK, 390px tanpa overflow.
+
+  - [x] **7.4 BUG Krits Fix (E2E-only):**
+    - [x] Nested `options.create` kirim `institutionId` → Prisma `Unknown argument` → gagal DB nyata.
+    - [x] Test mock (45 kasus) lolos padahal bug nyata → pelajaran: write path wajib dibuktikan E2E.
+    - [x] Fix: hapus `institutionId` dari nested create (2 titik di `question-service.ts`).
+
+  - [x] **7.5 Verifikasi Akhir (Tahap 8 Dokumentasi Gate):**
+    - [x] `npx tsc --noEmit` 0 · `npm test` 464/464 → **473/473** · `npm run build` exit 0.
+    - [x] ROADMAP, PROGRESS, CHANGELOG, TODO updated.
+    - [x] Push ke `origin/staging` (`2bb74c0` → `f3e6c06`).
+
+  ---
+
+  ## Phase 7 Trek C — AI Generator Infrastructure — **SELESAI**
+
+  - [x] **Model & Migrasi:**
+    - [x] `AiGenerationUsage` — quota harian per guru (unique institution+user+date), kolom `count`, `lastGenerateAt`, `cooldownUntil`.
+    - [x] `AiGenerationJob` — async job queue (DRAFT, READY_FOR_REVIEW, SAVED, DISCARDED, FAILED), relasi Institution/User/Subject, `prompt` JSON, `resultJson`, `errorMessage`.
+    - [x] Migrasi manual `20261001080000_ai_generation_infrastructure` applied via custom Node script (FK casing fix PostgreSQL).
+
+  - [x] **Plugin Registry:**
+    - [x] `AI_GENERATION` plugin (coreDependencies: `exam`, category: `AI_AUTOMATION`) — opt-in per institusi.
+
+  - [x] **Env Vars (.env.example):**
+    - [x] `AI_PROVIDER` (openai/anthropic/gemini/local), `AI_API_KEY`, `AI_MODEL`.
+    - [x] `AI_DAILY_QUOTA_PER_TEACHER=30`, `AI_COOLDOWN_MS=15000`, `AI_GENERATION_ENABLED=false` (default off).
+
+  - [x] **Services:**
+    - [x] `usage-service.ts` — `checkAIGenerationQuota` (limit + cooldown), `recordAIGenerationUsage`.
+    - [x] `ai-generation-service.ts` — `createAIGenerationJob`, `executeAIGeneration` (call provider, validate, update job, record usage), `reviewAIGenerationJob` (save/discard, link ke Question Bank), `listAIGenerationJobs`, `getAIGenerationJobDetail`. Fair-use guard 30/hari + cooldown 15s. Provider-agnostic scaffold (`callAIProvider` mock, siap diganti implementasi nyata).
+
+  - [x] **Validation Schemas:**
+    - [x] `src/lib/validation/ai-generation.ts` — Zod schemas: prompt params, job create/execute/review, provider enum, status enum.
+
+  - [x] **Cron Monitoring:**
+    - [x] `project-completion-monitor` (job ID `abef6fcf4ae7`) — schedule `0 */4 * * *` (setiap 4 jam).
+    - [x] Cek: tsc, npm test 473/473, build, prisma validate, AI infra files, Question Bank files.
+    - [x] Notifikasi completion otomatis saat semua hijau.
+
+  - [x] **Verifikasi:**
+    - [x] `npx tsc --noEmit` 0 · `npm test` **473/473** (baseline 412 → +61) · `npm run build` exit 0 · `prisma validate` valid.
+    - [x] Push ke `origin/staging` (`f3e6c06`).
+
+  - [x] **Status:** Infrastructure SIAP — tinggal pasang API key provider AI (OpenAI/Anthropic/Gemini/lokal) & implementasi adapter runtime + UI generate modal.
+
+  ---
+
+  ## Phase 8 — AI & Automation (Runtime & UI)
+
+  - [ ] **8.1 AI Provider Adapters:**
+    - [ ] `OpenAIProvider` (function calling / structured output JSON).
+    - [ ] `AnthropicProvider` (Claude, JSON mode).
+    - [ ] `GeminiProvider` (Google AI Studio).
+    - [ ] `LocalProvider` (Ollama / vLLM endpoint).
+    - [ ] Factory `getAIProvider()` mirip WhatsApp pattern.
+
+  - [ ] **8.2 Server Actions AI Generator:**
+    - [ ] `createAIGenerationJobAction` (input: subjectId, type, difficulty, count, topic, additionalInstructions).
+    - [ ] `executeAIGenerationAction` (jobId).
+    - [ ] `reviewAIGenerationJobAction` (jobId, action: save/discard, selectedQuestionIds?).
+    - [ ] `listAIGenerationJobsAction` (filters).
+
+  - [ ] **8.3 UI Generate Modal:**
+    - [ ] Modal "Generate Soal AI" di `/exams/question-bank` (trigger dari tombol "Tambah Soal" atau FAB).
+    - [ ] Form: Mapel (dropdown), Tipe (PG/Short/Essay), Kesulitan, Jumlah (1-10), Topik (opsional), Instruksi tambahan.
+    - [ ] Preview hasil AI (expandable cards) → checklist pilih soal → "Simpan ke Bank Soal".
+    - [ ] Status job real-time (polling/websocket): Draft → Generating → Ready for Review → Saved.
+    - [ ] Error state manusiawi (quota habis, cooldown, provider error).
+
+  - [ ] **8.4 Fair-Use Enforcement UI:**
+    - [ ] Badge quota di halaman Bank Soal: "Sisa generate hari ini: 27/30".
+    - [ ] Cooldown countdown saat generate terlalu cepat.
+    - [ ] History job dengan status & error message.
+
+  - [ ] **8.5 QA E2E Eksploratif AI Generator:**
+    - [ ] Generate soal PG 5 butir → review → simpan 3 → verifikasi masuk Question Bank.
+    - [ ] Generate soal Short Answer → validasi kunci jawaban.
+    - [ ] Generate soal Essay → validasi pedoman penskoran.
+    - [ ] Test quota limit (31x hari) → blocked dengan pesan jelas.
+    - [ ] Test cooldown (generate < 15 detik) → blocked.
+    - [ ] Test provider error handling (network timeout, invalid JSON, malformed response).
+
+  - [ ] **8.6 Verification Gate:**
+    - [ ] `tsc --noEmit` 0 · `npm test` pass · `npm run build` exit 0.
+    - [ ] DoD Strict: RBAC + Plugin Guard + Tenant Isolation + AuditLog semua lolos.
+    - [ ] Update ROADMAP, PROGRESS, CHANGELOG, TODO.
+
 
 

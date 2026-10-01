@@ -7,6 +7,16 @@
 * **BUG kritis (E2E):** nested `options.create` kirim `institutionId` (FK compound) → `Unknown argument` → create/impor gagal di DB nyata. Test mock (45 kasus) lolos padahal bug nyata. Fix: hapus field dari nested create (2 titik). Pelajaran dicatat ke LOG.
 * **Verifikasi akhir:** `npx tsc --noEmit` 0 · `npm test` 464/464 · `npm run build` exit 0 · DoD Strict semua terpenuhi.
 
+## 2026-10-01 - Phase 7 Trek C: AI Generator Infrastructure SELESAI
+* **Model & Migrasi:** `AiGenerationUsage` (quota harian per guru, unique institution+user+date) + `AiGenerationJob` (async job queue DRAFT→READY_FOR_REVIEW→SAVED/DISCARDED/FAILED, relasi Institution/User/Subject). Migrasi manual `20261001080000_ai_generation_infrastructure` diterapkan via custom script (FK casing fix untuk PostgreSQL).
+* **Plugin Registry:** `AI_GENERATION` plugin (coreDependencies: `exam`, category: `AI_AUTOMATION`) — opt-in per institusi.
+* **Env Vars:** `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `AI_DAILY_QUOTA_PER_TEACHER=30`, `AI_COOLDOWN_MS=15000`, `AI_GENERATION_ENABLED=false` (default off).
+* **Services:** `usage-service.ts` (check quota + cooldown, record usage), `ai-generation-service.ts` (create job → execute → validate → review → save to Question Bank, fair-use guard 30/hari + cooldown 15s, provider-agnostic scaffold).
+* **Validation:** `src/lib/validation/ai-generation.ts` (Zod schemas untuk prompt params, job create/execute/review, provider enum, status enum).
+* **Cron Monitoring:** `project-completion-monitor` setiap 4 jam (0 */4 * * *) — cek tsc, test 473/473, build, prisma validate, AI infra files, Question Bank files, notifikasi completion otomatis.
+* **Verifikasi:** `npx tsc --noEmit` 0 · `npm test` **473/473** (baseline 412 → +61) · `npm run build` exit 0 · `prisma validate` valid · push ke `origin/staging` (`f3e6c06`).
+* **Status:** Infrastructure SIAP — tinggal pasang API key provider AI (OpenAI/Anthropic/Gemini/lokal) & implementasi adapter runtime + UI generate modal.
+
 ## 2026-10-01 - Phase 7 Question Bank: Tahap 7 (UI) selesai + BUG kritis diperbaiki
 * UI `/exams/question-bank` (+`/[id]`), modal impor 4 langkah, form soal, nav
   "Bank Soal" — empty/loading/error state, mobile 390px tanpa overflow (QA E2E

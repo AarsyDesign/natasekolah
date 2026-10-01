@@ -1,5 +1,18 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - FEAT: Phase 7 Trek C — AI Generator Infrastructure (VERIFIED)
+
+### Added
+* **Models & Migration** — `AiGenerationUsage` (quota harian per guru, unique institution+user+date) + `AiGenerationJob` (async job queue DRAFT→READY_FOR_REVIEW→SAVED/DISCARDED/FAILED, relasi Institution/User/Subject). Migrasi manual `20261001080000_ai_generation_infrastructure` applied via custom Node script (FK casing fix PostgreSQL).
+* **Plugin Registry** — `AI_GENERATION` plugin (coreDependencies: `exam`, category: `AI_AUTOMATION`) — opt-in per institusi.
+* **Env Vars** (.env.example) — `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `AI_DAILY_QUOTA_PER_TEACHER=30`, `AI_COOLDOWN_MS=15000`, `AI_GENERATION_ENABLED=false`.
+* **Services** — `usage-service.ts` (check quota + cooldown, record usage), `ai-generation-service.ts` (create job → execute → validate → review → save to Question Bank, fair-use guard 30/hari + cooldown 15s, provider-agnostic scaffold).
+* **Validation Schemas** — `src/lib/validation/ai-generation.ts` (Zod: prompt params, job create/execute/review, provider enum, status enum).
+* **Cron Monitoring** — `project-completion-monitor` (job ID `abef6fcf4ae7`) schedule `0 */4 * * *` — cek tsc, test 473/473, build, prisma validate, AI infra files, Question Bank files, notifikasi completion otomatis.
+
+### Verification
+* `npx tsc --noEmit` 0 · `npm test` **473/473** (baseline 412 → +61) · `npm run build` exit 0 · `prisma validate` valid · push ke `origin/staging` (`f3e6c06`).
+
 ## [2026-10-01] - FEAT: Phase 7 Question Bank Tahap 7 (UI) + FIX nested-create Prisma (VERIFIED)
 
 ### Added
