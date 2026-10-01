@@ -8,6 +8,7 @@ import {
   buildLoginAttemptKey,
   loginRateLimiter,
   LoginAttemptKey,
+  formatDurasi,
 } from "../lib/auth/rate-limit";
 
 const GENERIC_LOGIN_ERROR = "Identitas lembaga, email, atau kata sandi tidak valid.";
@@ -35,7 +36,7 @@ async function resolveClientIdentity(): Promise<{ ipAddress?: string; userAgent?
 /** Pesan pembatas yang informatif namun tidak membocorkan status akun. */
 function throttleError(decision: { retryAfterMs: number }): string {
   const seconds = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
-  return `${THROTTLE_ERROR_PREFIX} ${seconds} detik.`;
+  return `${THROTTLE_ERROR_PREFIX} ${formatDurasi(seconds)}.`;
 }
 
 export async function loginAction(input: unknown): Promise<{ success: true } | { success: false; error: string }> {

@@ -176,3 +176,13 @@ export class LoginRateLimiter {
 
 /** Singleton yang dipakai `loginAction`. */
 export const loginRateLimiter = new LoginRateLimiter();
+
+/**
+ * Durasi manusiawi Bahasa Indonesia: "9 menit 59 detik", bukan angka detik mentah.
+ * Tidak diekspor dari `src/actions/*` — di sana semua export wajib async
+ * (kaidah Server Actions Next.js), jadi helper sync harus tinggal di lib.
+ */
+export function formatDurasi(seconds: number): string {
+  if (seconds < 60) return `${seconds} detik`;
+  return `${Math.floor(seconds / 60)} menit ${seconds % 60} detik`;
+}

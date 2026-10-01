@@ -1,5 +1,22 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - Fix UX: pesan throttle login manusiawi + pitfall Server Action (VERIFIED)
+### Fixed
+* **Pesan rate limit login** tidak lagi menampilkan detik mentah: dari "Coba lagi
+  dalam 599 detik." menjadi **"Coba lagi dalam 9 menit 59 detik."** — helper baru
+  `formatDurasi(seconds)` di `src/lib/auth/rate-limit.ts`.
+* **Pitfall Next.js 16 yang ditemukan lewat QA browser (bukan oleh tsc/test):**
+  SEMUA export di file `"use server"` (`src/actions/*.ts`) harus `async` — ekspor
+  sync `formatDurasi` membuat **dev server 500 di semua halaman** padahal
+  `tsc --noEmit` 0 dan 412/412 test lulus. Helper dipindah ke lib; diaudit 14
+  file `src/actions/` lain → tidak ada pelanggaran serupa.
+### Verification
+* `tsc --noEmit` 0 · `npm test` **412/412** (2 test baru `formatDurasi`) ·
+  `npm run build` exit 0 · `GET /login` **HTTP 200** (sempat 500, pulih setelah fix).
+* QA browser nyata: login salah 4× → pesan generik (tanpa bocoran akun), ke-5 →
+  throttle dengan format baru; tanpa overflow horizontal; 0 error console.
+
+
 ## [2026-10-01] - Fix: 3 high vulnerability npm audit (VERIFIED)
 ### Changed
 * **`package.json` → `overrides: { "deepmerge-ts": "^8.0.2" }`** — menutup 3 advisory

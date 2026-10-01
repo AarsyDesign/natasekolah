@@ -42,6 +42,18 @@
 
 ## 2. Catatan Log Aktivitas Kronologis
 
+### [2026-10-01] - QA browser pertama: rate limit UI + fix 500 (VERIFIED)
+* **Dogfood `/login`:** form lengkap (autocomplete benar, required), login salah
+  4× dapat pesan generik tanpa enumerasi akun, percobaan ke-5 kena throttle —
+  rate limit terbukti jalan di UI, bukan cuma di test.
+* **Bug ditemukan QA:** pesan throttle "599 detik" (mentah, tidak manusiawi) →
+  diganti "9 menit 59 detik" via `formatDurasi`.
+* **Regresi selama perbaikan:** ekspor sync di `"use server"` file membuat dev
+  server 500 total (tsc & test TIDAK menangkap — kaidah khusus transformasi
+  Next 16) → helper dipindah ke `src/lib/auth/rate-limit.ts`; 14 file action
+  lain diaudit bersih. Bukti screenshot: `cache/scratch/qa/login-throttle-format.png`.
+
+
 ### [2026-10-01] - Fix keamanan dependensi: audit 0 (VERIFIED)
 * **Temuan:** 3 advisory high — `deepmerge-ts@7.1.5` di rantai
   `prisma → @prisma/config`. Catatan lama bilang "butuh prisma major 8" — TERNYATA

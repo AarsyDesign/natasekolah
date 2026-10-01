@@ -8,6 +8,7 @@ import {
   loginRateLimiter,
 } from "../src/lib/auth/rate-limit";
 import { loginAction } from "../src/actions/auth";
+import { formatDurasi } from "../src/lib/auth/rate-limit";
 
 const THROTTLE_MARK = "Terlalu banyak percobaan gagal.";
 const GENERIC_MARK = "tidak valid";
@@ -171,5 +172,23 @@ describe("loginAction — proteksi brute-force", () => {
     const after = await attempt(email);
     assert.ok(after.includes(GENERIC_MARK), `setelah reset kembali normal, dapat: ${after}`);
     assert.ok(!after.startsWith(THROTTLE_MARK), "tidak boleh masih terkunci");
+  });
+});
+
+describe("formatDurasi — pesan throttle manusiawi", () => {
+  it("menampilkan detik polos di bawah 1 menit", () => {
+    assert.equal(formatDurasi(1), "1 detik");
+    assert.equal(formatDurasi(45), "45 detik");
+    assert.equal(formatDurasi(59), "59 detik");
+  });
+
+  it("menampilkan menit + detik di atas 1 menit (bukan angka detik mentah)", () => {
+    assert.equal(formatDurasi(60), "1 menit 0 detik");
+    assert.equal(formatDurasi(599), "9 menit 59 detik");
+    assert.equal(formatDurasi(600), "10 menit 0 detik");
+    // format akhir selalu diakhiri 'detik' agar konsisten dengan pesan throttle
+    for (const s of [1, 45, 60, 599, 600]) {
+      assert.match(formatDurasi(s), /detik$/);
+    }
   });
 });
