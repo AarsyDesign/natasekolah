@@ -1,5 +1,17 @@
 # Immediate Execution Backlog (TODO) - NataSekolah
 
+## Temuan QA E2E (belum dikerjakan)
+
+- [ ] **Sesi kedaluwarsa di tengah sesi tidak diarahkan ke login.** Gejala: semua
+  server action gagal, pengguna cuma lihat pesan generik "Gagal Memuat..." + banner
+  mentah "Sesi otentikasi tidak ditemukan". Konteks: `TenantContextMissingError`
+  (kode `TENANT_CONTEXT_MISSING`, status 401) sudah ada di `src/lib/tenant/context.ts`
+  tapi **tidak dibawa ke response aksi** (64 catch inline `success:false` tanpa shared
+  wrapper). Usulan perbaikan bertahap: (1) bawa `code` di response error aksi via
+  helper `runAction` bersama, (2) di halaman, jika kode 401 → `router.replace('/login?expired=1')`
+  atau tombol "Masuk ulang" (ikuti `DESIGN.md` §14: pesan manusiawi + tombol pemulihan).
+  Refactor menyentuh ~64 situs → wajib rencana + test bertahap, jangan tempbak satu commit.
+
 ## Phase 0 — Foundation & Security (COMPLETE)
 
 - [x] **0.1 Multi-Tenancy Core:**
