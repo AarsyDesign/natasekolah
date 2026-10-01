@@ -1,5 +1,12 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-01 - Phase 7 Question Bank: SELESAI (Tahap 0-8, Gate Phase 7 lulus)
+* **Tahap 0-1:** Schema Prisma + migrasi manual Question/QuestionOption (2 model, compound FK, index, enum). Verifikasi `prisma migrate diff` nihil, `migrate resolve --applied` untuk drift lama → status exit 0.
+* **Tahap 2-6:** Backend penuh — Zod strict + invariant superRefine (PG 4 opsi/1 kunci, SHORT_ANSWER wajib kunci, ESSAY tanpa opsi), domain service (CRUD + siklus DRAFT→ACTIVE→ARCHIVED + hapus lunak, resource scope guru via `academic:manage`, AuditLog), kategori agregat, importer (preview VALID/ERROR + deteksi kunci ganda + template xlsx/csv), exporter CSV 16 kolom, 15 server action (semua async), RBAC `exam:view`/`exam:manage` di 6 peran + peta legacy.
+* **Tahap 7:** UI mobile-first `/exams/question-bank` (metric bar, filter debounce, tabel/ResourceList, pagination, empty/loading/error) + `/[id]` (edit, transisi status, arsip konfirmasi) + modal impor 4 langkah + nav "Bank Soal" (nav-header + app-shell). QA E2E eksploratif: create soal PG sukses (toast + row + metrik Draf=1), detail page OK, 390px tanpa overflow.
+* **BUG kritis (E2E):** nested `options.create` kirim `institutionId` (FK compound) → `Unknown argument` → create/impor gagal di DB nyata. Test mock (45 kasus) lolos padahal bug nyata. Fix: hapus field dari nested create (2 titik). Pelajaran dicatat ke LOG.
+* **Verifikasi akhir:** `npx tsc --noEmit` 0 · `npm test` 464/464 · `npm run build` exit 0 · DoD Strict semua terpenuhi.
+
 ## 2026-10-01 - Phase 7 Question Bank: Tahap 7 (UI) selesai + BUG kritis diperbaiki
 * UI `/exams/question-bank` (+`/[id]`), modal impor 4 langkah, form soal, nav
   "Bank Soal" — empty/loading/error state, mobile 390px tanpa overflow (QA E2E

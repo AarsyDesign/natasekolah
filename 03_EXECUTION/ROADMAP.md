@@ -76,5 +76,6 @@ PHASE 7 (AI & Automation)
 * [ ] Transparansi Pembayaran & Rekap Kehadiran Real-time
 
 ### Phase 7 Gate — AI & Automation
-* [ ] Centralized Question Bank (3-Tier)
-* [ ] AI Question Generator with Fair Use Guard (30x/hari + cooldown)
+* [x] Centralized Question Bank (3-Tier) — **PRIVATE_INSTITUTION tier** selesai (backend + UI + RBAC + tenant isolation + importer/exporter + audit). `COMMUNITY` & `DEVELOPER_CENTRAL` di-backlog terpisah.
+* [ ] AI Question Generator with Fair Use Guard (30x/hari + cooldown) — **TREK TERPISAH**, terblokir konfigurasi provider AI (butuh keputusan env var, kuota, tabel `AiGenerationUsage`).
+
