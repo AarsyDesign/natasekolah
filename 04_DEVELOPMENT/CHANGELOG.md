@@ -13,6 +13,17 @@
 ### Verification
 * `npx tsc --noEmit` 0 · `npm test` **473/473** (baseline 412 → +61) · `npm run build` exit 0 · `prisma validate` valid · push ke `origin/staging` (`f3e6c06`).
 
+## [2026-10-01] - FEAT: Phase 8.1-8.3 — AI Provider Adapters + Server Actions + Generate Modal UI (VERIFIED)
+
+### Added
+* **AI Provider Adapters** (`src/lib/ai-providers/index.ts`) — 4 provider: OpenAI (function calling/structured output), Anthropic (Claude JSON mode), Gemini (Google AI Studio), Local (Ollama/vLLM). Factory pattern `getAIProvider()` mirip WhatsApp provider.
+* **Server Actions** (`src/actions/ai-generation.ts`) — `createAIGenerationJobAction` (quota guard), `executeAIGenerationAction` (call provider, validate, update job), `reviewAIGenerationJobAction` (save/discard partial, link ke Question Bank), `listAIGenerationJobsAction`, `getAIGenerationJobDetailAction`.
+* **Generate Modal UI** di `/exams/question-bank` — 3 step: Form → Generating → Review. Form: Mapel, Tipe (PG/Short/Essay), Kesulitan, Jumlah (1-10), Topik, Instruksi. Review: expandable cards, checkbox pilih soal, "Pilih semua", simpan ke Question Bank (DRAFT).
+* **Validation Schemas** — `src/lib/validation/ai-generation-actions.ts` (Zod: create job, save result, list filters, provider enum, status enum).
+
+### Verification
+* `npx tsc --noEmit` 0 · `npm test` **473/473** · `npm run build` exit 0 · `prisma validate` valid · push ke `origin/staging` (`c0818bd`).
+
 ## [2026-10-01] - FEAT: Phase 8 — AI Provider Adapters (OpenAI, Anthropic, Gemini, Local) (VERIFIED)
 
 ### Added

@@ -78,5 +78,8 @@ PHASE 7 (AI & Automation)
 ### Phase 7 Gate — AI & Automation
 * [x] Centralized Question Bank (3-Tier) — **PRIVATE_INSTITUTION tier** selesai (backend + UI + RBAC + tenant isolation + importer/exporter + audit). `COMMUNITY` & `DEVELOPER_CENTRAL` di-backlog terpisah.
 * [x] AI Question Generator Infrastructure — Models (`AiGenerationUsage`, `AiGenerationJob`), Migrations, Services (usage quota, generation flow), Validation Schemas, Plugin Registry (`AI_GENERATION`), Fair-use Guard (30/hari + cooldown 15s). **TREK C INFRASTRUCTURE SELESAI** — tinggal pasang API key provider AI (OpenAI/Anthropic/Gemini/lokal).
-* [ ] AI Question Generator Runtime — Provider adapter implementation, UI generate modal, teacher review workflow.
+* [x] AI Question Generator Runtime — **Phase 8.1-8.3 SELESAI**: Provider adapters (OpenAI, Anthropic, Gemini, Local), Server Actions (create/execute/review/list), Generate Modal UI (3-step: Form → Generating → Review), Validation schemas.
+* [ ] **Phase 8.4** Fair-Use Enforcement UI (quota badge, cooldown countdown, history job).
+* [ ] **Phase 8.5** QA E2E Eksploratif AI Generator.
+* [ ] **Phase 8.6** Verification Gate & docs update.
 

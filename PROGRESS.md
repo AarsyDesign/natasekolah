@@ -19,12 +19,12 @@
 | | - Phase 0.3: Input Validation & Domain Plugin Registry | Selesai (IMPLEMENTED & VERIFIED, 105 Tests Pass) | 2026-09-20 |
 | **Phase 1** | **Buku Induk & Academic Core** (Student Master, AcademicYear, Classroom, Sacred History Enrollment) | **COMPLETE** | 2026-09-20 (126 Tests Pass) |
 | **Phase 2** | **Academic Teaching Core** (Subject, Teacher Identity, TeacherAssignment, Teaching Scope) | **COMPLETE** | 2026-09-20 (155 Tests Pass) |
-| **Phase 3** | **Daily Operations** (Presensi < 60s, Kasir SPP 3-Tier, Buku Kas, Dashboard) | Belum Dimulai | - |
-| **Phase 4** | **Communication Engine** (WhatsApp Outbox Pattern, Notification Queue) | Belum Dimulai | - |
-| **Phase 5** | **Formal Academic** (Buku Nilai, Capaian Pembelajaran, Frozen Report Card Snapshot) | Belum Dimulai | - |
-| **Phase 6** | **Pesantren Living** (Diniyah, Asrama, Tasrih Perizinan, Mutaba'ah Tahfidz) | Belum Dimulai | - |
-| **Phase 7** | **Parent Experience** (PWA Wali Murid, Transparansi Rekap Tagihan) | Belum Dimulai | - |
-| **Phase 8** | **AI & Automation** (Bank Soal 3-Tier, AI Generator dengan Fair Use) | Belum Dimulai | - |
+| **Phase 3** | **Daily Operations** (Presensi < 60s, Kasir SPP 3-Tier, Buku Kas, Dashboard) | **COMPLETE** | 2026-09-20 (176 Tests Pass) |
+| **Phase 4** | **Communication Engine** (WhatsApp Outbox Pattern, Notification Queue) | **COMPLETE** | 2026-09-28 (183 Tests Pass) |
+| **Phase 5** | **Formal Academic** (Buku Nilai, Capaian Pembelajaran, Frozen Report Card Snapshot) | **COMPLETE** | 2026-09-23 (203 Tests Pass) |
+| **Phase 6** | **Pesantren Living** (Diniyah, Asrama, Tasrih Perizinan, Mutaba'ah Tahfidz) | **COMPLETE** | 2026-09-23 (229 Tests Pass) |
+| **Phase 7** | **Question Bank** (3-Tier, Private Institution, AI Generator Infrastructure) | **COMPLETE** | 2026-10-01 (473 Tests Pass) |
+| **Phase 8** | **AI & Automation** (Runtime Provider Adapters + Generate Modal UI) | **IN PROGRESS** | 2026-10-01 (473 Tests Pass) |
 
 ---
 
@@ -106,8 +106,20 @@
 ---
 
 ## 3. Langkah Selanjutnya (Next Immediate Gate)
-1. **Phase 3 Gate — Daily Operations:**
-   * Attendance Engine (< 60 detik) & offline cache idempotency.
-   * Finance 3-Tier Layer (FeeCategory, StudentCharge, PaymentTransaction).
-   * Cashbook & Unique Receipt Generator (`KW-...`).
-   * Operational Dashboard berbasis aksi pengguna.
+1. **Phase 8.4 — Fair-Use Enforcement UI:**
+   * Badge quota di halaman Bank Soal: "Sisa generate hari ini: 27/30".
+   * Cooldown countdown saat generate terlalu cepat.
+   * History job dengan status & error message.
+
+2. **Phase 8.5 — QA E2E Eksploratif AI Generator:**
+   * Generate soal PG 5 butir → review → simpan 3 → verifikasi masuk Question Bank.
+   * Generate soal Short Answer → validasi kunci jawaban.
+   * Generate soal Essay → validasi pedoman penskoran.
+   * Test quota limit (31x hari) → blocked dengan pesan jelas.
+   * Test cooldown (generate < 15 detik) → blocked.
+   * Test provider error handling (network timeout, invalid JSON, malformed response).
+
+3. **Phase 8.6 — Verification Gate:**
+   * `tsc --noEmit` 0 · `npm test` pass · `npm run build` exit 0.
+   * DoD Strict: RBAC + Plugin Guard + Tenant Isolation + AuditLog semua lolos.
+   * Update ROADMAP, PROGRESS, CHANGELOG, TODO.

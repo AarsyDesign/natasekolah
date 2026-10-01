@@ -402,25 +402,25 @@
 
   ## Phase 8 — AI & Automation (Runtime & UI)
 
-  - [ ] **8.1 AI Provider Adapters:**
-    - [ ] `OpenAIProvider` (function calling / structured output JSON).
-    - [ ] `AnthropicProvider` (Claude, JSON mode).
-    - [ ] `GeminiProvider` (Google AI Studio).
-    - [ ] `LocalProvider` (Ollama / vLLM endpoint).
-    - [ ] Factory `getAIProvider()` mirip WhatsApp pattern.
+  - [x] **8.1 AI Provider Adapters:**
+    - [x] `OpenAIProvider` (function calling / structured output JSON).
+    - [x] `AnthropicProvider` (Claude, JSON mode).
+    - [x] `GeminiProvider` (Google AI Studio).
+    - [x] `LocalProvider` (Ollama / vLLM endpoint).
+    - [x] Factory `getAIProvider()` mirip WhatsApp pattern.
 
-  - [ ] **8.2 Server Actions AI Generator:**
-    - [ ] `createAIGenerationJobAction` (input: subjectId, type, difficulty, count, topic, additionalInstructions).
-    - [ ] `executeAIGenerationAction` (jobId).
-    - [ ] `reviewAIGenerationJobAction` (jobId, action: save/discard, selectedQuestionIds?).
-    - [ ] `listAIGenerationJobsAction` (filters).
+  - [x] **8.2 Server Actions AI Generator:**
+    - [x] `createAIGenerationJobAction` (input: subjectId, type, difficulty, count, topic, additionalInstructions).
+    - [x] `executeAIGenerationAction` (jobId).
+    - [x] `reviewAIGenerationJobAction` (jobId, action: save/discard, selectedQuestionIds?).
+    - [x] `listAIGenerationJobsAction` (filters).
 
-  - [ ] **8.3 UI Generate Modal:**
-    - [ ] Modal "Generate Soal AI" di `/exams/question-bank` (trigger dari tombol "Tambah Soal" atau FAB).
-    - [ ] Form: Mapel (dropdown), Tipe (PG/Short/Essay), Kesulitan, Jumlah (1-10), Topik (opsional), Instruksi tambahan.
-    - [ ] Preview hasil AI (expandable cards) → checklist pilih soal → "Simpan ke Bank Soal".
-    - [ ] Status job real-time (polling/websocket): Draft → Generating → Ready for Review → Saved.
-    - [ ] Error state manusiawi (quota habis, cooldown, provider error).
+  - [x] **8.3 UI Generate Modal:**
+    - [x] Modal "Generate Soal AI" di `/exams/question-bank` (trigger dari tombol "Tambah Soal" atau FAB).
+    - [x] Form: Mapel (dropdown), Tipe (PG/Short/Essay), Kesulitan, Jumlah (1-10), Topik (opsional), Instruksi tambahan.
+    - [x] Preview hasil AI (expandable cards) → checklist pilih soal → "Simpan ke Bank Soal".
+    - [x] Status job real-time (polling/websocket): Draft → Generating → Ready for Review → Saved.
+    - [x] Error state manusiawi (quota habis, cooldown, provider error).
 
   - [ ] **8.4 Fair-Use Enforcement UI:**
     - [ ] Badge quota di halaman Bank Soal: "Sisa generate hari ini: 27/30".
