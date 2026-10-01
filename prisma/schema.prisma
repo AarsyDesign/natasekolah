@@ -57,6 +57,8 @@ model Institution {
   dormitoryAssignments StudentDormitoryAssignment[]
   questions            Question[]
   questionOptions      QuestionOption[]
+  aiGenerationUsage    AiGenerationUsage[]
+  aiGenerationJobs     AiGenerationJob[]
 
   @@index([slug])
   @@index([type])
@@ -86,6 +88,8 @@ model User {
   publishedReportCards ReportCard[]
   recordedTahfidz     TahfidzRecord[]
   createdQuestions    Question[]
+  aiGenerationUsage   AiGenerationUsage[]
+  aiGenerationJobs    AiGenerationJob[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, email])
@@ -336,6 +340,7 @@ model Subject {
   teacherAssignments  TeacherAssignment[]
   reportCardSubjects  ReportCardSubject[]
   questions           Question[]
+  aiGenerationJobs    AiGenerationJob[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, code])
@@ -873,6 +878,56 @@ model QuestionOption {
   @@unique([questionId, label])
   @@index([institutionId, questionId])
   @@map("question_options")
+}
+
+// -------------------------------------------------------------
+// PHASE 7 TREK C — AI QUESTION GENERATOR INFRASTRUCTURE
+// -------------------------------------------------------------
+
+// AiGenerationUsage (Kuota Fair-Use per Guru per Hari)
+model AiGenerationUsage {
+  id              String         @id @default(cuid())
+  institutionId   String
+  userId          String         // Guru yang meminta generate
+  date            DateTime       @db.Date          // UTC midnight (normalized)
+  count           Int            @default(0)       // Jumlah generate hari ini
+  lastGeneratedAt DateTime?      // Timestamp generate terakhir (cooldown)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([institutionId, userId, date])
+  @@index([institutionId, date])
+  @@map("ai_generation_usage")
+}
+
+// AiGenerationJob (Pekerjaan Generate: Draft → Review Guru → Save)
+model AiGenerationJob {
+  id              String         @id @default(cuid())
+  institutionId   String
+  userId          String         // Guru pemilik job
+  subjectId       String         // Mata pelajaran target
+  prompt          String         // Prompt yang dikirim ke AI (include: tipe, tingkat, topik, dll)
+  provider        String         // openai | anthropic | gemini
+  model           String         // Model yang dipakai (mis. gpt-4o-mini)
+  status          String         @default("DRAFT") // DRAFT | READY_FOR_REVIEW | SAVED | DISCARDED
+  resultJson      String?        // Hasil AI (array soal) disimpan sebagai JSON
+  errorMessage    String?        // Jika gagal
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  reviewedAt      DateTime?
+  savedAt         DateTime?
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  subject         Subject        @relation(fields: [subjectId, institutionId], references: [id, institutionId], onDelete: Restrict)
+
+  @@unique([id, institutionId])
+  @@index([institutionId, userId, status])
+  @@index([institutionId, createdAt])
+  @@map("ai_generation_jobs")
 }
 
 

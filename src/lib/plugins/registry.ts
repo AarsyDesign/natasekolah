@@ -9,6 +9,7 @@ export const PLUGINS = {
   PESANTREN_LIVING: "PESANTREN_LIVING",
   TAHFIDZ: "TAHFIDZ",
   PKBM: "PKBM",
+  AI_GENERATION: "AI_GENERATION",
 } as const;
 
 export type PluginId = (typeof PLUGINS)[keyof typeof PLUGINS];
@@ -61,6 +62,14 @@ export const PLUGIN_REGISTRY: Record<PluginId, PluginMetadata> = {
       "Modul fleksibilitas warga belajar paket A/B/C, modul mandiri, dan ujian kesetaraan.",
     category: "COMMUNITY",
     coreDependencies: ["student"],
+  },
+  AI_GENERATION: {
+    id: "AI_GENERATION",
+    name: "AI Question Generator",
+    description:
+      "Generator soal otomatis dengan guard fair-use (kuota harian, cooldown, review guru wajib).",
+    category: "ACADEMIC",
+    coreDependencies: ["question-bank"],
   },
 };
 
