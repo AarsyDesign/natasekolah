@@ -1,5 +1,17 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-01 - Phase 7 Question Bank: Tahap 7 (UI) selesai + BUG kritis diperbaiki
+* UI `/exams/question-bank` (+`/[id]`), modal impor 4 langkah, form soal, nav
+  "Bank Soal" — empty/loading/error state, mobile 390px tanpa overflow (QA E2E
+  via browser, screenshot bukti).
+* **BUG kritis terbukti hanya lewat QA E2E:** nested `options.create` kirim
+  `institutionId` (bagian FK compound) → Prisma tolak `Unknown argument` → create
+  soal/impor gagal di DB nyata, padahal **45 test lolos** karena suite pakai mock
+  Prisma in-memory. Fix: buang field dari nested create (2 titik). Catatan di LOG:
+  write path wajib dibuktikan E2E, bukan hanya test mock.
+* Verifikasi: tsc 0, **464/464**, create soal sukses end-to-end (toast + row +
+  Draf=1), detail page + transisi status OK. Sisa: Tahap 8 (dokumentasi gate).
+
 ## 2026-10-01 - Phase 7 Question Bank: Tahap 2-6 selesai (backend lengkap)
 * Zod + domain service (invariant soal, resource scope guru, AuditLog) + kategori
   + importer/exporter + 15 server action `async`. RBAC `exam:view`/`exam:manage`

@@ -118,8 +118,10 @@ export async function insertQuestion(
       shortAnswerKey: input.shortAnswerKey ?? null,
       status: input.status,
       options: {
+        // institutionId TIDAK dikirim: field ini bagian FK compound
+        // [questionId, institutionId] → Prisma mengecilkannya dari input
+        // nested dan mengisinya otomatis dari induk.
         create: input.options.map((opt) => ({
-          institutionId: ctx.institutionId,
           label: opt.label,
           content: opt.content,
           isCorrect: opt.isCorrect,
@@ -254,8 +256,8 @@ export async function updateQuestion(
         ? {
             options: {
               deleteMany: {},
+              // institutionId tidak dikirim — FK compound terisi dari induk.
               create: merged.options.map((opt) => ({
-                institutionId: ctx.institutionId,
                 label: opt.label,
                 content: opt.content,
                 isCorrect: opt.isCorrect,

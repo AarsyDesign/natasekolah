@@ -1,5 +1,32 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - FEAT: Phase 7 Question Bank Tahap 7 (UI) + FIX nested-create Prisma (VERIFIED)
+
+### Added
+* **Rute UI** `src/app/exams/question-bank/` — halaman daftar (metric bar opsional,
+  filter search debounce + mapel/tipe/tingkat/status, tabel desktop / `ResourceList`
+  mobile, `Pagination`, empty/loading/error state) dan `/[id]` (detail + edit +
+  transisi status DRAFT↔ACTIVE + Arsip dengan konfirmasi).
+* **Modal impor 4 langkah** `src/components/importer/question-import-modal.tsx`
+  (Unggah → Pratinjau tab Semua/Valid/Error → Eksekusi → Hasil + unduh template).
+* **Form soal** `src/components/question-bank/question-form-fields.tsx` + util
+  klien `question-bank-ui.ts` (validasi klien, payload builder, label/badge).
+* **Nav** link "Bank Soal" di `nav-header.tsx` dan `app-shell.tsx` (MASTER_DATA_ITEMS).
+
+### Fixed
+* **BUG Kritis (E2E-tertemukan):** nested `options.create` di `question-service.ts`
+  (create & update-replace) mengirim `institutionId` — field itu bagian FK compound
+  `[questionId, institutionId]`, jadi Prisma mengecilkannya dari input nested →
+  `Unknown argument institutionId` → semua create soal (dan impor) gagal di DB
+  nyata. Field dihapus (diisi otomatis dari induk). Lolos 45 test karena suite
+  memakai Prisma **mock in-memory** (`installPrismaMocks`) — jalur write asli tak
+  tercakup; terbukti hanya lewat QA E2E eksploratif.
+
+### Verification
+* `npx tsc --noEmit` 0 · `npm test` 464/464 · QA E2E: create PG sukses (toast +
+  row + metrik Draf=1), detail page OK, mobile 390px tanpa overflow, validasi
+  shortName & invariant menolak input salah.
+
 ## [2026-10-01] - FEAT: Phase 7 Question Bank Tahap 2-6 (VERIFIED)
 
 ### Added
