@@ -21,6 +21,14 @@ import {
   createQuestionAction,
   exportQuestionsCsvAction,
 } from "@/actions/question-bank";
+import {
+  createAIGenerationJobAction,
+  executeAIGenerationAction,
+  reviewAIGenerationJobAction,
+  listAIGenerationJobsAction,
+  getAIGenerationJobDetailAction,
+} from "@/actions/ai-generation";
+import type { AIGenerationJobResult } from "@/lib/ai-generation/types";
 import { getSubjectsAction } from "@/actions/teaching";
 import { downloadCSV } from "@/lib/finance/export-utils";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -108,6 +116,30 @@ export default function QuestionBankPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState<QuestionFormValue>(createEmptyQuestionForm());
   const [formError, setFormError] = useState<string | null>(null);
+
+  // AI Generate Modal state
+  const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
+  const [aiGenerateStep, setAiGenerateStep] = useState<"form" | "generating" | "review">("form");
+  const [aiJobId, setAiJobId] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<AIGenerationJobResult | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiForm, setAiForm] = useState<{
+    subjectId: string;
+    type: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
+    difficulty: "EASY" | "MEDIUM" | "HARD";
+    count: number;
+    topic: string;
+    additionalInstructions: string;
+  }>({
+    subjectId: "",
+    type: "MULTIPLE_CHOICE",
+    difficulty: "MEDIUM",
+    count: 5,
+    topic: "",
+    additionalInstructions: "",
+  });
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
 
   // Pencarian debounce 350ms (DESIGN.md §19 & §23)
   useEffect(() => {
@@ -222,6 +254,16 @@ export default function QuestionBankPage() {
     setCreateOpen(true);
   };
 
+  const openAiGenerateDialog = () => {
+    setAiForm({ ...aiForm, subjectId: subjects[0]?.id || "" });
+    setAiGenerateStep("form");
+    setAiJobId(null);
+    setAiResult(null);
+    setAiError(null);
+    setSelectedQuestionIds([]);
+    setAiGenerateOpen(true);
+  };
+
   const handleCreateSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     setFormError(null);
@@ -250,6 +292,85 @@ export default function QuestionBankPage() {
         setFormError("Koneksi terputus saat menyimpan soal. Coba lagi.");
       }
     });
+  };
+
+  // AI Generate handlers
+  const handleAiGenerateStart = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    setAiGenerateStep("generating");
+
+    try {
+      const promptParams = {
+        subjectId: aiForm.subjectId,
+        type: aiForm.type,
+        difficulty: aiForm.difficulty,
+        count: aiForm.count,
+        topic: aiForm.topic,
+        additionalInstructions: aiForm.additionalInstructions,
+      };
+
+      const createRes = await createAIGenerationJobAction({ 
+        subjectId: promptParams.subjectId,
+        prompt: JSON.stringify(promptParams), 
+        provider: "openai", 
+        model: "gpt-4o-mini",
+        promptParams 
+      });
+      if (!createRes.success) throw new Error(createRes.error);
+
+      const jobId = createRes.data.id;
+      setAiJobId(jobId);
+
+      const execRes = await executeAIGenerationAction(jobId);
+      if (!execRes.success) throw new Error(execRes.error);
+
+      setAiResult(execRes.data);
+      setAiGenerateStep("review");
+      // Select all by default
+      setSelectedQuestionIds(execRes.data.questions.map((_, i) => `${execRes.data.questions[i].type}-${execRes.data.questions[i].stem.substring(0, 20)}`));
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Gagal generate soal AI");
+      setAiGenerateStep("form");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiReviewSubmit = async (action: "save" | "discard") => {
+    if (!aiJobId) return;
+    setAiLoading(true);
+
+    try {
+      const reviewRes = await reviewAIGenerationJobAction({
+        jobId: aiJobId,
+        action,
+        selectedQuestionIds: action === "save" ? selectedQuestionIds : [],
+      });
+
+      if (!reviewRes.success) throw new Error(reviewRes.error);
+
+      setMessage({
+        text: action === "save" ? `${reviewRes.data.saved} soal disimpan ke Bank Soal.` : "Hasil generate dibuang.",
+        type: "success",
+      });
+
+      setAiGenerateOpen(false);
+      reload();
+      reloadMeta();
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Gagal review hasil generate");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const toggleQuestionSelection = (questionId: string) => {
+    setSelectedQuestionIds(prev =>
+      prev.includes(questionId)
+        ? prev.filter(id => id !== questionId)
+        : [...prev, questionId]
+    );
   };
 
   const handleExport = () => {
@@ -465,6 +586,15 @@ export default function QuestionBankPage() {
           >
             <Plus className="h-4 w-4" />
             <span>Tambah Soal</span>
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={openAiGenerateDialog}
+            className="w-full sm:w-auto"
+            disabled={!subjects.length}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span>Generate AI</span>
           </Button>
         </div>
       </header>
@@ -778,6 +908,277 @@ export default function QuestionBankPage() {
           });
         }}
       />
+
+      {/* Dialog Generate AI */}
+      <Dialog
+        isOpen={aiGenerateOpen}
+        onClose={() => setAiGenerateOpen(false)}
+        className="max-w-3xl"
+      >
+        <DialogHeader>
+          <DialogTitle>Generate Soal dengan AI</DialogTitle>
+          <DialogDescription>
+            AI akan membuat soal berdasarkan parameter yang Anda tentukan. Hasil generate
+            perlu ditinjau dan dipilih sebelum disimpan ke Bank Soal.
+          </DialogDescription>
+        </DialogHeader>
+
+        {aiError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-900"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+            <span>{aiError}</span>
+          </div>
+        )}
+
+        {aiGenerateStep === "form" && (
+          <form onSubmit={(e) => { e.preventDefault(); handleAiGenerateStart(); }}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="ai-subject" className="block text-sm font-medium text-stone-700 mb-1">
+                    Mata Pelajaran <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    id="ai-subject"
+                    value={aiForm.subjectId}
+                    onChange={(e) => setAiForm(prev => ({ ...prev, subjectId: e.target.value }))}
+                    className="min-h-[44px] w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-teal-700 focus:outline-none"
+                    required
+                  >
+                    <option value="">Pilih mata pelajaran</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.code ? `${subject.name} (${subject.code})` : subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="ai-type" className="block text-sm font-medium text-stone-700 mb-1">
+                    Tipe Soal <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    id="ai-type"
+                    value={aiForm.type}
+                    onChange={(e) => setAiForm(prev => ({ ...prev, type: e.target.value as any }))}
+                    className="min-h-[44px] w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-teal-700 focus:outline-none"
+                  >
+                    <option value="MULTIPLE_CHOICE">Pilihan Ganda (PG)</option>
+                    <option value="SHORT_ANSWER">Jawaban Singkat</option>
+                    <option value="ESSAY">Essay</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="ai-difficulty" className="block text-sm font-medium text-stone-700 mb-1">
+                    Tingkat Kesulitan <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    id="ai-difficulty"
+                    value={aiForm.difficulty}
+                    onChange={(e) => setAiForm(prev => ({ ...prev, difficulty: e.target.value as any }))}
+                    className="min-h-[44px] w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-teal-700 focus:outline-none"
+                  >
+                    <option value="EASY">Mudah</option>
+                    <option value="MEDIUM">Sedang</option>
+                    <option value="HARD">Sulit</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="ai-count" className="block text-sm font-medium text-stone-700 mb-1">
+                    Jumlah Soal <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="ai-count"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={aiForm.count}
+                    onChange={(e) => setAiForm(prev => ({ ...prev, count: parseInt(e.target.value) || 1 }))}
+                    className="min-h-[44px] w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-teal-700 focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="ai-topic" className="block text-sm font-medium text-stone-700 mb-1">
+                  Topik (opsional)
+                </label>
+                <input
+                  id="ai-topic"
+                  type="text"
+                  value={aiForm.topic}
+                  onChange={(e) => setAiForm(prev => ({ ...prev, topic: e.target.value }))}
+                  placeholder="Contoh: Hukum Newton, Fotosintesis, Tenses, dll"
+                  className="min-h-[44px] w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-teal-700 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="ai-instructions" className="block text-sm font-medium text-stone-700 mb-1">
+                  Instruksi Tambahan (opsional)
+                </label>
+                <textarea
+                  id="ai-instructions"
+                  value={aiForm.additionalInstructions}
+                  onChange={(e) => setAiForm(prev => ({ ...prev, additionalInstructions: e.target.value }))}
+                  placeholder="Contoh: Fokus pada konsep dasar, gunakan konteks kehidupan sehari-hari, hindari soal terlalu teoritis..."
+                  rows={3}
+                  className="min-h-[44px] w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-teal-700 focus:outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAiGenerateOpen(false)}
+                disabled={aiLoading}
+              >
+                Batal
+              </Button>
+              <Button type="submit" variant="primary" isLoading={aiLoading}>
+                <span className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Generate Soal
+                </span>
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+
+        {aiGenerateStep === "generating" && (
+          <div className="py-8 text-center">
+            <div className="mx-auto flex h-12 w-12 animate-spin items-center justify-center rounded-full bg-teal-100">
+              <BookOpen className="h-7 w-7 text-teal-700" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold text-stone-800">AI sedang membuat soal...</h3>
+            <p className="mt-1 text-sm text-stone-500">Mohon tunggu, ini mungkin memakan waktu beberapa saat.</p>
+          </div>
+        )}
+
+        {aiGenerateStep === "review" && aiResult && (
+          <div className="max-h-[60vh] overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-medium text-stone-700">
+                {aiResult.questions.length} soal dihasilkan — pilih yang ingin disimpan
+              </h3>
+              <label className="flex items-center gap-2 text-sm text-stone-600">
+                <input
+                  type="checkbox"
+                  checked={selectedQuestionIds.length === aiResult.questions.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedQuestionIds(aiResult.questions.map((_, i) =>
+                        `${aiResult.questions[i].type}-${aiResult.questions[i].stem.substring(0, 20)}`
+                      ));
+                    } else {
+                      setSelectedQuestionIds([]);
+                    }
+                  }}
+                />
+                Pilih semua
+              </label>
+            </div>
+
+            <div className="space-y-3">
+              {aiResult.questions.map((q, idx) => {
+                const questionId = `${q.type}-${q.stem.substring(0, 20)}`;
+                const isSelected = selectedQuestionIds.includes(questionId);
+                return (
+                  <div
+                    key={questionId}
+                    className={`border rounded-lg p-3 transition-colors ${
+                      isSelected ? "border-teal-300 bg-teal-50" : "border-stone-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleQuestionSelection(questionId)}
+                        className="mt-1 h-4 w-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Badge variant={q.type === "MULTIPLE_CHOICE" ? "primary" : q.type === "SHORT_ANSWER" ? "primary" : "neutral"}>
+                            {q.type === "MULTIPLE_CHOICE" ? "PG" : q.type === "SHORT_ANSWER" ? "Short" : "Essay"}
+                          </Badge>
+                          <Badge variant={
+                            q.difficulty === "EASY" ? "success" :
+                            q.difficulty === "MEDIUM" ? "warning" : "danger"
+                          }>
+                            {q.difficulty === "EASY" ? "Mudah" : q.difficulty === "MEDIUM" ? "Sedang" : "Sulit"}
+                          </Badge>
+                          {q.topic && (
+                            <Badge variant="neutral">
+                              {q.topic}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="mt-1 text-sm font-medium text-stone-900">{q.stem}</p>
+                        {q.type === "MULTIPLE_CHOICE" && q.options && (
+                          <div className="mt-2 space-y-1 text-xs text-stone-600">
+                            {q.options.map((opt) => (
+                              <div key={opt.label} className={`flex items-center gap-1 ${opt.isCorrect ? "text-emerald-700 font-medium" : ""}`}>
+                                <span className="w-5 text-center">{opt.label}.</span>
+                                <span>{opt.content}</span>
+                                {opt.isCorrect && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded">kunci</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {q.type === "SHORT_ANSWER" && q.shortAnswerKey && (
+                          <p className="mt-2 text-xs text-stone-600">
+                            <span className="font-medium">Kunci: </span>{q.shortAnswerKey}
+                          </p>
+                        )}
+                        {q.type === "ESSAY" && q.explanation && (
+                          <p className="mt-2 text-xs text-stone-600">
+                            <span className="font-medium">Pedoman: </span>{q.explanation}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {selectedQuestionIds.length === 0 && (
+              <div className="mt-4 text-center text-sm text-rose-600">
+                Pilih minimal 1 soal untuk disimpan.
+              </div>
+            )}
+
+            <DialogFooter className="mt-4 border-t border-stone-100 pt-4">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => handleAiReviewSubmit("discard")}
+                disabled={aiLoading}
+              >
+                Buang Semua
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => handleAiReviewSubmit("save")}
+                disabled={aiLoading || selectedQuestionIds.length === 0}
+              >
+                Simpan Terpilih ({selectedQuestionIds.length})
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }
