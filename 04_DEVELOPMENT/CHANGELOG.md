@@ -1,5 +1,41 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - Security: Rate Limiting Brute-Force pada Login (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/auth/rate-limit.ts` — pembatas kegagalan login sliding-window in-memory.
+  Dua lapis: per-akun (slug lembaga + email, 5 kegagalan / 10 menit) dan
+  per-IP dari `x-forwarded-for` (30 kegagalan / 10 menit). Waktu dapat
+  disuntikkan (`now`) sehingga pengujian deterministik tanpa `setTimeout`.
+* `test/auth-rate-limit.test.ts` — 11 pengujian: window, reset saat login
+  sukses, isolasi antar-key, batas jumlah key (anti memory bocor), normalisasi
+  key, serta perilaku `loginAction` terhadap kegagalan beruntun.
+
+### Changed
+* `src/actions/auth.ts` — `loginAction` kini:
+  1. memeriksa rate limit **sebelum** bcrypt dijalankan (blokir lebih awal);
+  2. menghitung setiap kegagalan autentikasi; pesan kekalahan tetap generik,
+     pesan pembatas menyebut waktu tunggu (retry-after);
+  3. mereset hitungan akun ketika login berhasil;
+  4. meneruskan `ipAddress` (x-forwarded-for) dan `userAgent` ke `loginUser`,
+     sehingga IP login tercatat di sesi untuk keperluan audit — sebelumnya
+     kedua parameter itu diterima layanan tetapi tidak pernah dikirim.
+* Kegagalan infrastruktur (mis. cookie gagal disetel setelah autentikasi
+  sukses) tidak menambah hitungan, agar pengguna tidak dihukum atas gangguan
+  di luar kendali mereka.
+
+### Security
+* Menutup temuan audit "0 rate limiting login": sebelumnya verifikasi password
+  berjalan tanpa batas sehingga password dapat ditebak berulang tanpa hambatan.
+
+### Known Limitation
+* Penyimpanan in-memory per proses. Pada Vercel serverless hitungan terpisah
+  per instance, jadi batas efektif ≈ batas × jumlah instance. Untuk pembatasan
+  keras perlu penyimpanan bersama (Redis / tabel Prisma) — dicatat sebagai
+  backlog, bukan bloker.
+
+---
+
 ## [2026-09-30] - Security: Dependency Upgrade — Next.js 16.3.6 & SheetJS (xlsx) 0.20.3 (IMPLEMENTED / VERIFIED)
 
 ### Changed

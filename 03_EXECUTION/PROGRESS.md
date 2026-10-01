@@ -42,6 +42,30 @@
 
 ## 2. Catatan Log Aktivitas Kronologis
 
+### [2026-10-01] - Security: Rate Limiting Brute-Force Login (IMPLEMENTED & VERIFIED)
+* **Masalah:** audit menemukan **0 rate limiting** pada login — `loginAction`
+  menjalankan verifikasi bcrypt tanpa batas, jadi password bisa ditebak
+  berulang tanpa hambatan.
+* **Perbaikan:** `src/lib/auth/rate-limit.ts` (sliding-window, dua lapis
+  per-akun 5×/10m + per-IP 30×/10m) dipasang di `loginAction` **sebelum**
+  bcrypt; login sukses me-reset hitungan; `ipAddress` + `userAgent` kini
+  benar-benar diteruskan ke `loginUser` (sebelumnya tidak).
+* **Verifikasi:** `tsc --noEmit` 0 error · `npm test` **395/395 lulus**
+  (384 baseline + 11 pengujian baru) · `npm run build` exit 0.
+* **Status:** commit di `feature/mizan-work`, di-push & di-merge ke `staging`.
+* **Batas:** state in-memory per proses — di serverless batas efektif dibagi
+  per instance. Pembatasan keras (Redis/DB) masuk backlog.
+
+### [2026-10-01] - Proteksi Branch `staging` di GitHub (IMPLEMENTED & VERIFIED)
+* Dipasang via REST API branch protection: **blokir force push**, **blokir
+  hapus branch**, **wajib linear history** (fast-forward saja).
+* Sengaja **tidak** mewajibkan PR/approval/status check — alur kerja "push
+  langsung ke `staging` setelah verifikasi hijau" tetap berjalan; status check
+  baru masuk akal ketika CI workflow sudah ada.
+* **Verifikasi:** `GET .../branches/staging/protection` mengembalikan
+  `allow_force_pushes=false`, `allow_deletions=false`,
+  `required_linear_history=true`, `enforce_admins=false`.
+
 ### [2026-09-30] - Security: Dependency Upgrade — Next.js 16.3.6 & SheetJS (xlsx) 0.20.3 (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Menutup dua kerentanan kritis hasil audit 2026-09-30 sesuai urutan perbaikan yang disepakati: RCE pada `next@16.3.4` (**GHSA-vcvr-r3jv-pc5j**, picu `next/image`) dan `xlsx@0.18.5` (**CVE-2023-30533** prototype pollution + **CVE-2024-22363** ReDoS) yang dipakai Excel Importer.
 * **Implementasi:**
