@@ -1,5 +1,27 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-01] - QA Login End-to-End + Perbaikan Temuan (VERIFIED)
+### QA End-to-End (browser, tanpa menangani password)
+* **Login sukses terbukti di UI** lewat sesi server (`createSession` + cookie
+  `nata_session` via CDP) — alur kerja nyata sampai ke `/settings/users`.
+* **Jalur sukses fitur Tambah Pengguna terbukti**: form terisi → submit sebagai
+  SUPER_ADMIN → "Akun Guru Uji QA berhasil dibuat" → muncul di daftar (3→4).
+* **Jalur RBAC terbukti**: submit sebagai ADMIN → ditolak `staff:manage`.
+
+### Fixed (temuan QA)
+* **Tombol "Tambah Pengguna" kini hanya tampil bila punya izin `staff:manage`.**
+  Sebelumnya tombol selalu tampil → ADMIN mengisi form panjang lalu ditolak.
+  `listManagedUsersAction` kini mengembalikan `{ users, canManage }`
+  (`hasPermission(ctx, "staff:manage")`), UI menyembunyikan tombol, default
+  tertutup bila muat gagal.
+* **Banner error tidak lagi kembar**: saat modal terbuka, banner error di halaman
+  disembunyikan (sebelumnya pesan yang sama muncul dua kali).
+
+### Verification
+* `tsc --noEmit` 0 · `npm test` **412/412** · browser: ADMIN tombol hilang /
+  SUPER_ADMIN tombol tampil.
+
+
 ## [2026-10-01] - Fix UX: pesan throttle login manusiawi + pitfall Server Action (VERIFIED)
 ### Fixed
 * **Pesan rate limit login** tidak lagi menampilkan detik mentah: dari "Coba lagi

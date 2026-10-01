@@ -34,6 +34,9 @@ export default function UsersSettingsPage() {
   const [isPending, startTransition] = useTransition();
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Izin staff:manage dari server — tombol aksi hanya tampil kalau memang
+  // akan diterima (default tertutup kalau muat gagal).
+  const [canManage, setCanManage] = useState(false);
 
   // Modal edit role
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
@@ -104,7 +107,8 @@ export default function UsersSettingsPage() {
     setErrorMsg(null);
     const res = await listManagedUsersAction();
     if (res.success && res.data) {
-      setUsers(res.data);
+      setUsers(res.data.users);
+      setCanManage(res.data.canManage);
     } else {
       setErrorMsg(res.error || "Gagal memuat daftar pengguna.");
     }
@@ -213,7 +217,7 @@ export default function UsersSettingsPage() {
         </div>
       )}
 
-      {errorMsg && (
+      {errorMsg && !creating && (
         <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-900">
           <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
           <span>{errorMsg}</span>
@@ -245,6 +249,7 @@ export default function UsersSettingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {canManage && (
             <button
               type="button"
               onClick={openCreateModal}
@@ -254,6 +259,7 @@ export default function UsersSettingsPage() {
               <UserPlus className="h-3.5 w-3.5" />
               <span>Tambah Pengguna</span>
             </button>
+            )}
             <button
               type="button"
               onClick={loadUsers}

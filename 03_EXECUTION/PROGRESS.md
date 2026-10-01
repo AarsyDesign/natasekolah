@@ -42,6 +42,20 @@
 
 ## 2. Catatan Log Aktivitas Kronologis
 
+### [2026-10-01] - Login E2E tanpa password + 2 fix QA (VERIFIED)
+* **Teknik QA baru:** sesi dibuat via `createSession()` (skrip lokal
+  `scripts/_local-mint.ts`, di-`.git/info/exclude`) → cookie dipasang via CDP.
+  Password TIDAK PERNAH ditangani — terbukti bisa dogfood penuh.
+* **Hasil:** modal Tambah Pengguna sukses dari ujung ke ujung; RBAC benar di
+  kedua sisi (ADMIN ditolak & tombol disembunyikan, SUPER_ADMIN lolos).
+* **Temuan & fix:** tombol tampil tanpa izin (kini ikut `canManage`), banner
+  error kembar (kini disembunyikan saat modal terbuka).
+* **Pitfall fixture:** `test/master-data-importer.test.ts` memakai ID institusi
+  tetap `inst_importer_test_a/b` dan menghapus SEMUA user di sana tiap run —
+  akun QA sempat hilang; solusi: akun QA dibuat di institusi terpisah
+  (`qa-lokal-terpisah`).
+
+
 ### [2026-10-01] - QA browser pertama: rate limit UI + fix 500 (VERIFIED)
 * **Dogfood `/login`:** form lengkap (autocomplete benar, required), login salah
   4× dapat pesan generik tanpa enumerasi akun, percobaan ke-5 kena throttle —

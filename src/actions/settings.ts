@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthenticatedTenantContext } from "../lib/auth/service";
-import { requirePermission } from "../lib/auth/permissions";
+import { requirePermission, hasPermission } from "../lib/auth/permissions";
 import {
   getInstitutionSettings,
   updateInstitutionProfile,
@@ -134,8 +134,11 @@ export async function updateInstitutionPluginsAction(input: unknown) {
 export async function listManagedUsersAction() {
   try {
     const ctx = await getAuthenticatedTenantContext();
-    const data = await listManagedUsers(ctx);
-    return { success: true, data };
+    const users = await listManagedUsers(ctx);
+    // Flag izin supaya UI bisa menyembunyikan aksi yang memang akan ditolak
+    // server (temuan QA 2026-10-01: tombol Tampil untuk peran tanpa staff:manage).
+    const canManage = hasPermission(ctx, "staff:manage");
+    return { success: true, data: { users, canManage } };
   } catch (err: unknown) {
     return {
       success: false,
