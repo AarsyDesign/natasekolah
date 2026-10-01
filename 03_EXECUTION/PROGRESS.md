@@ -42,6 +42,21 @@
 
 ## 2. Catatan Log Aktivitas Kronologis
 
+### [2026-09-30] - Security: Dependency Upgrade — Next.js 16.3.6 & SheetJS (xlsx) 0.20.3 (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Menutup dua kerentanan kritis hasil audit 2026-09-30 sesuai urutan perbaikan yang disepakati: RCE pada `next@16.3.4` (**GHSA-vcvr-r3jv-pc5j**, picu `next/image`) dan `xlsx@0.18.5` (**CVE-2023-30533** prototype pollution + **CVE-2024-22363** ReDoS) yang dipakai Excel Importer.
+* **Implementasi:**
+  1. **`next` 16.3.4 → 16.3.6** (pin versi persis, rilis patch resmi) tanpa perubahan kode aplikasi.
+  2. **`xlsx` ^0.18.5 → SheetJS CE 0.20.3** dari tarball resmi `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` (registry npm publik memang ditahan di 0.18.5, rilis baru hanya ada di CDN SheetJS). Integritas terkunci di `package-lock.json` (sha512).
+  3. **Zero code change:** API `XLSX.read` / `XLSX.utils` / `XLSX.writeFile` kompatibel, sehingga `src/lib/importer/parser.ts` dan 17 test importer tetap utuh tanpa penyesuaian.
+  4. **Skema database tidak disentuh** → tanpa migrasi baru (sesuai aturan: migrasi = file baru).
+* **Verifikasi:**
+  * Typecheck `npx tsc --noEmit` → **0 error**.
+  * Full regression `npx tsx --test` (env `.env` dimuat) → **384/384 pass, 0 fail** (baseline terjaga).
+  * `prisma validate` → **valid** (3 warning `onDelete: SetNull` lama, tidak berubah).
+  * `npm run build` → **sukses**, seluruh route terkompilasi.
+  * `npm audit` → advisory `next` dan `xlsx` tidak lagi muncul; sisa 3 high semuanya dev-only (`prisma` → `@prisma/config` → `deepmerge-ts`).
+* **Sisa / Berikutnya:** perbaikan CI workflow + script `test`, `deepmerge-ts` (toolchain Prisma), branch protection, README/LICENSE/ESLint, rate limit login.
+
 ### [2026-09-28] - Milestone: Communication Automation — Cross-Domain Notification Platform & Outbox Engine (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Membangun platform notifikasi otomatis lintas domain terpusat berbasis Outbox Pattern untuk NataSekolah sesuai PRD Phase 4, dengan alur: `Business Event -> Notification Event -> Notification Outbox -> Worker -> Provider -> Delivery Status`.
 * **Implementasi:**

@@ -1,5 +1,25 @@
 # Development Changelog - NataSekolah
 
+## [2026-09-30] - Security: Dependency Upgrade — Next.js 16.3.6 & SheetJS (xlsx) 0.20.3 (IMPLEMENTED / VERIFIED)
+
+### Changed
+* `package.json` / `package-lock.json`:
+  * `next` **16.3.4 → 16.3.6** (perbaikan RCE **GHSA-vcvr-r3jv-pc5j** pada `next/image`).
+  * `xlsx` **^0.18.5 → 0.20.3** (SheetJS Community Edition, dipasang dari tarball resmi `cdn.sheetjs.com` — rilis npm publik memang berhenti di 0.18.5):
+    * menutup **CVE-2023-30533** (prototype pollution, patched di 0.19.3),
+    * menutup **CVE-2024-22363** (ReDoS, patched di 0.20.2).
+  * API `xlsx` (`XLSX.read` / `XLSX.utils` / `XLSX.writeFile`) tetap kompatibel → tidak ada perubahan kode parser; `src/lib/importer/parser.ts` tidak diubah.
+* `tsconfig.tsbuildinfo`: artefak build ter-track ikut ter-regenerasi oleh `next build`, **tidak ikut di-commit** (dipulihkan ke versi HEAD); penanganannya dijadwalkan di task repo hygiene (gitignore + `git rm --cached`).
+
+### Verification
+* `npx tsc --noEmit` → **0 error**.
+* Full regression suite (`npx tsx --test` dengan `.env` dimuat) → **384 tests / 384 pass / 0 fail** (baseline terjaga).
+* `prisma validate` → valid (3 warning `onDelete: SetNull` lama, tidak berubah; skema tidak diubah → tanpa migrasi baru).
+* `npm run build` → sukses (seluruh route terkompilasi, middleware aktif).
+* `npm audit` → kerentanan `next` (RCE) dan `xlsx` (prototype pollution + ReDoS) **hilang**; tersisa 3 high yang semuanya dev-only toolchain (`prisma` → `@prisma/config` → `deepmerge-ts`), dijadwalkan di run berikutnya.
+
+---
+
 ## [2026-09-28] - Milestone: Communication Automation — Cross-Domain Notification Platform & Outbox Engine (IMPLEMENTED / VERIFIED)
 
 ### Added
