@@ -14,3 +14,4 @@ export * from "./formal-academic";
 export * from "./tahfidz";
 export * from "./dormitory";
 export * from "./question-bank";
+export * from "./ai-generation";
