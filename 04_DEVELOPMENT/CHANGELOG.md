@@ -13,6 +13,21 @@
 ### Verification
 * `npx tsc --noEmit` 0 · `npm test` **473/473** (baseline 412 → +61) · `npm run build` exit 0 · `prisma validate` valid · push ke `origin/staging` (`f3e6c06`).
 
+## [2026-10-01] - FEAT: Phase 8 — AI Provider Adapters (OpenAI, Anthropic, Gemini, Local) (VERIFIED)
+
+### Added
+* **AI Provider Interface** — `src/lib/ai-providers/provider.interface.ts` (mirip pola WhatsApp provider abstraction).
+* **OpenAI Provider** — `src/lib/ai-providers/openai.provider.ts` (function calling / structured output JSON, model support: gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo).
+* **Anthropic Provider** — `src/lib/ai-providers/anthropic.provider.ts` (Claude JSON mode, model support: claude-3.5-sonnet/haiku/opus, claude-3-sonnet/haiku).
+* **Google Gemini Provider** — `src/lib/ai-providers/gemini.provider.ts` (Google AI Studio, model support: gemini-1.5-pro/flash, gemini-1.0-pro).
+* **Local Provider** — `src/lib/ai-providers/local.provider.ts` (Ollama/vLLM/OpenAI-compatible endpoints, auto-detect OpenAI-compatible / Ollama native, `listModels()` support).
+* **Provider Factory** — `src/lib/ai-providers/provider-factory.ts` (factory pattern, caching, fallback support, `callAIProviderWithFallback`).
+* **Integration** — `ai-generation-service.ts` sekarang memanggil provider nyata via `getAIProvider()` (mock `callAIProvider` diganti implementasi nyata).
+* **Types Update** — `AI_PROVIDERS` ditambah `'local'` di `types.ts` dan `validation/ai-generation.ts`.
+
+### Verification
+* `npx tsc --noEmit` 0 · `npm test` **473/473** · `npm run build` exit 0 · `prisma validate` valid.
+
 ## [2026-10-01] - FEAT: Phase 7 Question Bank Tahap 7 (UI) + FIX nested-create Prisma (VERIFIED)
 
 ### Added

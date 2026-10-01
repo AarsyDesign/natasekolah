@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { AI_PROVIDERS } from '@/lib/ai-generation/types';
 
 // Provider enum
-export const aiProviderSchema = z.enum(AI_PROVIDERS);
+export const aiProviderSchema = z.enum(['openai', 'anthropic', 'gemini', 'local']);
 
 // Job status enum
 export const aiGenerationJobStatusSchema = z.enum(['DRAFT', 'READY_FOR_REVIEW', 'SAVED', 'DISCARDED', 'FAILED']);

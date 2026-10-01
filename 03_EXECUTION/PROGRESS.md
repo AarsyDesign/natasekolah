@@ -17,6 +17,18 @@
 * **Verifikasi:** `npx tsc --noEmit` 0 · `npm test` **473/473** (baseline 412 → +61) · `npm run build` exit 0 · `prisma validate` valid · push ke `origin/staging` (`f3e6c06`).
 * **Status:** Infrastructure SIAP — tinggal pasang API key provider AI (OpenAI/Anthropic/Gemini/lokal) & implementasi adapter runtime + UI generate modal.
 
+## 2026-10-01 - Phase 8 — AI Provider Adapters (Runtime) SELESAI
+* **Provider Interface:** `src/lib/ai-providers/provider.interface.ts` (mirip pola WhatsApp provider abstraction).
+* **OpenAI Provider:** `openai.provider.ts` (function calling / structured output JSON, model: gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo).
+* **Anthropic Provider:** `anthropic.provider.ts` (Claude JSON mode, model: claude-3.5-sonnet/haiku/opus, claude-3-sonnet/haiku).
+* **Google Gemini Provider:** `gemini.provider.ts` (Google AI Studio, model: gemini-1.5-pro/flash, gemini-1.0-pro).
+* **Local Provider:** `local.provider.ts` (Ollama/vLLM/OpenAI-compatible endpoints, auto-detect OpenAI-compatible / Ollama native, `listModels()` support).
+* **Provider Factory:** `provider-factory.ts` (factory pattern, caching, fallback support, `callAIProviderWithFallback`).
+* **Integration:** `ai-generation-service.ts` memanggil provider nyata via `getAIProvider()` (mock `callAIProvider` diganti implementasi nyata).
+* **Types Update:** `AI_PROVIDERS` ditambah `'local'` di `types.ts` dan `validation/ai-generation.ts`.
+* **Verifikasi:** `npx tsc --noEmit` 0 · `npm test` **473/473** · `npm run build` exit 0 · `prisma validate` valid.
+* **Sisa Phase 8:** Server Actions AI Generator (8.2), UI Generate Modal (8.3), Fair-Use Enforcement UI (8.4), QA E2E (8.5), Verification Gate (8.6).
+
 ## 2026-10-01 - Phase 7 Question Bank: Tahap 7 (UI) selesai + BUG kritis diperbaiki
 * UI `/exams/question-bank` (+`/[id]`), modal impor 4 langkah, form soal, nav
   "Bank Soal" — empty/loading/error state, mobile 390px tanpa overflow (QA E2E

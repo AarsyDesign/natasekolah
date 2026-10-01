@@ -5,7 +5,7 @@
 
 import type { PluginId } from '@/lib/plugins/registry';
 
-export const AI_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const;
+export const AI_PROVIDERS = ['openai', 'anthropic', 'gemini', 'local'] as const;
 export type AIProvider = (typeof AI_PROVIDERS)[number];
 
 export const AI_GENERATION_JOB_STATUS = [

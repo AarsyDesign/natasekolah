@@ -1,6 +1,7 @@
 /**
  * AI Generation Service
  * Phase 7 Trek C - AI Question Generator with Fair-use Guard
+ * Phase 8 - Integrated with real AI providers
  * Alur: Draft → Teacher Review → Save (AI tidak langsung publish)
  */
 
@@ -12,7 +13,6 @@ import {
   CreateAIGenerationJobInput,
   AIGenerationJobResult,
   AIGeneratedQuestion,
-  AI_PROVIDERS,
   AIProvider,
   AIGenerationJobStatus,
   AIGenerationPromptParams,
@@ -21,6 +21,7 @@ import {
 } from './types';
 import { checkAIGenerationQuota, recordAIGenerationUsage } from './usage-service';
 import { ValidationError } from '@/lib/validation';
+import { getAIProvider } from '@/lib/ai-providers/provider-factory';
 
 /**
  * Build prompt untuk AI provider
@@ -82,41 +83,31 @@ export function buildAIPrompt(params: AIGenerationPromptParams): string {
 }
 
 /**
- * Simulasi call ke AI provider (akan diganti implementasi nyata nanti)
- * Untuk infrastructure, return mock structure
+ * Call AI provider using the provider factory
  */
 export async function callAIProvider(
   provider: AIProvider,
   model: string,
-  prompt: string
+  prompt: string,
+  params: AIGenerationPromptParams
 ): Promise<AIGenerationJobResult> {
-  // TODO: Implement actual provider calls when API key available
-  // For now, return mock structure to validate flow
+  const aiProvider = getAIProvider(provider);
+  const result = await aiProvider.generateQuestions(prompt, model, params);
   
-  const mockQuestions: AIGeneratedQuestion[] = Array.from({ length: 3 }, (_, i) => ({
-    type: 'MULTIPLE_CHOICE' as const,
-    difficulty: 'MEDIUM' as const,
-    topic: 'Topik Mock',
-    stem: `Soal mock ke-${i + 1}: Berapa hasil 2 + 2?`,
-    explanation: 'Penjumlahan dasar',
-    options: [
-      { label: 'A' as const, content: '3', isCorrect: false },
-      { label: 'B' as const, content: '4', isCorrect: true },
-      { label: 'C' as const, content: '5', isCorrect: false },
-      { label: 'D' as const, content: '6', isCorrect: false },
-    ],
-  }));
-
+  if (!result.success) {
+    throw new ValidationError(`AI Provider (${provider}) error: ${result.errorMessage}`);
+  }
+  
+  if (!result.questions || result.questions.length === 0) {
+    throw new ValidationError('AI tidak mengembalikan soal apapun');
+  }
+  
   return {
-    questions: mockQuestions,
+    questions: result.questions,
     provider,
     model,
     generatedAt: new Date(),
-    usage: {
-      promptTokens: 150,
-      completionTokens: 300,
-      totalTokens: 450,
-    },
+    usage: result.usage,
   };
 }
 
@@ -229,7 +220,21 @@ export async function executeAIGeneration(
 
   try {
     // Call AI provider
-    const result = await callAIProvider(job.provider as AIProvider, job.model, job.prompt);
+    // Parse promptParams from the stored prompt JSON
+    let promptParams: AIGenerationPromptParams;
+    try {
+      promptParams = JSON.parse(job.prompt);
+    } catch {
+      // Fallback if prompt is not JSON
+      promptParams = {
+        subjectId: job.subjectId,
+        type: 'MULTIPLE_CHOICE',
+        difficulty: 'MEDIUM',
+        count: 3,
+      };
+    }
+    
+    const result = await callAIProvider(job.provider as AIProvider, job.model, job.prompt, promptParams);
 
     // Validate
     const expectedCount = JSON.parse(job.prompt).count ?? 3; // parse from promptParams or estimate
