@@ -1,5 +1,24 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 11.4: Rate Limit Redis/DB (Upstash) — Optional Hardening (COMPLETED / VERIFIED)
+
+### Added
+* **`src/lib/auth/rate-limit-types.ts`** — Shared types & constants (`RateLimitDecision`, `RateLimitRule`, `LOGIN_RATE_LIMITS`, `LoginAttemptKey`, `UNKNOWN_IP`, `buildLoginAttemptKey`, `formatDurasi`) — extracted to break circular dependency.
+* **`src/lib/auth/rate-limit-store.ts`** — `RateLimitStore` interface + `InMemoryStore` (existing behavior) + `UpstashStore` (HTTP REST API, serverless-friendly) + factory `createRateLimitStore()`.
+* **`02_DECISIONS/ADR-011-rate-limit-store.md`** — Architecture Decision Record: Upstash Redis chosen for production multi-instance rate limiting.
+
+### Updated
+* **`src/lib/auth/rate-limit.ts`** — Refactored to use `RateLimitStore` abstraction. `FailureRateLimiter` & `LoginRateLimiter` now async, DI-ready, backward compatible (default in-memory).
+* **`src/actions/auth.ts`** — `loginAction` updated to `await` rate limiter calls (async).
+* **`test/auth-rate-limit.test.ts`** — All tests converted to async/await; added `InMemoryStore` direct tests.
+
+### Verification
+* `npx tsc --noEmit` → **0 error**
+* `npm test` → **639/639 pass** (0 fail, 187 suites) — +1 test from InMemoryStore direct suite.
+* `npm run build` → **exit 0** (47 routes)
+
+---
+
 ## [2026-10-02] - Phase 11.1: Session Expiry UX (COMPLETED / VERIFIED)
 
 ### Added

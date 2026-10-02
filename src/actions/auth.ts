@@ -54,7 +54,7 @@ export async function loginAction(input: unknown): Promise<{ success: true } | {
     });
 
     // Cek sebelum bcrypt: blokir jauh sebelum verifikasi password dijalankan.
-    const decision = loginRateLimiter.check(keys);
+    const decision = await loginRateLimiter.check(keys);
     if (!decision.allowed) {
       return { success: false, error: throttleError(decision) };
     }
@@ -68,14 +68,14 @@ export async function loginAction(input: unknown): Promise<{ success: true } | {
     });
 
     authenticated = true;
-    loginRateLimiter.reset(keys);
+    await loginRateLimiter.reset(keys);
     await setSessionCookie(rawToken);
     return { success: true };
   } catch {
     // Hanya kegagalan autentikasi yang menambah hitungan — kegagalan infra
     // (mis. cookie gagal disetel setelah login sukses) tidak boleh menghukum pengguna.
     if (keys && !authenticated) {
-      const decision = loginRateLimiter.recordFailure(keys);
+      const decision = await loginRateLimiter.recordFailure(keys);
       if (!decision.allowed) {
         return { success: false, error: throttleError(decision) };
       }

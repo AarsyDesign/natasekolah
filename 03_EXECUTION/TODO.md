@@ -596,7 +596,7 @@
 - [x] **11.1 Session Expiry UX:** handle `?expired=1` di `/login` + toast ramah (bukan error mentah); `rethrowIfSessionExpired` sudah di 94 catch + 9 test.
 - [x] **11.2 PDF/DOCX Layout Stress Test:** teks esai panjang (>500 char), gambar soal, page break 2 kolom edge case; test integrasi `test/pdf-docx-layout-stress.test.ts`.
 - [x] **11.3 AI Generator Provider API Key Wiring:** dokumentasi `.env.example` + `README.md` (AI_PROVIDER, AI_API_KEY, AI_MODEL, AI_LOCAL_BASE_URL, AI_GENERATION_ENABLED=false default).
-- [ ] **11.4 Rate Limit Redis/DB (Optional):** ADR keputusan in-memory vs Redis (Upstash/Vercel KV/self-hosted); implementasi bila disetujui.
+- [x] **11.4 Rate Limit Redis/DB (Optional):** ADR keputusan in-memory vs Redis (Upstash) + implementasi `RateLimitStore` abstraction (`InMemoryStore` + `UpstashStore`), factory `createRateLimitStore`, env vars `RATE_LIMIT_REDIS_URL` + `RATE_LIMIT_REDIS_TOKEN`. Test suite diperbarui async. `tsc 0` · `npm test 639/639` · `build exit 0`.
 - [ ] **11.5 DKAS Bot Cohere Semantic Search (Optional):** fallback Fuse.js → Cohere API (gratis 1M/bln) untuk query ambigu; non-blocking.
 
 - [ ] **11.6 Gate Keluar Phase 11:** `tsc 0` · `npm test` **>650** · `build exit 0` · docs konsisten → **tulis PLAN-PHASE-12** (siklus "selesai → plan lagi"); bila backlog terblokir ditutup → laporan final.

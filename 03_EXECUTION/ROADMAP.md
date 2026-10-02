@@ -95,3 +95,11 @@ PHASE 7 (AI & Automation)
 * [x] **10.5 QA E2E + test DoD strict** — unit (compose/poin/urutan/RBAC/cross-tenant/token), integration (`%PDF` header, DOCX zip, anti-leak verifikasi), smoke HTTP download, QA E2E klik-manual (buat naskah → tarik 10 soal → atur poin → preview → unduh PDF & DOCX → buka URL QR). **SELESAI 2026-10-02 (run cron)**: `tsc 0` · `npm test` **624/624** · `build exit 0` · 4 ekspor PDF/DOCX SISWA+KUNCI terverifikasi + halaman verifikasi `/verify/exam/[token]` anti-leak.
 * [x] **10.6 Gate Keluar Phase 10** — `tsc 0` · `npm test` **>600** · `build exit 0` · docs konsisten → **tulis PLAN-PHASE-11** (siklus \"selesai → plan lagi\"); bila backlog habis total → laporan final. **LULUS 2026-10-02**
 
+### Phase 11 Gate — Pengerasan Rilis & Backlog Terblokir
+* [x] **11.1 Session Expiry UX** — handle `?expired=1` di `/login` + toast ramah (bukan error mentah); `rethrowIfSessionExpired` sudah di 94 catch + 9 test. **SELESAI 2026-10-02**.
+* [x] **11.2 PDF/DOCX Layout Stress Test** — teks esai panjang (>500 char), gambar soal, page break 2 kolom edge case; test integrasi `test/pdf-docx-layout-stress.test.ts` (14 test). **SELESAI 2026-10-02**.
+* [x] **11.3 AI Generator Provider API Key Wiring** — dokumentasi `.env.example` + `README.md` (AI_PROVIDER, AI_API_KEY, AI_MODEL, AI_LOCAL_BASE_URL, AI_GENERATION_ENABLED=false default). **SELESAI 2026-10-02**.
+* [x] **11.4 Rate Limit Redis/DB (Optional)** — ADR keputusan in-memory vs Redis (Upstash); implementasi `RateLimitStore` abstraction (`InMemoryStore` + `UpstashStore`), factory `createRateLimitStore`, env vars `RATE_LIMIT_REDIS_URL` + `RATE_LIMIT_REDIS_TOKEN`. Test suite async (639/639). **SELESAI 2026-10-02**.
+* [ ] **11.5 DKAS Bot Cohere Semantic Search (Optional)** — fallback Fuse.js → Cohere API (gratis 1M/bln) untuk query ambigu; non-blocking.
+* [ ] **11.6 Gate Keluar Phase 11** — `tsc 0` · `npm test` **>650** · `build exit 0` · docs konsisten → **tulis PLAN-PHASE-12** (siklus \"selesai → plan lagi\"); bila backlog terblokir ditutup → laporan final.
+
