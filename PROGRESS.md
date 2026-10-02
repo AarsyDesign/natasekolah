@@ -26,7 +26,8 @@
 | **Phase 7** | **Question Bank** (3-Tier, Private Institution, AI Generator Infrastructure) | **COMPLETE** | 2026-10-01 (473 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Runtime Provider Adapters + Generate Modal UI + QA E2E + Verification Gate) | **COMPLETE** | 2026-10-02 (473 Tests Pass; 8.1–8.6 selesai) |
 | **Phase 9** | **Penutupan Backlog Gerbang & Kesiapan Rilis** (9.0 QA E2E AI ✓, 9.1 Permit ✓, 9.2 Guardian CRUD ✓, 9.3 Student 5 Kluster ✓, 9.4 backlog terblokir, 9.5 gate LULUS) | **COMPLETE** | 2026-10-02 (584 Tests Pass) |
-|| **Phase 10** | **Exam Paper Engine (PRD #31)** — naskah ujian: kop, identitas, ruang nama/nomor peserta, kolom 1/2, QR verifikasi, ekspor PDF & DOCX | **BERJALAN — 10.1–10.4 SELESAI** | 2026-10-02 (10.1–10.4: 624 tests + build OK) |
+| **Phase 10** | **Exam Paper Engine (PRD #31)** — naskah ujian: kop, identitas, ruang nama/nomor peserta, kolom 1/2, QR verifikasi, ekspor PDF & DOCX | **COMPLETE** | 2026-10-02 (624 Tests Pass + build OK) |
+| **Phase 11** | **Pengerasan Rilis & Backlog Terblokir** — 11.1 Session Expiry UX, 11.2 PDF/DOCX Layout Stress Test ✓, 11.3 AI Generator Provider API Key Wiring ✓, 11.4 Rate Limit Redis/DB (Optional), 11.5 DKAS Bot Cohere Semantic Search (Optional) | **BERJALAN — 11.2 & 11.3 SELESAI** | 2026-10-02 (638 Tests Pass + build OK) |
 
 ---
 

@@ -1,5 +1,30 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 11.2-11.3: PDF/DOCX Layout Stress Test + AI Generator Provider API Key Wiring (COMPLETED / VERIFIED)
+
+### Added
+* **`test/pdf-docx-layout-stress.test.ts`** — 14 test integrasi stress layout PDF/DOCX:
+  - Teks esai sangat panjang (>500 char, multi-paragraf, karakter khusus) — mencegah overflow/terpotong.
+  - Gambar soal (base64 PNG) — render tanpa error di PDF & DOCX.
+  - Page break 2 kolom edge case — 5 soal pendek memaksa page break di mode `columnLayout: "TWO"`.
+  - Soal super panjang (stem 1000+ char + 4 opsi 200 char) — page break mid-soal.
+  - Mix tipe soal (PG + Singkat + Esai + PG gambar) — total 20 butir, 2 kolom, mode SISWA & KUNCI.
+  - Mode SISWA anti-leak: kunci jawaban tidak muncul di output SISWA (PDF & DOCX).
+  - Mode KUNCI: kunci jawaban & rubrik muncul (DOCX + PDF).
+  - Validasi file valid: PDF header `%PDF`, DOCX ZIP `PK` (anti-corrupt).
+* **`src/lib/exam-paper/export-pdf.ts`** — re-export tipe `ExamPaperData`, `ExamPaperQuestionItem` agar test bisa import.
+
+### Updated
+* **`.env.example`** — tambah env AI Generator Runtime (Phase 8): `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `AI_DAILY_QUOTA_PER_TEACHER`, `AI_COOLDOWN_MS`, `AI_GENERATION_ENABLED=false` (default nonaktif, diaktifkan via plugin per institusi), `AI_LOCAL_BASE_URL` (untuk provider local Ollama/vLLM).
+* **`README.md`** — dokumentasi konfig AI Generator diperbarui: default `AI_GENERATION_ENABLED=false`, catatan feature flag global + kontrol per institusi via plugin `AI_GENERATION`.
+
+### Verification
+* `npx tsc --noEmit` → **0 error**
+* `npm test` → **638/638 pass** (0 fail, 186 suites; +14 test stress layout)
+* `npm run build` → **exit 0** (Next.js 16.3.6, 47 routes)
+
+---
+
 ## [2026-10-02] - Phase 10.5: QA E2E + Test DoD Strict + Gate Keluar Phase 10 (COMPLETED / VERIFIED)
 
 ### Verified

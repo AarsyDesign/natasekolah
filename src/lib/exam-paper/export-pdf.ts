@@ -31,6 +31,9 @@ import {
 } from "./export-data";
 import { generateExamVerifyQr } from "./qr";
 
+// Re-export types for consumers (tests, other exporters)
+export type { ExamPaperData, ExamPaperQuestionItem } from "./export-data";
+
 // ---------------------------------------------------------------------------
 // Label Indonesia (selaras dengan src/components/exam-paper/exam-paper-ui.ts)
 // ---------------------------------------------------------------------------

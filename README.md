@@ -70,11 +70,12 @@ npm run dev
 ```env
 # .env
 AI_PROVIDER=openai          # openai | anthropic | gemini | local
-AI_API_KEY=sk-...           # API key provider
+AI_API_KEY=sk-...           # API key provider (dummy untuk local)
 AI_MODEL=gpt-4o-mini        # Model yang dipakai
 AI_DAILY_QUOTA_PER_TEACHER=30
 AI_COOLDOWN_MS=15000
-AI_GENERATION_ENABLED=true  # Default: false
+AI_GENERATION_ENABLED=false  # Default: false (flag wajib diaktifkan per institusi via plugin AI_GENERATION)
+AI_LOCAL_BASE_URL=http://localhost:11434  # Hanya untuk provider local (Ollama/vLLM)
 ```
 
 **Provider Local (Ollama/vLLM):**
@@ -84,6 +85,8 @@ AI_API_KEY=ollama           # Dummy, tidak dipakai
 AI_MODEL=llama3.1:8b
 AI_LOCAL_BASE_URL=http://localhost:11434
 ```
+
+**Catatan:** `AI_GENERATION_ENABLED` adalah feature flag global. Per institusi, fitur AI Generator dikontrol via plugin `AI_GENERATION` di halaman Pengaturan > Plugin. Default nonaktif.
 
 ---
 
