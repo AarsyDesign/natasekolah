@@ -21,6 +21,7 @@ import {
   Home,
   Search,
   Settings,
+  UsersRound,
 } from "lucide-react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { useAppShell } from "./app-shell";
@@ -56,6 +57,7 @@ export function NavHeader({ subtitle }: { subtitle?: string }) {
     { href: "/attendance", label: "Absensi", icon: ClipboardCheck },
     { href: "/notifications", label: "Outbox WA", icon: MessageSquare },
     { href: "/students", label: "Buku Induk", icon: Users },
+    { href: "/guardians", label: "Wali Murid", icon: UsersRound },
     { href: "/academic-years", label: "Tahun Ajaran", icon: Calendar },
     { href: "/classrooms", label: "Rombel", icon: School },
     { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen },

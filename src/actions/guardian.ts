@@ -1,10 +1,20 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { clearSessionCookie, setSessionCookie } from "../lib/auth/cookie";
 import { activateGuardian, GuardianInvitationError } from "../lib/auth/guardian";
 import { validateGuardianActivationInput } from "../lib/validation/guardian";
 import { revokeSession } from "../lib/auth/session";
 import { getSessionCookie } from "../lib/auth/cookie";
+import { requireActionSession, rethrowIfSessionExpired } from "../lib/auth/action-session";
+import { runWithTenantContext } from "../lib/tenant/context";
+import { hasPermission } from "../lib/auth/permissions";
+import {
+  listGuardians,
+  updateGuardianProfile,
+  deactivateGuardian,
+  issueGuardianInvitation,
+} from "../lib/guardian/master-data-service";
 
 export async function activateGuardianAction(
   input: unknown
@@ -42,4 +52,87 @@ export async function logoutGuardianAction(): Promise<{ success: true }> {
   }
 
   return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 9.2 — Guardian Master Data CRUD Staf + Wizard Undangan
+// ---------------------------------------------------------------------------
+
+/**
+ * Daftar wali murid (filter status + pencarian) beserta relasi anak.
+ * `canManage` dihitung dari izin sesi agar tombol aksi hanya tampil
+ * bagi peran yang memang berhak (guardian:manage).
+ */
+export async function listGuardiansAction(filter?: unknown) {
+  try {
+    const context = await requireActionSession();
+    const guardians = await runWithTenantContext(context, () =>
+      listGuardians(context, filter)
+    );
+    return {
+      success: true as const,
+      data: { guardians, canManage: hasPermission(context, "guardian:manage") },
+    };
+  } catch (error: any) {
+    rethrowIfSessionExpired(error);
+    return {
+      success: false as const,
+      error: error.message || "Gagal menampilkan daftar wali murid.",
+      code: error.code || "GUARDIAN_LIST_ERROR",
+    };
+  }
+}
+
+export async function updateGuardianAction(rawInput: unknown) {
+  try {
+    const context = await requireActionSession();
+    const data = await runWithTenantContext(context, () =>
+      updateGuardianProfile(context, rawInput)
+    );
+    revalidatePath("/guardians");
+    return { success: true as const, data };
+  } catch (error: any) {
+    rethrowIfSessionExpired(error);
+    return {
+      success: false as const,
+      error: error.message || "Gagal memperbarui profil wali murid.",
+      code: error.code || "GUARDIAN_UPDATE_ERROR",
+    };
+  }
+}
+
+export async function deactivateGuardianAction(rawInput: unknown) {
+  try {
+    const context = await requireActionSession();
+    const data = await runWithTenantContext(context, () =>
+      deactivateGuardian(context, rawInput)
+    );
+    revalidatePath("/guardians");
+    return { success: true as const, data };
+  } catch (error: any) {
+    rethrowIfSessionExpired(error);
+    return {
+      success: false as const,
+      error: error.message || "Gagal menonaktifkan wali murid.",
+      code: error.code || "GUARDIAN_DEACTIVATE_ERROR",
+    };
+  }
+}
+
+export async function createGuardianInvitationAction(rawInput: unknown) {
+  try {
+    const context = await requireActionSession();
+    const data = await runWithTenantContext(context, () =>
+      issueGuardianInvitation(context, rawInput)
+    );
+    revalidatePath("/guardians");
+    return { success: true as const, data };
+  } catch (error: any) {
+    rethrowIfSessionExpired(error);
+    return {
+      success: false as const,
+      error: error.message || "Gagal membuat undangan aktivasi wali murid.",
+      code: error.code || "GUARDIAN_INVITATION_ERROR",
+    };
+  }
 }

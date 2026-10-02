@@ -25,11 +25,26 @@
 | **Phase 6** | **Pesantren Living** (Diniyah, Asrama, Tasrih Perizinan, Mutaba'ah Tahfidz) | **COMPLETE** | 2026-09-23 (229 Tests Pass) |
 | **Phase 7** | **Question Bank** (3-Tier, Private Institution, AI Generator Infrastructure) | **COMPLETE** | 2026-10-01 (473 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Runtime Provider Adapters + Generate Modal UI + QA E2E + Verification Gate) | **COMPLETE** | 2026-10-02 (473 Tests Pass; 8.1–8.6 selesai) |
-| **Phase 9** | **Penutupan Backlog Gerbang & Kesiapan Rilis** (9.1 Permit Engine ✓, 9.2 Guardian CRUD, 9.3 Student 5 Kluster, 9.4 backlog terblokir, 9.5 gate keluar) | **BERJALAN — 9.1 SELESAI** | 2026-10-02 (513 Tests Pass) |
+| **Phase 9** | **Penutupan Backlog Gerbang & Kesiapan Rilis** (9.1 Permit Engine ✓, 9.2 Guardian CRUD ✓, 9.3 Student 5 Kluster, 9.4 backlog terblokir, 9.5 gate keluar) | **BERJALAN — 9.1 & 9.2 SELESAI** | 2026-10-02 (535 Tests Pass) |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-10-02] - Phase 9.2: Guardian Master Data CRUD Staf + Wizard Undangan (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Menutup sisa Phase 1 Gate "Guardian Master Data" — model wali + portal sudah ada, tetapi CRUD oleh staf dan wizard undangan aktivasi belum ada.
+* **Implementasi:**
+  1. **Zod (`src/lib/validation/guardian.ts`):** `guardianFilterSchema` (q + status), `updateGuardianInputSchema` (strict + refine minimal 1 bidang; `email:""` = bersihkan), `deactivateGuardianInputSchema`, `createGuardianInvitationStaffInputSchema` (sentVia WHATSAPP/SMS/MANUAL).
+  2. **Domain service (`src/lib/guardian/master-data-service.ts`):** `listGuardians` (`guardian:view` — filter status, pencarian nama/WA/email, include relasi anak + undangan aktif belum ditebus), `updateGuardianProfile`, `deactivateGuardian` (status→INACTIVE + `deleteMany` undangan belum ditebus + AuditLog dgn `revokedInvitations`/`reason`), `issueGuardianInvitation` (`guardian:manage` — token 256-bit, hash SHA-256 saja di DB, TTL 72 jam, re-issue mencabut token lama, tolak wali `INACTIVE` lewat `GuardianInactiveError`, AuditLog CREATE tanpa token mentah). Semua tenant-scoped via compound `id_institutionId`.
+  3. **Server actions (`src/actions/guardian.ts`):** `listGuardiansAction` (mengembalikan `{guardians, canManage}` — tombol aksi UI kondisional), `updateGuardianAction`, `deactivateGuardianAction`, `createGuardianInvitationAction` — pola `requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired` + `revalidatePath("/guardians")`.
+  4. **UI mobile-first `/guardians`:** daftar wali (badge status, WA/email, chip relasi anak dgn hubungan + indikator utama, info undangan aktif), filter status + pencarian, modal edit profil, wizard undangan (pilih kanal → hasil token + tautan `/wali/aktivasi?token=…` dengan tombol Salin), modal nonaktifkan (alasan opsional), empty/loading/error; nav "Wali Murid" ditambahkan ke `app-shell` (MASTER_DATA_ITEMS) dan `nav-header`.
+* **Testing & Verifikasi:**
+  * `test/guardian-master-data.test.ts` **22/22 pass** (listing/filter/search, update + AuditLog, penonaktifan + cabut undangan, wizard token hash-only/72 jam/re-issue, RBAC `guardian:*` + sesi wali, tenant isolation, Zod).
+  * `npx tsc --noEmit` **0** · `npm test` **535/535 pass, 0 fail** (166 suites; 513 + 22) · `npm run build` **exit 0** (route `/guardians`).
+  * **QA E2E DB NYATA** (`scripts/_local-qa-guardian.ts`): **35/35 pass** — list/filter/search, update menempel di tabel `guardians` + AuditLog, wizard undangan (hash-only, TTL ≈72 jam, token tak bocor ke audit, re-issue cabut token lama), penonaktifan mencabut baris undangan dari DB, reactivate lalu undang lagi OK, RBAC guru + sesi wali ditolak, cross-tenant 404; data QA dibersihkan.
+  * **QA server action via HTTP + sesi nyata** (`scripts/_local-qa-guardian-actions.ts`, `next start` :3100): **12/12 pass** — smoke `/guardians` 307→login tanpa sesi & 200 + marker UI dengan sesi; tanpa sesi ditolak; list sukses `canManage:true`; update/invitation/deactivate sukses dan menempel di DB; input ilegal → `success:false`.
+  * *Belum:* klik-manual browser 390px (harness tidak tersedia di run cron).
+* **Catatan run:** tidak ada perubahan `schema.prisma` (migrasi tidak diperlukan); `npx prisma` tetap diblokir scanner (tidak dibutuhkan); server prod :3100 dimatikan setelah QA.
 
 ### [2026-10-02] - Phase 9.1: Tasrih / Permit Engine — Izin Pulang Santri (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Menutup sisa Phase 5 Gate 100% — entitas permit izin pulang santri yang sebelumnya tidak ada (label "Izin Pulang (Tasrih)" hanya status `EXCUSED` di presensi asrama).
@@ -149,12 +164,12 @@
    * Klik-manual UI AI Generator (butuh harness browser — tidak tersedia di run cron).
    * Simulasi timeout provider AI menggantung (belum disimulasikan).
    * Pasang API key provider AI nyata (OpenAI/Anthropic/Gemini) di deployment — keputusan Arsyad.
-   * ~~Checkbox legacy di ROADMAP fase lama (Phase 0–6) sebagian basi~~ → **Audit silang SELESAI 2026-10-02 (run cron):** 21 checkbox legacy diverifikasi terhadap kode/test lalu ditandai `[x]` dengan bukti/referensi di anotasi ROADMAP; awalnya tersisa 4 item `[ ]`, kini **tinggal 2** (Offline Sync selesai via merge; **Tasrih/Permit Engine selesai di Phase 9.1, 2026-10-02**):
-     1. `Student Full Profile (5 Kluster Dapodik/EMIS)` — profil inti + importer ada; kluster terstruktur (keluarga, kesehatan, registry) belum.
-     2. `Guardian Master Data` — model/service/aktivasi/portal wali ada & teruji; CRUD wali + wizard undangan untuk staf (UI + server action) belum ada.
-   * Keduanya backlog terpisah di luar fase berjalan — butuh keputusan Arsyad untuk dijadikan fase baru; **bukan blocker rilis fase 0–8**.
+   * ~~Checkbox legacy di ROADMAP fase lama (Phase 0–6) sebagian basi~~ → **Audit silang SELESAI 2026-10-02 (run cron):** 21 checkbox legacy diverifikasi terhadap kode/test lalu ditandai `[x]` dengan bukti/referensi di anotasi ROADMAP; awalnya tersisa 4 item `[ ]`, kini **tinggal 1** (Offline Sync selesai via merge; Tasrih/Permit Engine selesai di Phase 9.1; **Guardian Master Data selesai di Phase 9.2, 2026-10-02**):
+     1. `Student Full Profile (5 Kluster Dapodik/EMIS)` — profil inti + importer ada; kluster terstruktur (keluarga, kesehatan, registry) belum. = tahap **9.3**.
+   * Item terakhir itu backlog fase berjalan Phase 9 — **bukan blocker rilis fase 0–8**.
 
 5. **Status fase berjalan: PHASE 9 (Penutupan Backlog Gerbang & Kesiapan Rilis)** — plan: `03_EXECUTION/PLAN-PHASE-9.md`:
    * ~~**9.1 Tasrih / Permit Engine**~~ **SELESAI 2026-10-02 (run cron):** skema `PermitRequest` + migrasi manual (`migrate diff` nihil), service+Zod+RBAC `pesantren:*`+6 server action+UI `/dormitories/permits`+notifikasi `PERMIT_APPROVED`; `tsc 0` · `npm test` **513/513** · `build exit 0` · QA E2E DB nyata 32/32 · action HTTP 7/7 · smoke 7/7. ROADMAP Phase 5 Gate "Tasrih" kini `[x]`.
-   * **Tahap berikutnya: 9.2 Guardian Master Data CRUD staf + wizard undangan** (server actions `guardian.ts`, UI `/guardians`, +10–15 test) → lalu **9.3 Student Full Profile 5 Kluster**.
+   * ~~**9.2 Guardian Master Data CRUD staf + wizard undangan**~~ **SELESAI 2026-10-02 (run cron):** Zod+service `src/lib/guardian/master-data-service.ts` (guardian:view/manage, AuditLog, token undangan hash-only 72 jam) + 4 server action + UI `/guardians` + nav "Wali Murid"; `tsc 0` · `npm test` **535/535** · `build exit 0` · QA E2E DB nyata **35/35** · action HTTP **12/12**. ROADMAP Phase 1 Gate "Guardian Master Data" kini `[x]`.
+   * **Tahap berikutnya: 9.3 Student Full Profile 5 Kluster Dapodik/EMIS** (skema 1-to-1 `StudentFamilyData`/`StudentHealthData`/`StudentRegistryData` + migrasi manual, service+Zod+action, UI tab di `/students/[id]`, +20 test) → lalu **9.5 gate keluar Phase 9**.
    * Masih `[ ]`: **9.0** QA klik-manual modal AI Generator (butuh harness browser), **9.4** backlog terblokir (Question Bank COMMUNITY/DEVELOPER_CENTRAL, CI workflow token `workflow`, deploy Vercel — keputusan Arsyad), **9.5** gate keluar Phase 9.

@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  UsersRound,
 } from "lucide-react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from "./ui/dropdown";
@@ -56,6 +57,7 @@ const PRIMARY_WORKSPACES = [
 
 const MASTER_DATA_ITEMS = [
   { href: "/students", label: "Buku Induk Siswa", icon: Users },
+  { href: "/guardians", label: "Wali Murid", icon: UsersRound },
   { href: "/academic-years", label: "Tahun Ajaran", icon: Calendar },
   { href: "/classrooms", label: "Rombel / Kelas", icon: School },
   { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen },

@@ -1,5 +1,27 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 9.2: Guardian Master Data CRUD Staf + Wizard Undangan (VERIFIED)
+
+### Added
+* **`src/lib/validation/guardian.ts`** — Zod baru: `guardianFilterSchema` (q + status), `updateGuardianInputSchema` (strict + refine minimal 1 bidang; `email:""` = membersihkan email), `deactivateGuardianInputSchema` (alasan opsional ≤200), `createGuardianInvitationStaffInputSchema` (sentVia `WHATSAPP`/`SMS`/`MANUAL`).
+* **`src/lib/guardian/master-data-service.ts`** — domain service Guardian Master Data: `listGuardians` (guard `guardian:view`; filter status, pencarian nama/WA/email, include relasi anak `GuardianStudent→Student` + undangan aktif belum ditebus), `updateGuardianProfile` (`guardian:manage`; compound `id_institutionId`, AuditLog `changes`/`previousStatus`), `deactivateGuardian` (status→INACTIVE + `deleteMany` undangan belum ditebus, AuditLog `revokedInvitations`/`reason`), `issueGuardianInvitation` (token 256-bit via `createGuardianInvitation` — **hanya SHA-256 hash yang tersimpan di DB**, TTL 72 jam, re-issue mencabut token lama, menolak wali `INACTIVE` dengan `GuardianInactiveError`, AuditLog CREATE **tanpa token mentah**).
+* **`src/actions/guardian.ts`** — 4 server action: `listGuardiansAction` (mengembalikan `{guardians, canManage}` — perhitungan izin `guardian:manage` di server agar tombol aksi UI tertutup bagi peran tanpa hak), `updateGuardianAction`, `deactivateGuardianAction`, `createGuardianInvitationAction` — semuanya `requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired` + `revalidatePath("/guardians")`.
+* **UI `src/app/guardians/page.tsx`** — mobile-first: daftar wali (badge status Diundang/Aktif/Nonaktif, WA/email, chip relasi anak + hubungan + penanda utama, info undangan aktif & jam kedaluwarsa), filter status + pencarian, modal edit profil, wizard undangan (kanal → token + tautan `/wali/aktivasi?token=…` dengan tombol Salin; catatan 72 jam 1x pakai), modal nonaktifkan dengan alasan; empty/loading/error state; tombol aksi hanya dirender bila `canManage`.
+* **Navigasi** — "Wali Murid" (`UsersRound`) ditambahkan ke `MASTER_DATA_ITEMS` `src/components/app-shell.tsx` dan `navLinks` `src/components/nav-header.tsx`.
+* **`test/guardian-master-data.test.ts`** — 22 test baru: listing/filter/pencarian + tenant isolation, update profil + AuditLog, penonaktifan + pencabutan undangan, wizard undangan (hash-only, TTL 72 jam, re-issue, `GuardianInactiveError`), RBAC `guardian:view`/`guardian:manage` (matriks 6 peran + guru + sesi wali ditolak), guard Zod.
+
+### Verification
+* `npx tsc --noEmit` **0 error** · `npm test` **535/535 pass, 0 fail** (166 suites; baseline 513 + 22) · `npm run build` **exit 0** (route `/guardians`). Tanpa perubahan `schema.prisma` → tanpa migrasi.
+* **QA E2E DB NYATA** (`scripts/_local-qa-guardian.ts`): **35/35 pass** — write path membuktikan perubahan menempel di tabel `guardians`, baris undangan hash-only, AuditLog tanpa token, baris undangan terhapus saat nonaktif; RBAC guru & sesi wali ditolak; cross-tenant 404; data QA dibersihkan.
+* **QA server action via HTTP + sesi nyata** (`scripts/_local-qa-guardian-actions.ts`, `next start` :3100): **12/12 pass** — smoke `/guardians` 307→login tanpa sesi & 200 + marker UI dengan sesi; list `canManage:true`; update/invitation/deactivate sukses & menempel di DB; input ilegal → `success:false`.
+* *Belum:* klik-manual browser 390px (harness tidak tersedia di run cron).
+
+### Dokumentasi
+* `03_EXECUTION/TODO.md` — checklist 9.2 seluruhnya `[x]` dengan anotasi bukti.
+* `03_EXECUTION/ROADMAP.md` — Phase 1 Gate "Guardian Master Data" `[ ]` → `[x]` (sisa `[ ]` ROADMAP kini **1**: Student Full Profile 5 Kluster = tahap 9.3).
+* `PROGRESS.md` (root) — baris Phase 9 gate matrix ("BERJALAN — 9.1 & 9.2 SELESAI", 535 test), entri log, "Langkah Selanjutnya" → tahap berikutnya **9.3 Student 5 Kluster**.
+* `03_EXECUTION/PROGRESS.md` — entri log Phase 9.2.
+
 ## [2026-10-02] - Phase 9.1: Tasrih / Permit Engine — Izin Pulang Santri (VERIFIED)
 
 ### Added

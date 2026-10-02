@@ -459,10 +459,23 @@
   - [x] UI `/dormitories/permits` (daftar, filter status, modal ajukan, aksi setujui/tolak/kembali/terlambat, empty/loading/error, mobile) + notifikasi `PERMIT_APPROVED` via outbox (template baru + `notifyPermitApproved`) + tautan dari `/dormitories`.
   - [x] Test `test/permit-engine.test.ts` **24/24** (lifecycle, imutabilitas terminal, RBAC, sesi wali, cross-tenant, filter, template) + QA E2E **DB nyata 32/32** (`scripts/_local-qa-permit.ts`) + **server action via HTTP 7/7** (`scripts/_local-qa-permit-actions.ts`) + smoke halaman **7/7**.
 
-- [ ] **9.2 Guardian Master Data CRUD Staf + Wizard Undangan:**
-  - [ ] Server actions `src/actions/guardian.ts` (list/update/deactivate/createInvitation 72 jam).
-  - [ ] UI `/guardians` (tabel + relasi anak, modal edit & undangan, empty/error state, mobile).
-  - [ ] Test: RBAC, tenant isolation, token sekali pakai (+10–15).
+- [x] **9.2 Guardian Master Data CRUD Staf + Wizard Undangan:** — **SELESAI 2026-10-02**
+  - [x] Zod `src/lib/validation/guardian.ts` (`guardianFilterSchema`, `updateGuardianInputSchema`
+    + refine minimal 1 bidang, `deactivateGuardianInputSchema`, `createGuardianInvitationStaffInputSchema`)
+    + service `src/lib/guardian/master-data-service.ts` (`listGuardians` guardian:view /
+    `updateGuardianProfile` / `deactivateGuardian` (cabut undangan belum ditebus) /
+    `issueGuardianInvitation` (token 72 jam hash-only di DB, AuditLog tanpa token mentah),
+    semua `requirePermission guardian:*` + tenant-scoped + AuditLog).
+  - [x] Server actions `src/actions/guardian.ts` (list+`canManage`, update, deactivate, invitation;
+    `requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`).
+  - [x] UI `/guardians` (daftar + relasi anak + filter status & pencarian, modal edit profil,
+    wizard undangan + salin tautan aktivasi, konfirmasi nonaktifkan, empty/loading/error,
+    tombol aksi hanya tampil jika `canManage`, mobile-first) + nav "Wali Murid"
+    (`app-shell` MASTER_DATA + `nav-header`).
+  - [x] Test `test/guardian-master-data.test.ts` **22/22** + QA E2E DB nyata **35/35**
+    (`scripts/_local-qa-guardian.ts`) + server action via HTTP **12/12**
+    (`scripts/_local-qa-guardian-actions.ts`, `next start` :3100 — termasuk smoke
+    `/guardians` 307→login tanpa sesi, 200 + marker UI dengan sesi).
 
 - [ ] **9.3 Student Full Profile — 5 Kluster Dapodik/EMIS:**
   - [ ] Skema tabel 1-to-1 `StudentFamilyData`, `StudentHealthData`, `StudentRegistryData` + migrasi manual.
