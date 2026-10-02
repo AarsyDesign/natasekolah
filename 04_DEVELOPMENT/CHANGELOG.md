@@ -1,5 +1,21 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - DOCS: Audit Silang Checkbox Legacy ROADMAP (Phase 0–6) (VERIFIED)
+
+### Changed
+* `03_EXECUTION/ROADMAP.md` — audit silang checkbox legacy gerbang Phase 0–6: **21 item `[ ]` diverifikasi terhadap kode/test** dan ditandai `[x]` dengan anotasi bukti (mis. `test/rbac-fine-grained` 31/31 untuk RBAC, `src/lib/importer/*` untuk Excel Importer, `src/app/manifest.ts` + portal `/wali/*` untuk Parent PWA Portal, `/wali/keuangan` + `/wali/kehadiran` untuk transparansi pembayaran & rekap kehadiran). Ditambahkan catatan pembuka bahwa audit dilakukan 2026-10-02.
+* `PROGRESS.md` — catatan log audit + pembaruan "Next Immediate Gate" butir 4: daftar 4 item `[ ]` yang tersisa setelah audit.
+
+### Findings (sisa `[ ]` — benar-benar belum / belum lengkap, bukan blocker fase 0–8)
+1. **Offline Sync & Idempotency Key** — sinkronisasi offline tidak ada; `idempotencyKey` sudah dipakai di notifikasi/promosi/pembayaran/raport.
+2. **Tasrih / Permit Engine** — tidak ada entitas permit di skema; "Izin Pulang (Tasrih)" hanya label status `EXCUSED` pada presensi asrama.
+3. **Student Full Profile (5 Kluster Dapodik/EMIS)** — profil inti siswa + importer xlsx ada; kluster terstruktur Dapodik/EMIS (keluarga, kesehatan/disabilitas, registry) belum ada di skema.
+4. **Guardian Master Data** — model `Guardian`/`GuardianStudent`/`GuardianInvitation`, service, aktivasi, dan portal wali ada & teruji; **CRUD wali + wizard undangan untuk staf (UI + server action) belum ada**.
+
+### Verification (run ini)
+* `npx tsc --noEmit` **0 error** · `npm test` **473/473 pass, 0 fail** (150 suites).
+* Perubahan murni dokumen — tidak menyentuh `src/`, `prisma/`, `test/`, `.github/`.
+
 ## [2026-10-02] - DOCS: Phase 8.6 — Verification Gate (VERIFIED) — **Phase 8 & seluruh fase 0–8 COMPLETE**
 
 ### Verification (Phase 8.6)
