@@ -13,6 +13,7 @@ import {
   CreateAIGenerationJobInput,
   AIGenerationJobResult,
   AIGeneratedQuestion,
+  AI_PROVIDERS,
   AIProvider,
   AIGenerationJobStatus,
   AIGenerationPromptParams,
@@ -146,6 +147,11 @@ export function validateAIResult(result: AIGenerationJobResult, expectedCount: n
       if (q.options && q.options.length > 0) {
         throw new ValidationError('Soal essay tidak boleh memiliki opsi');
       }
+      // Pedoman penskoran wajib — konsisten dengan kontrak prompt & invariant
+      // Question Bank (rubrik essay hidup di kolom explanation).
+      if (!q.explanation || q.explanation.trim().length === 0) {
+        throw new ValidationError('Soal essay harus memiliki pedoman penskoran (explanation)');
+      }
     }
   }
 }
@@ -159,7 +165,16 @@ export async function createAIGenerationJob(
 ): Promise<{ id: string }> {
   // Guard: permission + plugin
   requirePermission(ctx, 'exam:manage');
-  const institution = await requirePlugin(ctx.institutionId, 'AI_GENERATION');
+  // requirePlugin butuh baris institusi (objek enabledPlugins) — mengirim
+  // ctx.institutionId (string UUID) membuat guard selalu gagal 403 (temuan QA E2E 8.5).
+  const institution = await prisma.institution.findUnique({
+    where: { id: ctx.institutionId },
+    select: { enabledPlugins: true },
+  });
+  if (!institution) {
+    throw new ValidationError('Lembaga tidak ditemukan untuk guard plugin AI Generator.');
+  }
+  requirePlugin(institution, 'AI_GENERATION');
 
   // Guard: quota check
   const quota = await checkAIGenerationQuota(ctx, ctx.userId);
@@ -170,6 +185,14 @@ export async function createAIGenerationJob(
     throw new ValidationError(`Generate AI diblokir: ${reason}`);
   }
 
+  // Provider/model yang TERCATAT harus mencerminkan runtime (env server),
+  // bukan nilai yang dikirim klien — getAIProvider() membaca AI_PROVIDER env,
+  // jadi input.provider dari UI hanya metadata yang bisa menyesatkan (temuan QA 8.5).
+  const envProvider = process.env.AI_PROVIDER as AIProvider | undefined;
+  const provider: AIProvider =
+    envProvider && (AI_PROVIDERS as readonly string[]).includes(envProvider) ? envProvider : input.provider;
+  const model = process.env.AI_MODEL?.trim() || input.model;
+
   // Create job
   const job = await prisma.aiGenerationJob.create({
     data: {
@@ -177,8 +200,8 @@ export async function createAIGenerationJob(
       userId: ctx.userId,
       subjectId: input.subjectId,
       prompt: input.prompt,
-      provider: input.provider,
-      model: input.model,
+      provider,
+      model,
       status: 'DRAFT',
       // Store promptParams as JSON in a separate field or include in prompt
     },

@@ -1,5 +1,20 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - FIX: Phase 8.5 — QA E2E Eksploratif AI Generator (VERIFIED)
+
+### Fixed
+* **BUG KRITIS: fitur Generate AI 100% rusak di DB nyata** — `createAIGenerationJob` memanggil `requirePlugin(ctx.institutionId, 'AI_GENERATION')` (string UUID), padahal guard mengharapkan baris institusi → `parseEnabledPlugins` gagal → **selalu 403** "belum diaktifkan" berapa pun konfigurasi plugin. Fix: ambil baris `Institution` dulu lalu `requirePlugin(institution, …)` (pola `question-service`). Tertutup selama ini oleh test mock — kelas bug yang sama dengan temuan Phase 7.
+* **Metadata job menyesatkan** — UI hardcoded `provider: "openai"`, padahal runtime membaca `AI_PROVIDER` env (default `local`) → kolom `provider`/`model` di `AiGenerationJob` (dan Riwayat Blok 2b) tidak mencerminkan kenyataan. Fix: `createAIGenerationJob` mengambil provider/model dari env server, input klien hanya fallback.
+* **Essay tanpa pedoman penskoran lolos** — `validateAIResult` kini mewajibkan `explanation` non-kosong untuk tipe ESSAY (konsisten dengan kontrak prompt & invariant Question Bank); tanpa rubrik → job `FAILED` dengan pesan jelas.
+* **DB lokal: kasing kolom `ai_generation_usage`** — tabel dibuat script kustom dengan identifier unquoted (ter-fold `institutionid`, dst.) padahal file migrasi `20261001080000` benar (quoted camelCase) → PrismaClientKnownRequestError di seluruh fair-use guard (quota/cooldown/history). Diperbaiki via `RENAME COLUMN`/`ALTER INDEX` (data + FK aman); `migrate diff --from-url` kembali **nihil**. Perbaikan DB lokal, tanpa perubahan file migrasi.
+
+### Verification (Phase 8.5)
+* QA E2E service + DB nyata dengan mock provider HTTP (`scripts/_local-qa-ai.ts`, **lokal, tidak di-commit**): **34/34 PASS** — PG 5→review→simpan 3 (DRAFT + 4 opsi/1 kunci + AuditLog), Short Answer (kunci tersimpan), Essay (rubrik tersimpan; essay tanpa rubrik ditolak), quota ke-31 diblokir, cooldown 15 dtk diblokir, 4 mode error provider (invalid JSON / kosong / HTTP 500 / connection refused) → job `FAILED` + `errorMessage`, RBAC 403, tenant isolation, plugin guard 403, riwayat job.
+* QA lapis server action via HTTP (prod `next start` + sesi nyata): **3/3 PASS** (`getAIGenerationQuotaAction` limit=30, usage history, list jobs).
+* Smoke halaman: `/login` 200, `/exams/question-bank` 200 + marker Generate AI di HTML; Blok 2b & badge quota ada di bundle build (dirender client-side).
+* `npx tsc --noEmit` **0** · `npm test` **473/473 pass, 0 fail** · `npm run build` **exit 0** · `migrate diff` nihil.
+* *Belum: klik-manual UI (harness browser tidak tersedia di run cron) & simulasi timeout menggantung — opsional.*
+
 ## [2026-10-02] - FEAT: Phase 8.4 — Fair-Use Enforcement UI: Riwayat Job (VERIFIED)
 
 ### Added

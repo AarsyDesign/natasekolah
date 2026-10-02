@@ -80,6 +80,6 @@ PHASE 7 (AI & Automation)
 * [x] AI Question Generator Infrastructure — Models (`AiGenerationUsage`, `AiGenerationJob`), Migrations, Services (usage quota, generation flow), Validation Schemas, Plugin Registry (`AI_GENERATION`), Fair-use Guard (30/hari + cooldown 15s). **TREK C INFRASTRUCTURE SELESAI** — tinggal pasang API key provider AI (OpenAI/Anthropic/Gemini/lokal).
 * [x] AI Question Generator Runtime — **Phase 8.1-8.3 SELESAI**: Provider adapters (OpenAI, Anthropic, Gemini, Local), Server Actions (create/execute/review/list), Generate Modal UI (3-step: Form → Generating → Review), Validation schemas.
 * [x] **Phase 8.4** Fair-Use Enforcement UI (quota badge, cooldown countdown, history job) — **SELESAI**.
-* [ ] **Phase 8.5** QA E2E Eksploratif AI Generator.
+* [x] **Phase 8.5** QA E2E Eksploratif AI Generator — **SELESAI 2026-10-02** (34/34 service+DB, 3/3 server action HTTP, smoke halaman; 3 bug diperbaiki — lihat CHANGELOG. Klik-manual UI masih menunggu harness browser).
 * [ ] **Phase 8.6** Verification Gate & docs update.
 

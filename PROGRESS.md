@@ -24,7 +24,7 @@
 | **Phase 5** | **Formal Academic** (Buku Nilai, Capaian Pembelajaran, Frozen Report Card Snapshot) | **COMPLETE** | 2026-09-23 (203 Tests Pass) |
 | **Phase 6** | **Pesantren Living** (Diniyah, Asrama, Tasrih Perizinan, Mutaba'ah Tahfidz) | **COMPLETE** | 2026-09-23 (229 Tests Pass) |
 | **Phase 7** | **Question Bank** (3-Tier, Private Institution, AI Generator Infrastructure) | **COMPLETE** | 2026-10-01 (473 Tests Pass) |
-| **Phase 8** | **AI & Automation** (Runtime Provider Adapters + Generate Modal UI) | **IN PROGRESS** | 2026-10-01 (473 Tests Pass) |
+| **Phase 8** | **AI & Automation** (Runtime Provider Adapters + Generate Modal UI + QA E2E) | **IN PROGRESS** | 2026-10-02 (473 Tests Pass; 8.1–8.5 selesai, sisa 8.6) |
 
 ---
 
@@ -108,13 +108,11 @@
 ## 3. Langkah Selanjutnya (Next Immediate Gate)
 1. ~~**Phase 8.4 — Fair-Use Enforcement UI**~~ **SELESAI 2026-10-02** (badge quota, cooldown, riwayat job + error message di Blok 2b).
 
-2. **Phase 8.5 — QA E2E Eksploratif AI Generator:**
-   * Generate soal PG 5 butir → review → simpan 3 → verifikasi masuk Question Bank.
-   * Generate soal Short Answer → validasi kunci jawaban.
-   * Generate soal Essay → validasi pedoman penskoran.
-   * Test quota limit (31x hari) → blocked dengan pesan jelas.
-   * Test cooldown (generate < 15 detik) → blocked.
-   * Test provider error handling (network timeout, invalid JSON, malformed response).
+2. ~~**Phase 8.5 — QA E2E Eksploratif AI Generator**~~ **SELESAI 2026-10-02**:
+   * 34/34 pemeriksaan service + DB nyata (mock provider HTTP): PG 5→review→simpan 3, Short Answer (kunci), Essay (rubrik), quota 31 diblokir, cooldown 15 dtk diblokir, 4 mode error provider → job FAILED, RBAC 403, tenant isolation, plugin guard.
+   * 3/3 invoke server action via HTTP (prod + sesi nyata) + smoke halaman `/login` & `/exams/question-bank`.
+   * **Bug ditemukan & diperbaiki:** `requirePlugin` dapat string UUID → fitur generate selalu 403 (tertupuk mock test); metadata provider/model job diverifikasi ke env; validasi rubrik essay ditambahkan; kolom `ai_generation_usage` DB lokal di-rename (drift nol).
+   * Sisa: klik-manual UI butuh harness browser (tidak tersedia di run cron) — opsional.
 
 3. **Phase 8.6 — Verification Gate:**
    * `tsc --noEmit` 0 · `npm test` pass · `npm run build` exit 0.

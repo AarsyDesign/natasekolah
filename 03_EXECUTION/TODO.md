@@ -1,16 +1,10 @@
 # Immediate Execution Backlog (TODO) - NataSekolah
 
-## Temuan QA E2E (belum dikerjakan)
+## Temuan QA E2E (semua sudah dikerjakan)
 
-- [ ] **Sesi kedaluwarsa di tengah sesi tidak diarahkan ke login.** Gejala: semua
-  server action gagal, pengguna cuma lihat pesan generik "Gagal Memuat..." + banner
-  mentah "Sesi otentikasi tidak ditemukan". Konteks: `TenantContextMissingError`
-  (kode `TENANT_CONTEXT_MISSING`, status 401) sudah ada di `src/lib/tenant/context.ts`
-  tapi **tidak dibawa ke response aksi** (64 catch inline `success:false` tanpa shared
-  wrapper). Usulan perbaikan bertahap: (1) bawa `code` di response error aksi via
-  helper `runAction` bersama, (2) di halaman, jika kode 401 → `router.replace('/login?expired=1')`
-  atau tombol "Masuk ulang" (ikuti `DESIGN.md` §14: pesan manusiawi + tombol pemulihan).
-  Refactor menyentuh ~64 situs → wajib rencana + test bertahap, jangan tempbak satu commit.
+- [x] **Sesi kedaluwarsa di tengah sesi tidak diarahkan ke login.** Selesai 2026-10-01
+  (lihat LOG run "Task QA #1"): guard `rethrowIfSessionExpired` (`src/lib/auth/action-session.ts`,
+  `SESSION_EXPIRED_PATH = /login?expired=1`) dipasang di ~94 catch server action + 9 test baru.
 
 ## Phase 0 — Foundation & Security (COMPLETE)
 
@@ -427,13 +421,18 @@
     - [x] Cooldown countdown saat generate terlalu cepat (caption badge & panel form: "Cooldown: Ns").
     - [x] History job dengan status & error message (Blok 2b "Riwayat Generate AI": 5 job terakhir + badge status + `errorMessage` + total generate 30 hari).
 
-  - [ ] **8.5 QA E2E Eksploratif AI Generator:**
-    - [ ] Generate soal PG 5 butir → review → simpan 3 → verifikasi masuk Question Bank.
-    - [ ] Generate soal Short Answer → validasi kunci jawaban.
-    - [ ] Generate soal Essay → validasi pedoman penskoran.
-    - [ ] Test quota limit (31x hari) → blocked dengan pesan jelas.
-    - [ ] Test cooldown (generate < 15 detik) → blocked.
-    - [ ] Test provider error handling (network timeout, invalid JSON, malformed response).
+  - [x] **8.5 QA E2E Eksploratif AI Generator:** — **SELESAI 2026-10-02**
+    (skrip lokal `scripts/_local-qa-ai.ts`, `scripts/_local-qa-actions.ts`, `scripts/_local-smoke.ts`;
+    34/34 pemeriksaan service+DB nyata via mock provider HTTP, 3/3 invoke server action via
+    HTTP prod + sesi, smoke halaman OK. Klik-manual UI belum — harness browser tidak tersedia
+    di run cron.)
+    - [x] Generate soal PG 5 butir → review → simpan 3 → verifikasi masuk Question Bank (DRAFT, 4 opsi/1 kunci, AuditLog).
+    - [x] Generate soal Short Answer → validasi kunci jawaban (`shortAnswerKey` tersimpan, 0 opsi).
+    - [x] Generate soal Essay → validasi pedoman penskoran (`explanation` tersimpan; kini **wajib** — `validateAIResult` menolak essay tanpa rubrik).
+    - [x] Test quota limit (31x hari) → blocked "Limit harian 30 tercapai".
+    - [x] Test cooldown (generate < 15 detik) → blocked "Cooldown N detik".
+    - [x] Test provider error handling → invalid JSON, respons kosong, HTTP 500, endpoint mati (connection refused) semuanya → job `FAILED` + `errorMessage`. *Catatan: timeout menggantung belum disimulasikan.*
+    - [x] Temuan bug diperbaiki di run ini: (1) `requirePlugin(ctx.institutionId, …)` selalu 403 → guard ambil baris institusi dulu (**fitur generate 100% rusak di DB nyata, tertutup test mock**); (2) metadata `provider/model` job kini dari env server (`AI_PROVIDER`/`AI_MODEL`), bukan input klien; (3) kolom `ai_generation_usage` di DB lokal huruf kecil → di-rename (drift `migrate diff` nol; file migrasi memang benar).
 
   - [ ] **8.6 Verification Gate:**
     - [ ] `tsc --noEmit` 0 · `npm test` pass · `npm run build` exit 0.
