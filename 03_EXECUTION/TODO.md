@@ -434,10 +434,15 @@
     - [x] Test provider error handling → invalid JSON, respons kosong, HTTP 500, endpoint mati (connection refused) semuanya → job `FAILED` + `errorMessage`. *Catatan: timeout menggantung belum disimulasikan.*
     - [x] Temuan bug diperbaiki di run ini: (1) `requirePlugin(ctx.institutionId, …)` selalu 403 → guard ambil baris institusi dulu (**fitur generate 100% rusak di DB nyata, tertutup test mock**); (2) metadata `provider/model` job kini dari env server (`AI_PROVIDER`/`AI_MODEL`), bukan input klien; (3) kolom `ai_generation_usage` di DB lokal huruf kecil → di-rename (drift `migrate diff` nol; file migrasi memang benar).
 
-  - [ ] **8.6 Verification Gate:**
-    - [ ] `tsc --noEmit` 0 · `npm test` pass · `npm run build` exit 0.
-    - [ ] DoD Strict: RBAC + Plugin Guard + Tenant Isolation + AuditLog semua lolos.
-    - [ ] Update ROADMAP, PROGRESS, CHANGELOG, TODO.
+  - [x] **8.6 Verification Gate:** — **SELESAI 2026-10-02**
+    - [x] `npx tsc --noEmit` **0 error** · `npm test` **473/473 pass, 0 fail** (150 suites) · `npm run build` **exit 0**.
+    - [x] DoD Strict lolos (dijalankan per-suite, semua 0 fail):
+      RBAC `rbac-fine-grained` **31/31** · Plugin Guard `validation-plugins` **22/22** ·
+      Tenant Isolation `tenant-isolation` **10/10** · AuditLog tercakup di `question-bank` **45/45**
+      (+ `bulk-promotion`, `finance-core`, `master-data-importer`).
+    - [x] Update ROADMAP, PROGRESS, CHANGELOG, TODO.
+    - *Catatan environment:* `prisma validate` tidak bisa dijalankan dari run cron
+      (scanner keamanan memblokir eksekusi CLI prisma; tidak ada perubahan `schema.prisma` di fase ini).
 
 
 

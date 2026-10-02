@@ -1,5 +1,23 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - DOCS: Phase 8.6 — Verification Gate (VERIFIED) — **Phase 8 & seluruh fase 0–8 COMPLETE**
+
+### Verification (Phase 8.6)
+* `npx tsc --noEmit` **0 error** · `npm test` **473/473 pass, 0 fail** (150 suites) · `npm run build` **exit 0** (Turbopack, seluruh routes termasuk portal `/wali/*` terkompilasi).
+* **DoD Strict — dijalankan per-suite, semua 0 fail:**
+  * RBAC: `test/rbac-fine-grained.test.ts` **31/31** (termasuk izin `exam:view`/`exam:manage` untuk Question Bank & AI Generator).
+  * Plugin Guard: `test/validation-plugins.test.ts` **22/22** (termasuk `DomainFeatureDisabledError` 403 & urutan 5 gerbang otorisasi).
+  * Tenant Isolation: `test/tenant-isolation.test.ts` **10/10**.
+  * AuditLog: tercakup di `test/question-bank.test.ts` **45/45** plus `bulk-promotion`, `finance-core`, `master-data-importer`.
+* *Catatan environment:* `prisma validate` diblokir scanner keamanan pada run cron (eksekusi CLI prisma butuh approval); fase ini tidak menyentuh `schema.prisma`.
+
+### Changed
+* `03_EXECUTION/TODO.md`, `03_EXECUTION/ROADMAP.md`, `PROGRESS.md` — Phase 8.6 ditandai selesai; **Phase 8 (AI & Automation) COMPLETE**, seluruh fase 0–8 COMPLETE.
+
+### Notes (bukan blocker)
+* Klik-manual UI AI Generator (harness browser tidak tersedia di run cron) & simulasi timeout provider menggantung — opsional.
+* API key provider AI nyata (OpenAI/Anthropic/Gemini/lokal) belum dipasang di deployment — keputusan operator.
+
 ## [2026-10-02] - FIX: Phase 8.5 — QA E2E Eksploratif AI Generator (VERIFIED)
 
 ### Fixed

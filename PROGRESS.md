@@ -24,7 +24,7 @@
 | **Phase 5** | **Formal Academic** (Buku Nilai, Capaian Pembelajaran, Frozen Report Card Snapshot) | **COMPLETE** | 2026-09-23 (203 Tests Pass) |
 | **Phase 6** | **Pesantren Living** (Diniyah, Asrama, Tasrih Perizinan, Mutaba'ah Tahfidz) | **COMPLETE** | 2026-09-23 (229 Tests Pass) |
 | **Phase 7** | **Question Bank** (3-Tier, Private Institution, AI Generator Infrastructure) | **COMPLETE** | 2026-10-01 (473 Tests Pass) |
-| **Phase 8** | **AI & Automation** (Runtime Provider Adapters + Generate Modal UI + QA E2E) | **IN PROGRESS** | 2026-10-02 (473 Tests Pass; 8.1–8.5 selesai, sisa 8.6) |
+| **Phase 8** | **AI & Automation** (Runtime Provider Adapters + Generate Modal UI + QA E2E + Verification Gate) | **COMPLETE** | 2026-10-02 (473 Tests Pass; 8.1–8.6 selesai) |
 
 ---
 
@@ -114,7 +114,14 @@
    * **Bug ditemukan & diperbaiki:** `requirePlugin` dapat string UUID → fitur generate selalu 403 (tertupuk mock test); metadata provider/model job diverifikasi ke env; validasi rubrik essay ditambahkan; kolom `ai_generation_usage` DB lokal di-rename (drift nol).
    * Sisa: klik-manual UI butuh harness browser (tidak tersedia di run cron) — opsional.
 
-3. **Phase 8.6 — Verification Gate:**
-   * `tsc --noEmit` 0 · `npm test` pass · `npm run build` exit 0.
-   * DoD Strict: RBAC + Plugin Guard + Tenant Isolation + AuditLog semua lolos.
-   * Update ROADMAP, PROGRESS, CHANGELOG, TODO.
+3. ~~**Phase 8.6 — Verification Gate**~~ **SELESAI 2026-10-02**:
+   * `npx tsc --noEmit` **0** · `npm test` **473/473 pass, 0 fail** · `npm run build` **exit 0**.
+   * DoD Strict (dijalankan per-suite): RBAC `rbac-fine-grained` 31/31 · Plugin Guard `validation-plugins` 22/22 · Tenant Isolation `tenant-isolation` 10/10 · AuditLog tercakup `question-bank` 45/45 (+ bulk-promotion, finance-core, master-data-importer) — semua 0 fail.
+   * ROADMAP, PROGRESS, CHANGELOG, TODO diupdate.
+   * *Catatan:* `prisma validate` diblokir scanner keamanan saat run cron (CLI prisma tidak bisa dieksekusi tanpa approval); tidak ada perubahan `schema.prisma` di fase ini.
+
+4. **Status: SELURUH FASE 0–8 COMPLETE.** Tidak ada tugas fase berjalan yang tertunda. Sisa opsional/bukan blocker:
+   * Klik-manual UI AI Generator (butuh harness browser — tidak tersedia di run cron).
+   * Simulasi timeout provider AI menggantung (belum disimulasikan).
+   * Pasang API key provider AI nyata (OpenAI/Anthropic/Gemini) di deployment — keputusan Arsyad.
+   * Checkbox legacy di ROADMAP fase lama (Phase 0–6) sebagian basi/tidak ikut diperbarui — audit silang terpisah bila diperlukan; `Offline Sync & Idempotency Key` adalah item yang benar-benar belum ada.
