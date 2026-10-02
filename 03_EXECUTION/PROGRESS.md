@@ -1,5 +1,12 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-02 - Phase 8.4 Fair-Use Enforcement UI: SELESAI
+* **Temuan:** commit `eea9b7e` sudah memasang badge quota + cooldown, tetapi item ke-3 (history job) belum ada di UI — `usageHistory` dan `listAIGenerationJobsAction` ter-fetch namun tidak pernah dirender (dead state/import).
+* **Ditambahkan:** Blok 2b "Riwayat Generate AI" di `/exams/question-bank` — 5 job terakhir dengan badge status (Draf/Siap Direview/Tersimpan/Dibuang/Gagal), nama mapel, waktu (id-ID), `provider/model`, pesan error bila ada, plus total generate 30 hari terakhir dari `usageHistory`. Data di-refresh via `loadFairUse()` saat mount dan setelah review job (save/discard).
+* **Dokumentasi:** TODO 8.4 & ROADMAP 8.4 ditandai selesai; PROGRESS & CHANGELOG diupdate.
+* **Verifikasi:** `npx tsc --noEmit` **0** · `npm test` **473/473 pass, 0 fail** · `npm run build` **exit 0** (halaman `/exams/question-bank` prerender tanpa error).
+* **Catatan:** UI riwayat ini belum lewat QA E2E eksploratif — termasuk cakupan Phase 8.5.
+
 ## 2026-10-01 - Phase 7 Question Bank: SELESAI (Tahap 0-8, Gate Phase 7 lulus)
 * **Tahap 0-1:** Schema Prisma + migrasi manual Question/QuestionOption (2 model, compound FK, index, enum). Verifikasi `prisma migrate diff` nihil, `migrate resolve --applied` untuk drift lama → status exit 0.
 * **Tahap 2-6:** Backend penuh — Zod strict + invariant superRefine (PG 4 opsi/1 kunci, SHORT_ANSWER wajib kunci, ESSAY tanpa opsi), domain service (CRUD + siklus DRAFT→ACTIVE→ARCHIVED + hapus lunak, resource scope guru via `academic:manage`, AuditLog), kategori agregat, importer (preview VALID/ERROR + deteksi kunci ganda + template xlsx/csv), exporter CSV 16 kolom, 15 server action (semua async), RBAC `exam:view`/`exam:manage` di 6 peran + peta legacy.

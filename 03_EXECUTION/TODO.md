@@ -422,10 +422,10 @@
     - [x] Status job real-time (polling/websocket): Draft → Generating → Ready for Review → Saved.
     - [x] Error state manusiawi (quota habis, cooldown, provider error).
 
-  - [ ] **8.4 Fair-Use Enforcement UI:**
-    - [ ] Badge quota di halaman Bank Soal: "Sisa generate hari ini: 27/30".
-    - [ ] Cooldown countdown saat generate terlalu cepat.
-    - [ ] History job dengan status & error message.
+  - [x] **8.4 Fair-Use Enforcement UI:**
+    - [x] Badge quota di halaman Bank Soal: "Sisa generate hari ini: 27/30" (MetricCard "Sisa Generate AI" + indikator di form generate).
+    - [x] Cooldown countdown saat generate terlalu cepat (caption badge & panel form: "Cooldown: Ns").
+    - [x] History job dengan status & error message (Blok 2b "Riwayat Generate AI": 5 job terakhir + badge status + `errorMessage` + total generate 30 hari).
 
   - [ ] **8.5 QA E2E Eksploratif AI Generator:**
     - [ ] Generate soal PG 5 butir → review → simpan 3 → verifikasi masuk Question Bank.

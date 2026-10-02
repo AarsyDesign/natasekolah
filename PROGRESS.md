@@ -106,10 +106,7 @@
 ---
 
 ## 3. Langkah Selanjutnya (Next Immediate Gate)
-1. **Phase 8.4 — Fair-Use Enforcement UI:**
-   * Badge quota di halaman Bank Soal: "Sisa generate hari ini: 27/30".
-   * Cooldown countdown saat generate terlalu cepat.
-   * History job dengan status & error message.
+1. ~~**Phase 8.4 — Fair-Use Enforcement UI**~~ **SELESAI 2026-10-02** (badge quota, cooldown, riwayat job + error message di Blok 2b).
 
 2. **Phase 8.5 — QA E2E Eksploratif AI Generator:**
    * Generate soal PG 5 butir → review → simpan 3 → verifikasi masuk Question Bank.

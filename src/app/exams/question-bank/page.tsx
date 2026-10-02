@@ -86,6 +86,46 @@ interface FeedbackMessage {
   type: "success" | "error";
 }
 
+/** Status job generate AI — dipakai riwayat fair-use Blok 2b (Phase 8.4). */
+type AIJobStatus =
+  | "DRAFT"
+  | "READY_FOR_REVIEW"
+  | "SAVED"
+  | "DISCARDED"
+  | "FAILED";
+
+interface AIJobSummary {
+  id: string;
+  subjectId: string;
+  provider: string;
+  model: string;
+  status: AIJobStatus;
+  createdAt: string | Date;
+  errorMessage?: string | null;
+}
+
+const AI_JOB_STATUS_META: Record<
+  AIJobStatus,
+  { label: string; variant: "success" | "warning" | "danger" | "info" | "neutral" | "primary" }
+> = {
+  DRAFT: { label: "Draf", variant: "neutral" },
+  READY_FOR_REVIEW: { label: "Siap Direview", variant: "info" },
+  SAVED: { label: "Tersimpan", variant: "success" },
+  DISCARDED: { label: "Dibuang", variant: "warning" },
+  FAILED: { label: "Gagal", variant: "danger" },
+};
+
+function formatAiJobDate(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 /**
  * Rute /exams/question-bank: daftar soal 4-blok (DESIGN.md §21) dengan
  * metric bar, filter, tabel padat desktop / ResourceList mobile.
@@ -146,6 +186,24 @@ export default function QuestionBankPage() {
   // Fair-use UI state
   const [quota, setQuota] = useState<AIGenerationQuotaResult | null>(null);
   const [usageHistory, setUsageHistory] = useState<AIGenerationUsageHistoryEntry[]>([]);
+  const [aiJobs, setAiJobs] = useState<AIJobSummary[]>([]);
+
+  // Muat data fair-use (quota, riwayat pemakaian, riwayat job) — dipanggil saat
+  // mount dan setelah review job (Phase 8.4)
+  const loadFairUse = async () => {
+    try {
+      const [quotaRes, historyRes, jobsRes] = await Promise.all([
+        getAIGenerationQuotaAction(),
+        getAIGenerationUsageHistoryAction(),
+        listAIGenerationJobsAction(),
+      ]);
+      if (quotaRes.success) setQuota(quotaRes.data);
+      if (historyRes.success) setUsageHistory(historyRes.data);
+      if (jobsRes.success) setAiJobs(jobsRes.data);
+    } catch {
+      // bagian UI ini opsional — kegagalan diamkan agar halaman tetap utuh
+    }
+  };
 
   // Pencarian debounce 350ms (DESIGN.md §19 & §23)
   useEffect(() => {
@@ -251,23 +309,10 @@ export default function QuestionBankPage() {
     };
   }, [metaKey]);
 
-  // Load quota & usage history on mount
+  // Load quota, usage history & job history on mount (Phase 8.4)
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const [quotaRes, historyRes] = await Promise.all([
-          getAIGenerationQuotaAction(),
-          getAIGenerationUsageHistoryAction(),
-        ]);
-        if (!active) return;
-        if (quotaRes.success) setQuota(quotaRes.data);
-        if (historyRes.success) setUsageHistory(historyRes.data);
-      } catch {
-        // silent fail
-      }
-    })();
-    return () => { active = false; };
+    void loadFairUse();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const reload = () => setReloadKey((prev) => prev + 1);
@@ -383,6 +428,7 @@ export default function QuestionBankPage() {
       setAiGenerateOpen(false);
       reload();
       reloadMeta();
+      void loadFairUse();
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Gagal review hasil generate");
     } finally {
@@ -695,6 +741,59 @@ export default function QuestionBankPage() {
             )}
           </>
         ) : null}
+        </section>
+      )}
+
+      {/* Blok 2b: Riwayat Generate AI — fair-use (Phase 8.4) */}
+      {(aiJobs.length > 0 || usageHistory.length > 0) && (
+        <section
+          aria-label="Riwayat generate AI"
+          className="mt-4 rounded-lg border border-stone-200 bg-white p-4 shadow-2xs"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-stone-700">
+              Riwayat Generate AI
+            </h2>
+            <span className="text-xs text-stone-500">
+              {usageHistory.reduce((sum, entry) => sum + entry.count, 0)} generate
+              30 hari terakhir
+            </span>
+          </div>
+
+          {aiJobs.length === 0 ? (
+            <p className="mt-2 text-xs text-stone-500">
+              Belum ada job generate AI.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {aiJobs.slice(0, 5).map((job) => (
+                <li
+                  key={job.id}
+                  className="rounded-md border border-stone-100 bg-stone-50 p-2"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <Badge variant={AI_JOB_STATUS_META[job.status]?.variant ?? "neutral"}>
+                      {AI_JOB_STATUS_META[job.status]?.label ?? job.status}
+                    </Badge>
+                    <span className="text-stone-600">
+                      {subjects.find((s) => s.id === job.subjectId)?.name ??
+                        "Mata pelajaran"}
+                    </span>
+                    <span className="text-stone-400">·</span>
+                    <span className="text-stone-500">{formatAiJobDate(job.createdAt)}</span>
+                    <span className="ml-auto text-stone-400">
+                      {job.provider}/{job.model}
+                    </span>
+                  </div>
+                  {job.errorMessage && (
+                    <p className="mt-1 break-words text-xs text-rose-600">
+                      {job.errorMessage}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

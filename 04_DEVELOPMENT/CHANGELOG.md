@@ -1,5 +1,17 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - FEAT: Phase 8.4 — Fair-Use Enforcement UI: Riwayat Job (VERIFIED)
+
+### Added
+* **Blok 2b "Riwayat Generate AI"** di `/exams/question-bank` — 5 job generate terakhir: badge status (`DRAFT`/`READY_FOR_REVIEW`/`SAVED`/`DISCARDED`/`FAILED`), nama mata pelajaran, waktu lokal id-ID, `provider/model`, dan `errorMessage` bila job gagal. Total generate 30 hari terakhir dari `getAIGenerationUsageHistoryAction`.
+* **`loadFairUse()`** — satu fungsi memuat quota + usage history + job history, dipanggil saat mount dan setelah review job (save/discard) supaya badge quota & riwayat langsung segar.
+
+### Fixed
+* Data quota/history yang sebelumnya di-fetch tapi tidak pernah dirender (state `usageHistory` dan import `listAIGenerationJobsAction` mati) kini tampil di UI.
+
+### Verification
+* `npx tsc --noEmit` **0** · `npm test` **473/473 pass, 0 fail** · `npm run build` **exit 0**. Belum QA E2E (masuk Phase 8.5).
+
 ## [2026-10-01] - FEAT: Phase 7 Trek C — AI Generator Infrastructure (VERIFIED)
 
 ### Added
