@@ -912,8 +912,9 @@
 ---
 
 ## 3. Langkah Selanjutnya (Next Immediate Gate)
-1. **Phase 2 Gate — Daily Operations:**
-   * Attendance Engine (< 60 detik) & offline cache idempotency.
-   * Finance 3-Tier Layer (FeeCategory, StudentCharge, PaymentTransaction).
-   * Cashbook & Unique Receipt Generator (`KW-...`).
-   * Operational Dashboard berbasis aksi pengguna.
+1. **Phase 9 — Penutupan Backlog Gerbang & Kesiapan Rilis** (plan lengkap: `03_EXECUTION/PLAN-PHASE-9.md`):
+   * **9.0** QA E2E eksploratif klik-manual modal "Generate Soal AI" (sisa Phase 8.5).
+   * **9.1** Tasrih / Permit Engine (Izin Pulang Santri) — menutup Phase 5 Gate 100%.
+   * **9.2** Guardian Master Data CRUD staf + wizard undangan (menutup Phase 1 Gate).
+   * **9.3** Student Full Profile 5 Kluster Dapodik/EMIS (menutup Phase 1 Gate).
+   * **9.4** Backlog terblokir (butuh keputusan Arsyad): tier Question Bank COMMUNITY/DEVELOPER_CENTRAL, CI workflow (token scope `workflow`), deploy Vercel.

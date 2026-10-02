@@ -1,5 +1,12 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - DOCS: PLAN Phase 9 — Penutupan Backlog Gerbang & Kesiapan Rilis
+
+### Added
+* **`03_EXECUTION/PLAN-PHASE-9.md`** — plan resmi fase berikutnya: 9.0 QA E2E klik-manual AI Generator, 9.1 Tasrih/Permit Engine, 9.2 Guardian CRUD staf + wizard undangan, 9.3 Student 5 Kluster Dapodik/EMIS, 9.4 backlog terblokir (Question Bank COMMUNITY/DEVELOPER_CENTRAL, CI workflow, Vercel), 9.5 gate keluar. Termasuk scope, urutan prioritas, DoD Strict, verification plan, dan mitigasi risiko.
+* **`03_EXECUTION/TODO.md`** — seksi Phase 9 (checklist per tahap).
+* **`03_EXECUTION/PROGRESS.md`** — "Langkah Selanjutnya" diperbarui dari Phase 2 (basì) → Phase 9.
+
 ## [2026-10-02] - MERGE: Offline Attendance & Sync Engine dari `feature/offline-attendance-sync` (VERIFIED)
 
 ### Added (dari cabang, 2 commit `a36eb68` + `5eceaf4`)

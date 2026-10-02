@@ -444,5 +444,40 @@
     - *Catatan environment:* `prisma validate` tidak bisa dijalankan dari run cron
       (scanner keamanan memblokir eksekusi CLI prisma; tidak ada perubahan `schema.prisma` di fase ini).
 
+---
+
+## Phase 9 — Penutupan Backlog Gerbang & Kesiapan Rilis (PLAN: `03_EXECUTION/PLAN-PHASE-9.md`)
+
+- [ ] **9.0 QA E2E klik-manual modal "Generate Soal AI":**
+  - [ ] Alur form → generating → review → simpan terpilih lewat browser; catat temuan.
+
+- [ ] **9.1 Tasrih / Permit Engine (Izin Pulang Santri):**
+  - [ ] Skema `PermitRequest` (lifecycle PENDING→APPROVED/REJECTED→RETURNED/OVERDUE) + migrasi MANUAL (`migrate diff` nihil).
+  - [ ] Zod `src/lib/validation/permit.ts` + service `src/lib/permit/permit-service.ts` (guard siswa ber-assignment asrama, AuditLog).
+  - [ ] RBAC `pesantren:view`/`pesantren:manage` di matriks 6 peran + test.
+  - [ ] Server actions `src/actions/permit.ts` (+ `rethrowIfSessionExpired`).
+  - [ ] UI `/dormitories/permits` (daftar, filter, modal ajukan/approve) + notifikasi `PERMIT_APPROVED` via outbox.
+  - [ ] Test `test/permit-engine.test.ts` (+15–20) + QA E2E.
+
+- [ ] **9.2 Guardian Master Data CRUD Staf + Wizard Undangan:**
+  - [ ] Server actions `src/actions/guardian.ts` (list/update/deactivate/createInvitation 72 jam).
+  - [ ] UI `/guardians` (tabel + relasi anak, modal edit & undangan, empty/error state, mobile).
+  - [ ] Test: RBAC, tenant isolation, token sekali pakai (+10–15).
+
+- [ ] **9.3 Student Full Profile — 5 Kluster Dapodik/EMIS:**
+  - [ ] Skema tabel 1-to-1 `StudentFamilyData`, `StudentHealthData`, `StudentRegistryData` + migrasi manual.
+  - [ ] Service + Zod + server actions (upsert cluster, `student:manage`).
+  - [ ] UI tab tambahan di `/students/[id]`: Keluarga, Kesehatan, Registry.
+  - [ ] Test +20 termasuk cross-tenant; importer kolom kluster (tahap lanjut).
+
+- [ ] **9.4 Backlog terblokir — TIDAK dikerjakan sampai keputusan Arsyad:**
+  - [ ] Tier Question Bank `COMMUNITY`/`DEVELOPER_CENTRAL` (butuh keputusan produk moderasi lintas lembaga).
+  - [ ] CI workflow `.github/workflows/ci.yml` (butuh token GitHub scope `workflow`).
+  - [ ] Deploy Vercel permanen (butuh project baru + env Supabase).
+
+- [ ] **9.5 Gate Keluar Phase 9:**
+  - [ ] ROADMAP: 3 butir `[ ]` → `[x]` dengan anotasi bukti.
+  - [ ] `tsc 0` · `npm test` (target >500) · `build exit 0` · PROGRESS/CHANGELOG konsisten.
+
 
 
