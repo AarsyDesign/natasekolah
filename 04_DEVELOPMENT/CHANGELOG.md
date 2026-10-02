@@ -1,5 +1,29 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 10.4: Ekspor DOCX (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`package.json`** — dependensi baru `docx@8.5.0` (workaround threat-intel cron: edit `package.json` lalu `npm install --no-audit --no-fund`).
+* **`src/lib/exam-paper/export-docx.ts`** — renderer DOCX lengkap (Phase 10.4, PRD #31) dengan struktur identik PDF:
+  - Kop lembaga (nama/alamat/telp/logo best-effort) + identitas ujian.
+  - Blok Ruang / Nomor Peserta / Nama Peserta (diisi manual).
+  - Body 1/2 kolom configurable (`exam.columnLayout`: ONE/TWO) dengan aliran per halaman.
+  - Mode **SISWA** (kunci disembunyikan) dan **KUNCI** (kunci tebal + warna merah, pedoman penskoran esai).
+  - QR verifikasi → `/verify/exam/<token>` (PNG 240px, error correction M).
+  - Footer institusi + nomor halaman "Halaman n dari m" via `PageNumberElement` (CURRENT + TOTAL_PAGES).
+  - Sumber data bersama `buildExamPaperData()` agar isi PDF & DOCX identik.
+  - `renderExamPaperDocx(data, options)` (murni, tanpa DB) + `exportExamPaperDocx(ctx, examId, mode)` (orkestrasi + guard `exam:manage` + plugin `FORMAL_ACADEMIC` + `regenerateToken` tiap ekspor → QR rotasi).
+* **`src/lib/exam-paper/index.ts`** — re-export non-conflicting (`renderExamPaperDocx`, `exportExamPaperDocx`, `RenderExamPaperDocxOptions`).
+* **`src/actions/exam-paper.ts`** — server action `exportExamPaperDocxAction(examId, mode)` → base64 buffer untuk download klien.
+* **`src/app/exams/papers/[id]/page.tsx`** — tombol "DOCX Siswa" (teal) + "DOCX Kunci" (amber) hanya saat `canManage` + soal > 0; loading state; feedback sukses berisi nama file + peringatan QR rotasi.
+
+### Verification
+* `npx tsc --noEmit` → 0 error
+* `npm test` → 624/624 pass (0 fail, 182 suites)
+* `npm run build` → exit 0
+
+---
+
 ## [2026-10-02] - Phase 10.3: Ekspor PDF + QR Verifikasi (IMPLEMENTED / VERIFIED)
 
 ### Added

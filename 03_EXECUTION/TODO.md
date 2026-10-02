@@ -568,8 +568,11 @@
   - [x] Halaman verifikasi publik `/verify/exam/[token]` (middleware PUBLIC): identitas ringkas saja (lembaga, judul, mapel, T.A, jenis, status, updatedAt) — **anti-leak**: tanpa soal/kunci/data tenant lain.
   - [x] Middleware: tambah `/verify` ke `PUBLIC_PREFIXES`.
   - [x] Verifikasi: `tsc 0` · `npm test` **624/624** · `npm run build` exit 0 (routes `/verify/exam/[token]` dynamic + 24 existing).
-- [ ] **10.4 Ekspor DOCX:** dep `docx`; `export-docx.ts` struktur identik PDF
-  memakai sumber data bersama `buildExamPaperData()`.
+- [x] **10.4 Ekspor DOCX:** dep `docx`; `export-docx.ts` struktur identik PDF
+  memakai sumber data bersama `buildExamPaperData()`. **SELESAI 2026-10-02 (run cron)**:
+  `export-docx.ts` + `index.ts` (re-export non-conflicting), `tsc 0` · `npm test`
+  **624/624** · `build exit 0`. Server action `exportExamPaperDocxAction` + UI tombol
+  \"DOCX Siswa\" + \"DOCX Kunci\" di halaman detail naskah ujian.
 - [ ] **10.5 QA E2E + test DoD strict:** unit (compose/poin/urutan/RBAC/
   cross-tenant/token), integration (`%PDF` header, DOCX zip, anti-leak
   verifikasi), smoke HTTP download, QA E2E klik-manual (buat naskah → tarik
