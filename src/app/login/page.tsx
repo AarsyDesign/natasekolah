@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, Suspense, useState } from "react";
+import React, { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginAction } from "../../actions/auth";
 import { getSafePostLoginPath } from "../../lib/auth/navigation";
+import { useToast } from "../../components/ui/toast";
 
 export default function LoginPage() {
   return (
@@ -23,9 +24,21 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sessionExpired = searchParams.get("expired") === "1";
+
+  React.useEffect(() => {
+    if (sessionExpired && !error) {
+      toast({
+        title: "Sesi Berakhir",
+        description: "Sesi Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.",
+        variant: "expired",
+        duration: 8000,
+      });
+    }
+  }, [sessionExpired, toast, error]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,9 +88,9 @@ function LoginForm() {
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-          {sessionExpired && !error ? (
-            <p aria-live="polite" className="rounded-lg border border-[#99f6e4] bg-[#f0fdfa] p-3 text-sm leading-5 text-[#115e59]" role="status">
-              Sesi Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.
+          {error ? (
+            <p aria-live="polite" className="rounded-lg border border-[#fecaca] bg-[#fef2f2] p-3 text-sm leading-5 text-[#991b1b]" role="alert">
+              {error}
             </p>
           ) : null}
 
@@ -122,12 +135,6 @@ function LoginForm() {
               type="password"
             />
           </label>
-
-          {error ? (
-            <p aria-live="polite" className="rounded-lg border border-[#fecaca] bg-[#fef2f2] p-3 text-sm leading-5 text-[#991b1b]" role="alert">
-              {error}
-            </p>
-          ) : null}
 
           <button
             className="min-h-11 w-full rounded-lg bg-[#0f766e] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#115e59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f766e] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#52525b]"

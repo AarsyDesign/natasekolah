@@ -593,7 +593,7 @@
 
 ## Phase 11 — Pengerasan Rilis & Backlog Terblokir (PLAN: `03_EXECUTION/PLAN-PHASE-11.md`)
 
-- [ ] **11.1 Session Expiry UX:** handle `?expired=1` di `/login` + toast ramah (bukan error mentah); `rethrowIfSessionExpired` sudah di 94 catch + 9 test.
+- [x] **11.1 Session Expiry UX:** handle `?expired=1` di `/login` + toast ramah (bukan error mentah); `rethrowIfSessionExpired` sudah di 94 catch + 9 test.
 - [x] **11.2 PDF/DOCX Layout Stress Test:** teks esai panjang (>500 char), gambar soal, page break 2 kolom edge case; test integrasi `test/pdf-docx-layout-stress.test.ts`.
 - [x] **11.3 AI Generator Provider API Key Wiring:** dokumentasi `.env.example` + `README.md` (AI_PROVIDER, AI_API_KEY, AI_MODEL, AI_LOCAL_BASE_URL, AI_GENERATION_ENABLED=false default).
 - [ ] **11.4 Rate Limit Redis/DB (Optional):** ADR keputusan in-memory vs Redis (Upstash/Vercel KV/self-hosted); implementasi bila disetujui.

@@ -1,5 +1,21 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 11.1: Session Expiry UX (COMPLETED / VERIFIED)
+
+### Added
+* **`src/components/ui/toast.tsx`** — Toast notification system dengan provider `ToastProvider`, hook `useToast()`, dan varian `default` | `success` | `error` | `warning` | `info` | `expired` (khusus untuk sesi berakhir).
+* **`src/app/login/page.tsx`** — Integrasi toast pada halaman login: handle query param `?expired=1` via `useEffect` → tampil toast varian `expired` (durasi 8 detik) menggantikan inline message sebelumnya.
+
+### Updated
+* **`src/components/app-shell.tsx`** — Wrap konten utama dengan `ToastProvider` agar toast tersedia di seluruh aplikasi (di dalam `AppShellContext`).
+
+### Verification
+* `npx tsc --noEmit` → **0 error**
+* `npm test` → **638/638 pass** (0 fail, 186 suites)
+* `npm run build` → **exit 0** (47 routes)
+
+---
+
 ## [2026-10-02] - Phase 11.2-11.3: PDF/DOCX Layout Stress Test + AI Generator Provider API Key Wiring (COMPLETED / VERIFIED)
 
 ### Added
