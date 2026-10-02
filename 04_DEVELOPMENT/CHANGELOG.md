@@ -1,5 +1,51 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 10.2: Server Actions + UI /exams/papers (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`src/actions/exam-paper.ts`** — 8 server action Exam Paper Engine:
+  `listExamsAction` (filter + pagination + `canManage`), `getExamDetailAction`,
+  `createExamAction`, `addExamQuestionsAction` (tarik soal, idempoten),
+  `setExamQuestionPointsAction`, `reorderExamQuestionsAction`,
+  `transitionExamStatusAction`, `archiveExamAction` (soft delete). Pola standar:
+  `requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`
+  sebagai baris pertama tiap `catch` (sesi berakhir → redirect login) + semua
+  export **async** (kaidah Next.js 16) + `revalidatePath` daftar & detail.
+* **`src/components/exam-paper/exam-paper-ui.ts`** — modul UI klien bebas impor
+  server: opsi/label/badge tipe-status-layout naskah, pantulan
+  `EXAM_STATUS_TRANSITIONS`, batas (100 soal, poin 1–100), tipe bayangan klien
+  (`ExamListItem`, `ExamDetailItem`, `ExamPaperQuestionItem`), helper
+  `sumExamPoints`/`formatExamDate`/`truncateExamText`.
+* **`src/app/exams/papers/page.tsx`** — daftar naskah: pencarian debounce
+  350ms, filter status/mapel/jenis ujian, pagination, empty/loading/error
+  state, modal **Buat Naskah** (judul, mapel, tahun ajaran — default tahun
+  aktif, tipe, petunjuk, layout kolom 1/2, toggle tampil kunci) → redirect ke
+  halaman detail. Tombol aksi hanya tampil bila `canManage` (exam:manage).
+* **`src/app/exams/papers/[id]/page.tsx`** — detail naskah:
+  * komposisi bernomor dengan **atur poin** per butir (1–100, blur/Enter) dan
+    **urutan naik/turun** (reorder komposisi lengkap);
+  * modal **Tarik Soal dari Bank Soal** (filter tipe/kesulitan/jumlah,
+    penanda "sudah ada di naskah", non-aktif saat slot penuh/batas jumlah,
+    pagination);
+  * **mode Preview** bernomor + **toggle kunci jawaban** (penanda ✓ opsi PG
+    benar, `shortAnswerKey` soal singkat, rubrik esai);
+  * aksi siklus status (Siap/Kembali ke Draf/Terbitkan/Arsipkan dengan
+    konfirmasi), komposisi terkunci otomatis saat ISSUED/ARCHIVED,
+    empty/loading/error + banner feedback, mobile-first.
+* **Navigasi "Naskah Ujian"** (`src/components/nav-header.tsx` fallback links +
+  `src/components/app-shell.tsx` MASTER_DATA_ITEMS, ikon `FileText`).
+* **`test/exam-paper.test.ts` +2 test struktural** — seluruh export action
+  bersifat `AsyncFunction` (kaidah Next.js 16) + kelengkapan 8 aksi plan 10.2.
+
+### Verification
+* `npm run typecheck` → **0 error**.
+* `npm test` → **624/624 pass, 0 fail** (baseline 622 + 2 baru).
+* `npm run build` → **exit 0**; route `/exams/papers` (static) &
+  `/exams/papers/[id]` (dynamic) terdaftar.
+* Smoke dev server: GET `/exams/papers` & `/exams/papers/[id]/<id>` → **200**
+  tanpa error runtime (menangkap kelas bug "use server" yang lolos tsc/test).
+* QA E2E klik-manual → masuk tahap 10.5.
+
 ## [2026-10-02] - Phase 10.1: Exam Paper Engine — Fondasi Data & Domain (IMPLEMENTED / VERIFIED)
 
 ### Added

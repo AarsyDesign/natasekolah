@@ -535,11 +535,19 @@
     DoD strict RBAC/plugin/tenant/audit) · `prisma validate` valid ·
     `build exit 0` · QA E2E DB nyata **44/44**
     (`scripts/_local-qa-exam-paper.ts`, lokal saja).
-- [ ] **10.2 Server actions + UI `/exams/papers`:** `src/actions/exam-paper.ts`
-  (`requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`);
-  daftar + filter, modal buat naskah, halaman detail (tarik soal dari Bank
-  Soal: filter tipe/difficulty/jumlah, atur urutan + poin), preview nomor soal,
-  toggle kunci, empty/loading/error, mobile 430px.
+- [x] **10.2 Server actions + UI `/exams/papers`:** — **SELESAI 2026-10-02 (run cron)**
+  - [x] `src/actions/exam-paper.ts` (8 action; `requireActionSession` +
+    `runWithTenantContext` + `rethrowIfSessionExpired` di tiap catch).
+  - [x] Daftar + filter (judul/status/mapel/tipe) + pagination + modal buat
+    naskah (judul, mapel, tahun ajaran, tipe, petunjuk, layout kolom, tampil
+    kunci) → redirect ke detail.
+  - [x] Halaman detail: tarik soal dari Bank Soal (filter tipe/kesulitan/
+    jumlah, penanda soal sudah ada, batas slot 100), atur urutan (naik/turun)
+    + poin per soal (1–100), preview nomor soal + toggle kunci, komposisi
+    terkunci saat ISSUED/ARCHIVED, empty/loading/error, mobile-first.
+  - [x] Nav "Naskah Ujian" (`nav-header` + `app-shell`) + 2 test struktural
+    (semua export async kaidah Next.js 16). `tsc 0` · **624/624** · `build exit 0` ·
+    smoke kedua route 200.
 - [ ] **10.3 Ekspor PDF + QR verifikasi:** dep `pdfkit` + `qrcode`;
   `src/lib/exam-paper/export-pdf.ts` (kop, identitas ujian, ruang nama +
   nomor peserta, kolom 1/2 configurable, footer + nomor halaman, mode SISWA

@@ -1,6 +1,7 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import * as examPaperActions from "../src/actions/exam-paper";
 import { prisma } from "../src/lib/prisma";
 import {
   createExam,
@@ -1144,6 +1145,47 @@ describe("Phase 10.1 — Exam Paper Engine: Fondasi data & domain", () => {
       for (const audit of inMemoryAuditLogs.filter((a) => a.entityId === exam.id)) {
         assert.equal(audit.entityType, "Exam");
         assert.equal(audit.institutionId, instAId);
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 10.2 — Server Actions src/actions/exam-paper.ts
+  // -------------------------------------------------------------------------
+  describe("Phase 10.2 — Server Actions exam-paper (struktur & kaidah Next.js 16)", () => {
+    const REQUIRED_ACTIONS = [
+      "listExamsAction",
+      "getExamDetailAction",
+      "createExamAction",
+      "addExamQuestionsAction",
+      "setExamQuestionPointsAction",
+      "reorderExamQuestionsAction",
+      "transitionExamStatusAction",
+      "archiveExamAction",
+    ];
+
+    it("seluruh ekspor action bersifat async function (kaidah Next.js 16)", () => {
+      const exportNames = Object.keys(examPaperActions);
+      assert.ok(exportNames.length >= REQUIRED_ACTIONS.length);
+
+      for (const name of exportNames) {
+        const value = (examPaperActions as Record<string, unknown>)[name];
+        assert.equal(typeof value, "function", `${name} harus berupa function`);
+        assert.equal(
+          (value as { constructor: { name: string } }).constructor.name,
+          "AsyncFunction",
+          `${name} harus async agar tidak memicu runtime 500`
+        );
+      }
+    });
+
+    it("menyediakan seluruh aksi sesuai plan 10.2 (daftar, detail, create, komposisi, urutan, poin, status, arsip)", () => {
+      for (const name of REQUIRED_ACTIONS) {
+        assert.equal(
+          typeof (examPaperActions as Record<string, unknown>)[name],
+          "function",
+          `aksi ${name} harus tersedia`
+        );
       }
     });
   });
