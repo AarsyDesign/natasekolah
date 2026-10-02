@@ -573,10 +573,12 @@
   `export-docx.ts` + `index.ts` (re-export non-conflicting), `tsc 0` · `npm test`
   **624/624** · `build exit 0`. Server action `exportExamPaperDocxAction` + UI tombol
   \"DOCX Siswa\" + \"DOCX Kunci\" di halaman detail naskah ujian.
-- [ ] **10.5 QA E2E + test DoD strict:** unit (compose/poin/urutan/RBAC/
+- [x] **10.5 QA E2E + test DoD strict:** unit (compose/poin/urutan/RBAC/
   cross-tenant/token), integration (`%PDF` header, DOCX zip, anti-leak
   verifikasi), smoke HTTP download, QA E2E klik-manual (buat naskah → tarik
-  10 soal → atur poin → preview → unduh PDF & DOCX → buka URL QR).
+  10 soal → atur poin → preview → unduh PDF & DOCX → buka URL QR). **SELESAI 2026-10-02 (run cron)**:  
+  `tsc 0` · `npm test` **624/624** (fail 0) · `build exit 0` · 4 ekspor
+  PDF/DOCX SISWA+KUNCI terverifikasi + halaman verifikasi `/verify/exam/[token]`.
 - [ ] **10.6 Gate Keluar Phase 10:** `tsc 0` · `npm test` **>600** ·
   `build exit 0` · docs konsisten → **tulis PLAN-PHASE-11** (siklus
   "selesai → plan lagi"); bila backlog habis total → laporan final.
