@@ -84,3 +84,7 @@ server action · UI · empty/error state · mobile < 430px tanpa overflow · uni
 ## 6. Gate Keluar Phase 9
 - ROADMAP: ketiga butir `[ ]` menjadi `[x]` dengan anotasi bukti.
 - `tsc 0` · `npm test` (target > 500 test) · `build exit 0` · dokumentasi konsisten.
+- **Sesuai instruksi Arsyad (2026-10-02): begitu gate ini lulus, langsung susun
+  PLAN fase berikutnya** (`03_EXECUTION/PLAN-PHASE-<N>.md` + checklist TODO +
+  update PROGRESS/CHANGELOG, commit & push) — jangan berhenti tanpa plan baru,
+  dan jangan mengarang pekerjaan di luar backlog.
