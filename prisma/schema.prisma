@@ -63,6 +63,8 @@ model Institution {
   studentFamilyData    StudentFamilyData[]
   studentHealthData    StudentHealthData[]
   studentRegistryData  StudentRegistryData[]
+  exams                Exam[]
+  examQuestions        ExamQuestion[]
 
   @@index([slug])
   @@index([type])
@@ -95,6 +97,7 @@ model User {
   aiGenerationUsage   AiGenerationUsage[]
   aiGenerationJobs    AiGenerationJob[]
   approvedPermits     PermitRequest[]
+  createdExams        Exam[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, email])
@@ -119,6 +122,7 @@ model AcademicYear {
   studentCharges      StudentCharge[]
   reportCards         ReportCard[]
   permitRequests      PermitRequest[]
+  exams               Exam[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, name])
@@ -351,6 +355,7 @@ model Subject {
   reportCardSubjects  ReportCardSubject[]
   questions           Question[]
   aiGenerationJobs    AiGenerationJob[]
+  exams               Exam[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, code])
@@ -897,6 +902,7 @@ model Question {
   subject          Subject        @relation(fields: [subjectId, institutionId], references: [id, institutionId], onDelete: Restrict)
   createdBy        User           @relation(fields: [createdById, institutionId], references: [id, institutionId], onDelete: Cascade)
   options          QuestionOption[]
+  examQuestions    ExamQuestion[]
 
   @@unique([id, institutionId])
   @@index([institutionId, subjectId])
@@ -1062,6 +1068,64 @@ model StudentRegistryData {
   @@unique([studentId, institutionId])
   @@index([institutionId])
   @@map("student_registry_data")
+}
+
+// -------------------------------------------------------------
+// PHASE 10 — EXAM PAPER ENGINE (PRD #31)
+// -------------------------------------------------------------
+
+// Exam (Naskah Ujian jadi cetak: komposisi soal + pengaturan layout cetak)
+model Exam {
+  id              String         @id @default(cuid())
+  institutionId   String
+  academicYearId  String
+  subjectId       String
+  createdById     String
+  title           String         // Judul naskah (mis. "UTS Ganjil Kelas 8")
+  examType        String         @default("DAILY") // DAILY | MIDTERM | FINAL | REMEDIAL | PRACTICAL
+  instructions    String?        // Petunjuk pengerjaan (cetak di naskah)
+  showAnswers     Boolean        @default(false) // Tampilkan kunci saat preview
+  columnLayout    String         @default("ONE") // ONE | TWO (kolom cetak configurable)
+  status          String         @default("DRAFT") // DRAFT | READY | ISSUED | ARCHIVED
+  verifyToken     String         @unique // Hash SHA-256 dari token QR verifikasi (token mentah TIDAK pernah disimpan)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution      Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear   @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  subject          Subject        @relation(fields: [subjectId, institutionId], references: [id, institutionId], onDelete: Restrict)
+  createdBy        User           @relation(fields: [createdById, institutionId], references: [id, institutionId], onDelete: Cascade)
+  questions        ExamQuestion[]
+
+  @@unique([id, institutionId])
+  @@index([institutionId, status])
+  @@index([institutionId, subjectId])
+  @@index([institutionId, academicYearId])
+  @@index([institutionId, createdAt])
+  @@map("exams")
+}
+
+// ExamQuestion (Komposisi naskah: satu soal bank pada satu naskah,
+// dengan urutan cetak dan bobot poin)
+model ExamQuestion {
+  id              String         @id @default(cuid())
+  institutionId   String
+  examId          String
+  questionId      String
+  order           Int            @default(0) // Urutan cetak (1..n)
+  points          Int            @default(10) // Bobot poin butir soal
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution      Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  exam             Exam           @relation(fields: [examId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  question         Question       @relation(fields: [questionId, institutionId], references: [id, institutionId], onDelete: Restrict)
+
+  @@unique([id, institutionId])
+  @@unique([examId, questionId])
+  @@index([institutionId, examId])
+  @@index([institutionId, questionId])
+  @@map("exam_questions")
 }
 
 

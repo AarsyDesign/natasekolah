@@ -1,5 +1,40 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 10.1: Exam Paper Engine — Fondasi Data & Domain (IMPLEMENTED / VERIFIED)
+
+### Added
+* **Model Prisma `Exam` + `ExamQuestion`** (`prisma/schema.prisma`): naskah
+  ujian (judul, tipe ujian, petunjuk, `columnLayout` ONE/TWO, `showAnswers`,
+  status DRAFT→READY→ISSUED→ARCHIVED, `verifyToken` **unik hash-only** SHA-256)
+  + komposisi soal (urutan cetak, poin, compound unique `[examId, questionId]`,
+  compound FK `[examId, institutionId]` / `[questionId, institutionId]`).
+* **Migrasi MANUAL `20261002080000_exam_paper_core`** (SQL dari
+  `migrate diff --from-url`, diterapkan via `migrate deploy`; verifikasi
+  `migrate diff` = *empty migration* & `migrate status` = "up to date", 7 migrasi;
+  tanpa `migrate dev`).
+* **`src/lib/validation/exam-paper.ts`** — Zod strict: create naskah, tarik
+  soal (array non-kosong, tanpa duplikat, maks 100), atur poin (1–100 int),
+  reorder (wajib komposisi lengkap), transisi status, filter daftar.
+* **`src/lib/exam-paper/`** — `exam-paper-service.ts` (`createExam`,
+  `addQuestions` — soal wajib milik lembaga & se-mapel, idempoten terhadap
+  duplikat, batas 100 butir; `setQuestionPoints`; `reorderQuestions`;
+  `listExams`; `getExamDetail`; `transitionExamStatus` + `archiveExam`
+  (ARCHIVED = soft delete, terminal); `regenerateToken` (token mentah
+  sekali-jalan, DB hanya hash); `getExamPublicIdentity` (publik, tanpa sesi,
+  7 field identitas saja) + `types.ts` (galat domain) + barrel `index.ts`.
+  Rantai guard lengkap: `exam:view`/`exam:manage` → plugin `FORMAL_ACADEMIC`
+  (via baris Institution — pitfall 8.5) → tenant-scoped → AuditLog tanpa token.
+* **`test/exam-paper.test.ts` — 38 test** (Zod boundary, RBAC 6 peran termasuk
+  guardian, plugin guard, cross-tenant, komposisi idempoten + limit,
+  urutan/poin, siklus status + idempoten arsip, hash-only token +
+  anti-leak identitas publik, cakupan AuditLog per operasi).
+
+### Changed
+* Relasi balik: `Institution.exams/examQuestions`, `AcademicYear.exams`,
+  `Subject.exams`, `User.createdExams`, `Question.examQuestions`.
+* `03_EXECUTION/TODO.md`: checklist **Phase 10** ditambahkan, **10.1 ✓**;
+  `PROGRESS.md` "Langkah Selanjutnya" → 10.1 SELESAI, tahap berikut 10.2.
+
 ## [2026-10-02] - DOCS: PLAN Phase 10 — Exam Paper Engine (PRD #31)
 
 ### Added

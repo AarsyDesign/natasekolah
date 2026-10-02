@@ -516,14 +516,25 @@
 
 ## Phase 10 — Exam Paper Engine (PRD #31) + Pengerasan Rilis (PLAN: `03_EXECUTION/PLAN-PHASE-10.md`)
 
-- [ ] **10.1 Fondasi data & domain:** model `Exam` + `ExamQuestion` (compound FK
-  institution, `verifyToken` unik hash-only), migrasi MANUAL
-  `20261002080000_exam_paper_core` (`migrate deploy`, `migrate diff` nihil),
-  Zod `src/lib/validation/exam-paper.ts`, service
-  `src/lib/exam-paper/exam-paper-service.ts` (create, addQuestions dengan
-  validasi kepemilikan soal, urutan/poin, list, detail, regenerateToken;
-  `requirePermission exam:*` + plugin `FORMAL_ACADEMIC` + AuditLog, ARCHIVED
-  menggantikan hard delete).
+- [x] **10.1 Fondasi data & domain:** — **SELESAI 2026-10-02 (run cron)**
+  - [x] Model `Exam` + `ExamQuestion` (compound FK institution, `verifyToken`
+    unik hash-only SHA-256 — token mentah tidak pernah disimpan), migrasi
+    MANUAL `20261002080000_exam_paper_core` (`migrate deploy` OK,
+    `migrate diff` nihil, `migrate status` up to date — 7 migrasi).
+  - [x] Zod `src/lib/validation/exam-paper.ts` (create, addQuestions,
+    setPoints, reorder, transisi status, filter; enum tipe/status/layout,
+    batas `EXAM_MAX_QUESTIONS` 100, poin 1–100).
+  - [x] Service `src/lib/exam-paper/exam-paper-service.ts` (`createExam`,
+    `addQuestions` — validasi soal milik institusi & se-mapel + idempoten,
+    `setQuestionPoints`, `reorderQuestions` (wajib komposisi lengkap),
+    `listExams`, `getExamDetail`, `transitionExamStatus`/`archiveExam`
+    (ARCHIVED menggantikan hard delete), `regenerateToken` (hash-only),
+    `getExamPublicIdentity` (publik, identitas ringkas anti-leak);
+    `requirePermission exam:*` + plugin `FORMAL_ACADEMIC` + AuditLog).
+  - [x] Verifikasi: `tsc 0` · `npm test` **622/622** (+38 `test/exam-paper.test.ts`,
+    DoD strict RBAC/plugin/tenant/audit) · `prisma validate` valid ·
+    `build exit 0` · QA E2E DB nyata **44/44**
+    (`scripts/_local-qa-exam-paper.ts`, lokal saja).
 - [ ] **10.2 Server actions + UI `/exams/papers`:** `src/actions/exam-paper.ts`
   (`requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`);
   daftar + filter, modal buat naskah, halaman detail (tarik soal dari Bank
