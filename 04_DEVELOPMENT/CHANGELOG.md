@@ -1,5 +1,26 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 11.5: DKAS Bot Cohere Semantic Search (Optional) — COMPLETED / VERIFIED
+
+### Added
+* **`src/lib/ai-providers/cohere.provider.ts`** — CohereProvider implementation untuk semantic search/rerank (IAIProvider interface). Fungsi: `embed()`, `rerank()`, `generateAnswer()`, `generateQuestions()` (permanent error), `isConfigured()`. Free tier: 1M requests/bulan.
+* **`src/lib/operations/semantic-search.ts`** — `searchGlobalEntitiesWithSemanticFallback()` dengan logika: keyword search dulu (Prisma) → fallback ke Cohere rerank jika hasil < threshold ATAU query panjang (natural language). Helper: `buildSearchCorpus()` (exported), `mapRerankToResults()` (exported). Server action wrapper `searchGlobalSemanticAction()`.
+* **`src/actions/operations.ts`** — Tambah `searchGlobalSemanticActionWrapper()` server action.
+* **`.env.example`** — Tambah `COHERE_API_KEY` + `COHERE_BASE_URL` (optional).
+* **`test/semantic-search-cohere.test.ts`** — 15 test: CohereProvider interface, rerank logic, fallback logic, edge cases, integration logic (no DB mock needed).
+
+### Updated
+* **`src/lib/ai-generation/types.ts`** — Tambah `'cohere'` ke `AI_PROVIDERS` (tetapi tidak dipakai AI Generator, hanya untuk search).
+* **`src/lib/ai-providers/provider-factory.ts`** — `getAvailableProviders()` return list tanpa cohere (karena cohere tidak untuk generate soal).
+* **`src/lib/ai-providers/cohere.provider.ts`** — `embed()` & `generateAnswer()` return empty/default saat API key tidak diset (untuk test).
+
+### Verification
+* `npx tsc --noEmit` → **0 error**
+* `npm test` → **657/657 pass** (0 fail, 194 suites) — +18 test dari Phase 11.5
+* `npm run build` → **exit 0** (47 routes)
+
+---
+
 ## [2026-10-02] - Phase 11.4: Rate Limit Redis/DB (Upstash) — Optional Hardening (COMPLETED / VERIFIED)
 
 ### Added

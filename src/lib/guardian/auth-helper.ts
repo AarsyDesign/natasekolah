@@ -1,4 +1,4 @@
-import { getSessionCookie } from "../auth/cookie";
+import { getSessionCookie } from "../auth/server-cookie";
 import { validateSessionToken } from "../auth/session";
 import type { Guardian, Institution, Session } from "@prisma/client";
 

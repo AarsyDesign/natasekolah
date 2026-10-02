@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { clearSessionCookie, setSessionCookie } from "../lib/auth/cookie";
+import { clearSessionCookie, setSessionCookie } from "../lib/auth/server-cookie";
 import { loginUser, logoutUser } from "../lib/auth/service";
 import { validateLoginInput } from "../lib/validation/auth";
 import {

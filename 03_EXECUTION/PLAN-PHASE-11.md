@@ -37,7 +37,7 @@ Fokus: **Pengerasan rilis** (hardening) + **Backlog terblokir** yang butuh keput
 | **11.2 PDF/DOCX Layout Stress Test** | Teks panjang (esai > 500 char), gambar soal, layout 2 kolom edge case (page break di tengah soal). Tambah test integrasi visual (snapshot teks). | Sedang |
 | **11.3 AI Generator: Provider API Key Wiring** | Infra siap (4 adapter). Butuh: dokumentasi setup `AI_PROVIDER` + `AI_API_KEY` + `AI_MODEL` di `.env.example` + `README.md`. Default `AI_GENERATION_ENABLED=false`. | Kecil |
 | **11.4 Rate Limit Redis/DB (Optional)** | Saat ini in-memory (map). Produksi butuh Redis/DB supaya persist & multi-instance. Opsional — catat di ADR bila dibutuhkan. | Sedang |
-| **11.5 DKAS Bot: Cohere Semantic Search (Optional)** | Fuse.js jalan 32k item. Cohere API gratis 1M/bln untuk semantic fallback bila query ambigu. Tidak blocking. | Kecil |
+| **11.5 DKAS Bot: Cohere Semantic Search (Optional)** | Fuse.js jalan 32k item. Cohere API gratis 1M/bln untuk semantic fallback bila query ambigu. Tidak blocking. | Kecil | ✅ **SELESAI 2026-10-02** — `CohereProvider` + `SemanticSearchService` + 15 test + env vars. |
 
 ### 2.2 Backlog Terblokir (Butuh Keputusan Arsyad — **JANGAN DIKERJAKAN** sampai ada keputusan)
 

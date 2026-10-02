@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { clearSessionCookie, setSessionCookie } from "../lib/auth/cookie";
+import { clearSessionCookie, setSessionCookie } from "../lib/auth/server-cookie";
 import { activateGuardian, GuardianInvitationError } from "../lib/auth/guardian";
 import { validateGuardianActivationInput } from "../lib/validation/guardian";
 import { revokeSession } from "../lib/auth/session";
-import { getSessionCookie } from "../lib/auth/cookie";
+import { getSessionCookie } from "../lib/auth/server-cookie";
 import { requireActionSession, rethrowIfSessionExpired } from "../lib/auth/action-session";
 import { runWithTenantContext } from "../lib/tenant/context";
 import { hasPermission } from "../lib/auth/permissions";

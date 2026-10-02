@@ -7,7 +7,7 @@ import {
   revokeAllUserSessions,
   ValidatedSessionPayload,
 } from "./session";
-import { getSessionCookie, clearSessionCookie, setSessionCookie } from "./cookie";
+import { getSessionCookie, clearSessionCookie, setSessionCookie } from "./server-cookie";
 import { TenantContext, TenantContextMissingError } from "../tenant/context";
 import { resolvePermissionsFromRoles } from "./permissions";
 import type { User, Institution } from "@prisma/client";
