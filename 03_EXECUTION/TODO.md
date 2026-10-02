@@ -548,11 +548,26 @@
   - [x] Nav "Naskah Ujian" (`nav-header` + `app-shell`) + 2 test struktural
     (semua export async kaidah Next.js 16). `tsc 0` · **624/624** · `build exit 0` ·
     smoke kedua route 200.
-- [ ] **10.3 Ekspor PDF + QR verifikasi:** dep `pdfkit` + `qrcode`;
-  `src/lib/exam-paper/export-pdf.ts` (kop, identitas ujian, ruang nama +
-  nomor peserta, kolom 1/2 configurable, footer + nomor halaman, mode SISWA
-  dan KUNCI); QR → `/verify/exam/<token>` (halaman publik identitas ringkas
-  saja, tanpa stem/kunci/tenant lain — wajib test anti-leak).
+- [x] **10.3 Ekspor PDF + QR verifikasi:** — **SELESAI 2026-10-02 (run cron)**
+  - [x] Dep baru: `pdfkit` + `qrcode` + `@types/pdfkit` + `@types/qrcode` (workaround threat-intel: edit `package.json` + `npm install --no-audit --no-fund`).
+  - [x] Sumber data bersama `src/lib/exam-paper/export-data.ts` (`buildExamPaperData`, `buildVerifyUrl`, `fetchLogoSafe`) — dipakai BERSAMA PDF + DOCX (Phase 10.4) agar isi identik.
+  - [x] QR verifikasi `src/lib/exam-paper/qr.ts` (`generateExamVerifyQr` → buffer PNG, 240px, error correction M).
+  - [x] Renderer PDF `src/lib/exam-paper/export-pdf.ts`:
+    - Kop lembaga (nama/alamat/telp/logo best-effort timeout 5dtk + 2MB cap).
+    - Identitas ujian (mapel, T.A, jenis, status) + QR kanan (URL `/verify/exam/<token>`).
+    - Blok Ruang / Nomor Peserta / Nama Peserta (diisi manual saat ujian).
+    - Body 1/2 kolom configurable (`exam.columnLayout`: ONE/TWO), aliran per halaman dengan pengukuran tinggi agar teks tidak terpotong.
+    - Mode **SISWA** (kunci disembunyikan: PG kotak kosong, SHORT_ANSWER garis isian, ESSAY baris kosong) dan **KUNCI** (kunci tebal + latar kuning, pedoman penskoran esai).
+    - Footer institusi + nomor halaman "Halaman n dari m" (buffered pages).
+    - `compress: false` agar isi PDF auditable lewat teks pada test anti-leak.
+  - [x] Orkestrasi ekspor `exportExamPaperPdf(ctx, examId, mode)`:
+    - Guard `exam:manage` + plugin `FORMAL_ACADEMIC` (via `buildExamPaperData`).
+    - `regenerateToken` dipanggil tiap ekspor → token mentah untuk QR, DB hanya hash SHA-256. QR cetakan lama jadi tidak berlaku (pesan sukses UI).
+  - [x] Server action `exportExamPaperPdfAction(examId, mode)` → base64 download.
+  - [x] UI halaman detail (`/exams/papers/[id]`): tombol "PDF Siswa" + "PDF Kunci" (hanya `canManage` + soal > 0), loading state, feedback sukses berisi nama file + peringatan QR rotasi.
+  - [x] Halaman verifikasi publik `/verify/exam/[token]` (middleware PUBLIC): identitas ringkas saja (lembaga, judul, mapel, T.A, jenis, status, updatedAt) — **anti-leak**: tanpa soal/kunci/data tenant lain.
+  - [x] Middleware: tambah `/verify` ke `PUBLIC_PREFIXES`.
+  - [x] Verifikasi: `tsc 0` · `npm test` **624/624** · `npm run build` exit 0 (routes `/verify/exam/[token]` dynamic + 24 existing).
 - [ ] **10.4 Ekspor DOCX:** dep `docx`; `export-docx.ts` struktur identik PDF
   memakai sumber data bersama `buildExamPaperData()`.
 - [ ] **10.5 QA E2E + test DoD strict:** unit (compose/poin/urutan/RBAC/

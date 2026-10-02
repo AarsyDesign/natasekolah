@@ -14,6 +14,7 @@ import {
   transitionExamStatus,
   archiveExam,
 } from "../lib/exam-paper/exam-paper-service";
+import { exportExamPaperPdf } from "../lib/exam-paper/export-pdf";
 
 /**
  * Server Actions Exam Paper Engine (Phase 10.2, PRD #31).
@@ -190,8 +191,41 @@ export async function archiveExamAction(examId: string) {
     rethrowIfSessionExpired(error);
     return {
       success: false as const,
-      error: defaultError(error, "Gagal mengarsipkan naskah."),
+      error: defaultError(error, "Gagal mengarsipkan naskah ujian."),
       code: error?.code || "EXAM_ARCHIVE_ERROR",
+    };
+  }
+}
+
+/**
+ * Ekspor naskah ke PDF (Phase 10.3): mode `SISWA` (kunci disembunyikan) atau
+ * `KUNCI` (kunci ditandai). Token QR verifikasi diputar ulang tiap ekspor —
+ * QR pada cetakan sebelumnya menjadi tidak berlaku.
+ *
+ * Mengembalikan buffer PDF sebagai base64 agar bisa diunduh oleh klien
+ * (server action tidak bisa streaming response).
+ */
+export async function exportExamPaperPdfAction(examId: string, mode: string) {
+  try {
+    const context = await requireActionSession();
+    const result = await runWithTenantContext(context, () =>
+      exportExamPaperPdf(context, examId, mode)
+    );
+    return {
+      success: true as const,
+      data: {
+        filename: result.filename,
+        contentType: result.contentType,
+        mode: result.mode,
+        base64: result.buffer.toString("base64"),
+      },
+    };
+  } catch (error: any) {
+    rethrowIfSessionExpired(error);
+    return {
+      success: false as const,
+      error: defaultError(error, "Gagal mengekspor naskah ujian ke PDF."),
+      code: error?.code || "EXAM_EXPORT_PDF_ERROR",
     };
   }
 }

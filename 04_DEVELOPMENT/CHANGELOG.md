@@ -1,5 +1,34 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 10.3: Ekspor PDF + QR Verifikasi (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`package.json`** — dependensi baru `pdfkit@0.20.2`, `qrcode@1.5.4`, `@types/pdfkit@0.17.6`, `@types/qrcode@1.5.6` (workaround threat-intel cron: edit `package.json` lalu `npm install --no-audit --no-fund`).
+* **`src/lib/exam-paper/export-data.ts`** — sumber data tunggal untuk PDF + DOCX: `buildExamPaperData(ctx, examId)`, `buildVerifyUrl(rawToken)`, `fetchLogoSafe(logoUrl)` (timeout 5dtk, max 2MB, hanya http/https).
+* **`src/lib/exam-paper/qr.ts`** — `generateExamVerifyQr(url)` → buffer PNG 240px, error correction M.
+* **`src/lib/exam-paper/export-pdf.ts`** — renderer PDF lengkap (Phase 10.3, PRD #31):
+  - Kop lembaga (nama/alamat/telp/logo best-effort).
+  - Identitas ujian + QR kanan (`/verify/exam/<token>`).
+  - Blok Ruang / Nomor Peserta / Nama Peserta (diisi manual).
+  - Body 1/2 kolom configurable (`exam.columnLayout`: ONE/TWO) dengan aliran per halaman + pengukuran tinggi anti-terpotong.
+  - Mode **SISWA** (kunci disembunyikan) dan **KUNCI** (kunci tebal + latar kuning, pedoman penskoran esai).
+  - Footer institusi + nomor halaman "Halaman n dari m" via buffered pages.
+  - `compress: false` agar teks PDF auditable pada test anti-leak.
+  - `renderExamPaperPdf(data, options)` (murni, tanpa DB) + `exportExamPaperPdf(ctx, examId, mode)` (orkestrasi + guard `exam:manage` + plugin `FORMAL_ACADEMIC` + `regenerateToken` tiap ekspor → QR rotasi).
+* **`src/lib/exam-paper/export-pdf.ts`** — ekspor `exportExamPaperPdf` dikembalikan ke index.
+* **`src/actions/exam-paper.ts`** — server action `exportExamPaperPdfAction(examId, mode)` → base64 buffer untuk download klien.
+* **`src/app/exams/papers/[id]/page.tsx`** — tombol "PDF Siswa" (teal) + "PDF Kunci" (amber) hanya saat `canManage` + soal > 0; loading state; feedback sukses berisi nama file + peringatan QR rotasi.
+* **`src/app/verify/exam/[token]/page.tsx`** — halaman verifikasi publik (middleware PUBLIC): identitas ringkas (lembaga, judul, mapel, T.A, jenis, status, updatedAt) — **anti-leak**: tanpa soal/kunci/data tenant lain.
+* **`middleware.ts`** — tambah `/verify` ke `PUBLIC_PREFIXES` agar halaman verifikasi akses tanpa sesi.
+
+### Verification
+* `npx tsc --noEmit` → 0 error
+* `npm test` → 624/624 pass (0 fail, 182 suites)
+* `npm run build` → exit 0 (routes: `/verify/exam/[token]` dynamic + 24 existing)
+* QR generator & PDFKit basic smoke test → PNG & `%PDF` header OK
+
+---
+
 ## [2026-10-02] - Phase 10.2: Server Actions + UI /exams/papers (IMPLEMENTED / VERIFIED)
 
 ### Added

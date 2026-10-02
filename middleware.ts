@@ -12,6 +12,7 @@ const PUBLIC_PREFIXES = [
   "/login",
   "/daftar",
   "/wali/aktivasi",
+  "/verify",
 ];
 
 /**

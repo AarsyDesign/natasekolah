@@ -14,6 +14,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Archive,
+  Download,
 } from "lucide-react";
 import {
   getExamDetailAction,
@@ -22,6 +23,7 @@ import {
   reorderExamQuestionsAction,
   transitionExamStatusAction,
   archiveExamAction,
+  exportExamPaperPdfAction,
 } from "@/actions/exam-paper";
 import { getQuestionsAction } from "@/actions/question-bank";
 import { NavHeader } from "@/components/nav-header";
@@ -79,6 +81,9 @@ export default function ExamPaperDetailPage({ params }: { params: Promise<{ id: 
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [isPending, startTransition] = useTransition();
+
+  // Ekspor PDF (Phase 10.3)
+  const [exporting, setExporting] = useState<"SISWA" | "KUNCI" | null>(null);
 
   // Preview mode
   const [previewMode, setPreviewMode] = useState(false);
@@ -271,6 +276,49 @@ export default function ExamPaperDetailPage({ params }: { params: Promise<{ id: 
     startTransition(doRun);
   };
 
+  // Ekspor PDF naskah (mode SISWA / KUNCI) — Phase 10.3
+  const downloadPdf = (mode: "SISWA" | "KUNCI") => {
+    startTransition(async () => {
+      setMessage(null);
+      setExporting(mode);
+      try {
+        const res = await exportExamPaperPdfAction(id, mode);
+        if (!res.success) {
+          setMessage({
+            text: res.error || "Gagal mengekspor naskah ke PDF.",
+            type: "error",
+          });
+          return;
+        }
+        const byteChars = atob(res.data.base64);
+        const bytes = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i += 1) {
+          bytes[i] = byteChars.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: res.data.contentType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = res.data.filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+        setMessage({
+          text: `PDF mode ${mode === "KUNCI" ? "Kunci" : "Siswa"} diunduh sebagai "${res.data.filename}". QR verifikasi diputar ulang — QR pada cetakan sebelumnya tidak berlaku lagi.`,
+          type: "success",
+        });
+      } catch {
+        setMessage({
+          text: "Koneksi terputus saat mengekspor PDF. Silakan coba lagi.",
+          type: "error",
+        });
+      } finally {
+        setExporting(null);
+      }
+    });
+  };
+
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
@@ -422,6 +470,44 @@ export default function ExamPaperDetailPage({ params }: { params: Promise<{ id: 
             </span>
           )}
         </div>
+
+        {/* Cetak & Ekspor PDF (Phase 10.3) */}
+        {canManage && questions.length > 0 && (
+          <div className="mb-6 rounded-xl border border-stone-200 bg-white p-4 shadow-2xs">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xs font-bold text-stone-900">Cetak &amp; Ekspor PDF</h3>
+                <p className="mt-0.5 text-[11px] text-stone-500">
+                  Kop + identitas + ruang/nomor peserta ·{" "}
+                  {exam.columnLayout === "TWO" ? "2 kolom" : "1 kolom"} · QR
+                  verifikasi · footer nomor halaman.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => downloadPdf("SISWA")}
+                  disabled={isPending}
+                  className="touch-target inline-flex items-center gap-1.5 rounded-lg bg-teal-800 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-teal-700 disabled:opacity-50"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>{exporting === "SISWA" ? "Menyiapkan…" : "PDF Siswa"}</span>
+                </button>
+                <button
+                  onClick={() => downloadPdf("KUNCI")}
+                  disabled={isPending}
+                  className="touch-target inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-2xs hover:bg-amber-100 disabled:opacity-50"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>{exporting === "KUNCI" ? "Menyiapkan…" : "PDF Kunci"}</span>
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-stone-400">
+              QR verifikasi diputar ulang setiap unduhan — pindai cetakan
+              terbaru; QR pada cetakan lama tidak berlaku lagi.
+            </p>
+          </div>
+        )}
 
         {/* Banner preview */}
         {previewMode && (

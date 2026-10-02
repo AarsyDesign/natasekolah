@@ -117,6 +117,25 @@ export const reorderExamQuestionsInputSchema = z
 export type ReorderExamQuestionsInput = z.infer<typeof reorderExamQuestionsInputSchema>;
 
 // ---------------------------------------------------------------------------
+// Skema Ekspor PDF (Phase 10.3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Mode cetak naskah: SISWA (kunci disembunyikan) atau KUNCI (kunci
+ * ditandai/latar). Berlaku untuk seluruh exporter (PDF maupun DOCX).
+ */
+export const EXAM_EXPORT_MODES = ["SISWA", "KUNCI"] as const;
+export type ExamExportMode = (typeof EXAM_EXPORT_MODES)[number];
+
+export const exportExamPaperInputSchema = z
+  .object({
+    mode: z.enum(EXAM_EXPORT_MODES, { message: "Mode ekspor tidak valid" }),
+  })
+  .strict();
+
+export type ExportExamPaperInput = z.infer<typeof exportExamPaperInputSchema>;
+
+// ---------------------------------------------------------------------------
 // Skema Transisi Status & Filter Daftar Naskah
 // ---------------------------------------------------------------------------
 
@@ -168,4 +187,8 @@ export function validateUpdateExamStatusInput(input: unknown): UpdateExamStatusI
 
 export function validateExamFilter(input: unknown): ExamFilter {
   return validate(examFilterSchema, input);
+}
+
+export function validateExportExamPaperInput(input: unknown): ExportExamPaperInput {
+  return validate(exportExamPaperInputSchema, input);
 }
