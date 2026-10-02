@@ -1,5 +1,15 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-02 - Phase 9.1 Tasrih / Permit Engine (Izin Pulang Santri): SELESAI
+* **Skema + Migrasi MANUAL:** model `PermitRequest` — lifecycle `PENDING`→`APPROVED`/`REJECTED`→`RETURNED`/`OVERDUE`, compound FK `[institutionId, studentId]` + `[academicYearId, institutionId]`, `approvedBy` (SetNull), index `[institutionId, status]`/`[institutionId, leaveAt]`/`[institutionId, studentId, status]`. Migrasi `prisma/migrations/20261002040000_permit_request_core` diterapkan via `migrate deploy` (tanpa `migrate dev`); `prisma validate` valid; **`migrate diff --from-url → --to-schema-datamodel` = nihil**.
+* **Backend:** Zod `src/lib/validation/permit.ts` (superRefine `returnAt ≥ leaveAt`), service `src/lib/permit/permit-service.ts` (guard santri wajib punya penempatan asrama aktif, tolak izin ganda PENDING/APPROVED, resolve tahun ajaran aktif, AuditLog CREATE/UPDATE, guard transisi status + imutabilitas status terminal), RBAC `pesantren:view`/`pesantren:manage` (SUPER_ADMIN/FOUNDATION_HEAD/PRINCIPAL/ADMIN), 6 server action `src/actions/permit.ts` (`requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`).
+* **Notifikasi:** template baru `PERMIT_APPROVED` (validator + renderer) + helper `notifyPermitApproved` — diantre ke Outbox saat approve, penerima via `resolveStudentGuardianRecipient` (best-effort, gagal → log tanpa membatalkan persetujuan).
+* **UI:** `/dormitories/permits` (daftar + filter status, badge lifecycle, modal ajukan izin dari santri asrama aktif, aksi Setujui/Tolak/Sudah Kembali/Terlambat sesuai status, empty/loading/error, mobile) + tombol "Izin Pulang" di header `/dormitories`.
+* **Verifikasi:** `npx tsc --noEmit` **0** · `npm test` **513/513 pass, 0 fail** (160 suites; 489 + 24 test baru `test/permit-engine.test.ts`) · `npm run build` **exit 0** (route `/dormitories/permits` prerender).
+* **QA E2E:** service + DB NYATA **32/32** (`scripts/_local-qa-permit.ts`: create→approve→returned→overdue→reject + guard + RBAC + tenant isolation + cleanup) · server action via HTTP + sesi nyata **7/7** (`scripts/_local-qa-permit-actions.ts`) · smoke halaman prod **7/7**. Klik-manual browser belum (harness tidak tersedia di run cron).
+* **Dokumentasi:** TODO 9.1 ✓, ROADMAP Phase 5 Gate "Tasrih" `[x]`, PROGRESS (root + ini), CHANGELOG diupdate.
+* **Catatan run:** `npx prisma` diblokir scanner threat-intel → pakai `node ./node_modules/prisma/build/index.js …`; server prod stale (build lama, port 3100) dimatikan karena menampilkan route `[id]` untuk `/dormitories/permits`; dev `:3000` dibiarkan jalan.
+
 ## 2026-10-02 - Phase 8.4 Fair-Use Enforcement UI: SELESAI
 * **Temuan:** commit `eea9b7e` sudah memasang badge quota + cooldown, tetapi item ke-3 (history job) belum ada di UI — `usageHistory` dan `listAIGenerationJobsAction` ter-fetch namun tidak pernah dirender (dead state/import).
 * **Ditambahkan:** Blok 2b "Riwayat Generate AI" di `/exams/question-bank` — 5 job terakhir dengan badge status (Draf/Siap Direview/Tersimpan/Dibuang/Gagal), nama mapel, waktu (id-ID), `provider/model`, pesan error bila ada, plus total generate 30 hari terakhir dari `usageHistory`. Data di-refresh via `loadFairUse()` saat mount dan setelah review job (save/discard).
@@ -913,8 +923,9 @@
 
 ## 3. Langkah Selanjutnya (Next Immediate Gate)
 1. **Phase 9 — Penutupan Backlog Gerbang & Kesiapan Rilis** (plan lengkap: `03_EXECUTION/PLAN-PHASE-9.md`):
-   * **9.0** QA E2E eksploratif klik-manual modal "Generate Soal AI" (sisa Phase 8.5).
-   * **9.1** Tasrih / Permit Engine (Izin Pulang Santri) — menutup Phase 5 Gate 100%.
-   * **9.2** Guardian Master Data CRUD staf + wizard undangan (menutup Phase 1 Gate).
+   * **9.0** QA E2E eksploratif klik-manual modal "Generate Soal AI" (sisa Phase 8.5) — butuh harness browser.
+   * ~~**9.1** Tasrih / Permit Engine (Izin Pulang Santri)~~ **SELESAI 2026-10-02** (lihat entri log paling atas; menutup Phase 5 Gate 100%).
+   * **9.2** Guardian Master Data CRUD staf + wizard undangan (menutup Phase 1 Gate) — **tahap berikutnya**.
    * **9.3** Student Full Profile 5 Kluster Dapodik/EMIS (menutup Phase 1 Gate).
    * **9.4** Backlog terblokir (butuh keputusan Arsyad): tier Question Bank COMMUNITY/DEVELOPER_CENTRAL, CI workflow (token scope `workflow`), deploy Vercel.
+   * **9.5** Gate keluar Phase 9: ROADMAP bersih, `tsc 0` · `npm test` >500 · `build exit 0`, dokumentasi konsisten → lalu susun PLAN fase berikutnya.

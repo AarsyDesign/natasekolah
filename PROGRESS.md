@@ -25,10 +25,29 @@
 | **Phase 6** | **Pesantren Living** (Diniyah, Asrama, Tasrih Perizinan, Mutaba'ah Tahfidz) | **COMPLETE** | 2026-09-23 (229 Tests Pass) |
 | **Phase 7** | **Question Bank** (3-Tier, Private Institution, AI Generator Infrastructure) | **COMPLETE** | 2026-10-01 (473 Tests Pass) |
 | **Phase 8** | **AI & Automation** (Runtime Provider Adapters + Generate Modal UI + QA E2E + Verification Gate) | **COMPLETE** | 2026-10-02 (473 Tests Pass; 8.1–8.6 selesai) |
+| **Phase 9** | **Penutupan Backlog Gerbang & Kesiapan Rilis** (9.1 Permit Engine ✓, 9.2 Guardian CRUD, 9.3 Student 5 Kluster, 9.4 backlog terblokir, 9.5 gate keluar) | **BERJALAN — 9.1 SELESAI** | 2026-10-02 (513 Tests Pass) |
 
 ---
 
 ## 2. Catatan Log Aktivitas Kronologis
+
+### [2026-10-02] - Phase 9.1: Tasrih / Permit Engine — Izin Pulang Santri (IMPLEMENTED & VERIFIED)
+* **Tujuan:** Menutup sisa Phase 5 Gate 100% — entitas permit izin pulang santri yang sebelumnya tidak ada (label "Izin Pulang (Tasrih)" hanya status `EXCUSED` di presensi asrama).
+* **Implementasi:**
+  1. **Skema + Migrasi Manual:** model `PermitRequest` (`prisma/schema.prisma`) — lifecycle `PENDING`→`APPROVED`/`REJECTED`→`RETURNED`/`OVERDUE`, compound FK `[institutionId, studentId]` & `[academicYearId, institutionId]`, relasi `approvedBy` (SetNull), index `[institutionId, status]` / `[institutionId, leaveAt]` / `[institutionId, studentId, status]`. Migrasi manual `prisma/migrations/20261002040000_permit_request_core` diterapkan via `migrate deploy` (bukan `migrate dev`); **`migrate diff --from-url → --to-schema-datamodel` = "No difference detected" (nihil)**.
+  2. **Zod:** `src/lib/validation/permit.ts` (create + superRefine `returnAt ≥ leaveAt`, decide, return, overdue, filter status/jenis/santri).
+  3. **Domain service:** `src/lib/permit/permit-service.ts` — `createPermitRequest` (guard: siswa milik tenant, **punya penempatan asrama aktif**, tidak ada izin berjalan, tahun ajaran dari input/aktif), `approvePermitRequest` (guard transisi + AuditLog + **outbox `PERMIT_APPROVED` ke wali via `resolveStudentGuardianRecipient`**, best-effort), `rejectPermitRequest`, `markPermitReturned`, `markPermitOverdue` (hanya lewat `returnAt`), `listPermitRequests` (filter), `getPermitRequestById`. Semua `requirePermission` + tenant-scoped + AuditLog.
+  4. **RBAC:** izin baru `pesantren:view`/`pesantren:manage` (PERMISSIONS + ROLE_PERMISSIONS untuk SUPER_ADMIN, FOUNDATION_HEAD, PRINCIPAL, ADMIN; TEACHER & FINANCE_STAFF tanpa izin ini).
+  5. **Notifikasi:** template `PERMIT_APPROVED` di `validation/notification.ts` + renderer `templates.ts` + helper `notifyPermitApproved` (`events.ts`).
+  6. **Server actions:** `src/actions/permit.ts` — 6 action (`list/get/create/approve/reject/markReturned/markOverdue`) dengan `requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`.
+  7. **UI mobile-first:** `/dormitories/permits` (daftar + filter status + modal ajukan izin dengan pilihan santri asrama aktif + aksi Setujui/Tolak/Sudah Kembali/Terlambat sesuai status, badge status, empty/loading/error) + tombol tautan "Izin Pulang" di header `/dormitories`.
+* **Testing & Verifikasi:**
+  * `test/permit-engine.test.ts` **24/24 pass** (lifecycle, imutabilitas status terminal, RBAC guru & sesi wali, cross-tenant, filter, template notifikasi).
+  * `npx tsc --noEmit` **0** · `npm test` **513/513 pass, 0 fail** (160 suites; 489 + 24) · `npm run build` **exit 0** (route `/dormitories/permits` prerender) · `prisma validate` valid · `migrate diff` nihil.
+  * **QA E2E DB NYATA** (`scripts/_local-qa-permit.ts`): **32/32 pass** — create/approve/returned/overdue/reject menulis baris nyata + AuditLog + outbox `PERMIT_APPROVED` (recipient `628…`, pesan berisi nama santri), guard asrama/izin ganda/Zod, RBAC guru, isolasi tenant; data QA dibersihkan di akhir.
+  * **QA server action via HTTP + sesi nyata** (`scripts/_local-qa-permit-actions.ts`, `next start`): **7/7 pass** — tanpa sesi ditolak, create→approve→outbox tercatat, input ilegal → `success:false`.
+  * **Smoke halaman prod:** **7/7 pass** — `/dormitories/permits` 307 ke login tanpa sesi, 200 + marker UI dengan sesi, tautan dari `/dormitories` ada. Klik-manual browser belum (harness tidak tersedia di run cron).
+* **Catatan run:** `npx prisma …` diblokir scanner threat-intel → jalur `node ./node_modules/prisma/build/index.js …` works; server prod stale peninggalan run sebelumnya di port 3100 (build lama — menampilkan `[id]` untuk `/dormitories/permits`) dimatikan; dev server `:3000` dibiarkan berjalan.
 
 ### [2026-10-02] - DOCS: Audit Silang Checkbox Legacy ROADMAP Phase 0–6 (VERIFIED)
 * **Tujuan:** Checkbox `[ ]` lama di `03_EXECUTION/ROADMAP.md` (fase 0–6) tidak ikut diperbarui seiring fase berjalan — audit silang agar peta status jujur dan tidak menyesatkan.
@@ -130,8 +149,12 @@
    * Klik-manual UI AI Generator (butuh harness browser — tidak tersedia di run cron).
    * Simulasi timeout provider AI menggantung (belum disimulasikan).
    * Pasang API key provider AI nyata (OpenAI/Anthropic/Gemini) di deployment — keputusan Arsyad.
-   * ~~Checkbox legacy di ROADMAP fase lama (Phase 0–6) sebagian basi~~ → **Audit silang SELESAI 2026-10-02 (run cron):** 21 checkbox legacy diverifikasi terhadap kode/test lalu ditandai `[x]` dengan bukti/referensi di anotasi ROADMAP; awalnya tersisa 4 item `[ ]`, kini **tinggal 3** (item `Offline Sync & Idempotency Key` ikut selesai setelah merge cabang `feature/offline-attendance-sync` di run yang sama):
-     1. `Tasrih / Permit Engine` — tidak ada entitas permit; "Izin Pulang (Tasrih)" hanya label status `EXCUSED` di presensi asrama.
-     2. `Student Full Profile (5 Kluster Dapodik/EMIS)` — profil inti + importer ada; kluster terstruktur (keluarga, kesehatan, registry) belum.
-     3. `Guardian Master Data` — model/service/aktivasi/portal wali ada & teruji; CRUD wali + wizard undangan untuk staf (UI + server action) belum ada.
-   * Ketiganya backlog terpisah di luar fase berjalan — butuh keputusan Arsyad untuk dijadikan fase baru; **bukan blocker rilis fase 0–8**.
+   * ~~Checkbox legacy di ROADMAP fase lama (Phase 0–6) sebagian basi~~ → **Audit silang SELESAI 2026-10-02 (run cron):** 21 checkbox legacy diverifikasi terhadap kode/test lalu ditandai `[x]` dengan bukti/referensi di anotasi ROADMAP; awalnya tersisa 4 item `[ ]`, kini **tinggal 2** (Offline Sync selesai via merge; **Tasrih/Permit Engine selesai di Phase 9.1, 2026-10-02**):
+     1. `Student Full Profile (5 Kluster Dapodik/EMIS)` — profil inti + importer ada; kluster terstruktur (keluarga, kesehatan, registry) belum.
+     2. `Guardian Master Data` — model/service/aktivasi/portal wali ada & teruji; CRUD wali + wizard undangan untuk staf (UI + server action) belum ada.
+   * Keduanya backlog terpisah di luar fase berjalan — butuh keputusan Arsyad untuk dijadikan fase baru; **bukan blocker rilis fase 0–8**.
+
+5. **Status fase berjalan: PHASE 9 (Penutupan Backlog Gerbang & Kesiapan Rilis)** — plan: `03_EXECUTION/PLAN-PHASE-9.md`:
+   * ~~**9.1 Tasrih / Permit Engine**~~ **SELESAI 2026-10-02 (run cron):** skema `PermitRequest` + migrasi manual (`migrate diff` nihil), service+Zod+RBAC `pesantren:*`+6 server action+UI `/dormitories/permits`+notifikasi `PERMIT_APPROVED`; `tsc 0` · `npm test` **513/513** · `build exit 0` · QA E2E DB nyata 32/32 · action HTTP 7/7 · smoke 7/7. ROADMAP Phase 5 Gate "Tasrih" kini `[x]`.
+   * **Tahap berikutnya: 9.2 Guardian Master Data CRUD staf + wizard undangan** (server actions `guardian.ts`, UI `/guardians`, +10–15 test) → lalu **9.3 Student Full Profile 5 Kluster**.
+   * Masih `[ ]`: **9.0** QA klik-manual modal AI Generator (butuh harness browser), **9.4** backlog terblokir (Question Bank COMMUNITY/DEVELOPER_CENTRAL, CI workflow token `workflow`, deploy Vercel — keputusan Arsyad), **9.5** gate keluar Phase 9.

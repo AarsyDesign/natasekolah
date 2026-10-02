@@ -59,6 +59,7 @@ model Institution {
   questionOptions      QuestionOption[]
   aiGenerationUsage    AiGenerationUsage[]
   aiGenerationJobs     AiGenerationJob[]
+  permitRequests       PermitRequest[]
 
   @@index([slug])
   @@index([type])
@@ -90,6 +91,7 @@ model User {
   createdQuestions    Question[]
   aiGenerationUsage   AiGenerationUsage[]
   aiGenerationJobs    AiGenerationJob[]
+  approvedPermits     PermitRequest[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, email])
@@ -113,6 +115,7 @@ model AcademicYear {
   teacherAssignments  TeacherAssignment[]
   studentCharges      StudentCharge[]
   reportCards         ReportCard[]
+  permitRequests      PermitRequest[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, name])
@@ -173,6 +176,7 @@ model Student {
   reportCards     ReportCard[]
   tahfidzRecords  TahfidzRecord[]
   dormitoryAssignments StudentDormitoryAssignment[]
+  permitRequests  PermitRequest[]
 
   @@unique([id, institutionId])
   @@unique([institutionId, nis])
@@ -824,6 +828,43 @@ model StudentDormitoryAssignment {
   @@index([institutionId, studentId, status])
   @@index([institutionId, roomId, status])
   @@map("student_dormitory_assignments")
+}
+
+// -------------------------------------------------------------
+// PHASE 9 — TASRIH / PERMIT ENGINE (Izin Pulang Santri)
+// -------------------------------------------------------------
+
+// Permohonan Izin Pulang (Tasrih) Santri — lifecycle:
+// PENDING -> APPROVED | REJECTED ; APPROVED -> RETURNED | OVERDUE
+model PermitRequest {
+  id              String         @id @default(cuid())
+  institutionId   String
+  studentId       String
+  academicYearId  String
+  requestedAt     DateTime       @default(now())
+  type            String         // HOME_LEAVE | SICK_LEAVE | EXCUSED
+  leaveAt         DateTime       // Waktu berangkat
+  returnAt        DateTime?      // Waktu kembali yang dijanjikan
+  reason          String?
+  status          String         @default("PENDING") // PENDING | APPROVED | REJECTED | RETURNED | OVERDUE
+  approvedById    String?
+  approvedAt      DateTime?
+  decidedAt       DateTime?
+  returnedAt      DateTime?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  institution     Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student         Student        @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  academicYear    AcademicYear   @relation(fields: [academicYearId, institutionId], references: [id, institutionId], onDelete: Cascade)
+  approvedBy      User?          @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@unique([id, institutionId])
+  @@index([institutionId, status])
+  @@index([institutionId, leaveAt])
+  @@index([institutionId, studentId, status])
+  @@map("permit_requests")
 }
 
 // -------------------------------------------------------------

@@ -17,6 +17,7 @@ import {
   ArrowRight,
   X,
   Layers,
+  ScrollText,
 } from "lucide-react";
 
 export default function DormitoriesPage() {
@@ -139,6 +140,14 @@ export default function DormitoriesPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/dormitories/permits"
+              className="touch-target inline-flex items-center gap-2 rounded-lg border border-teal-700 bg-teal-50 px-3.5 py-2 text-xs font-semibold text-teal-800 shadow-2xs hover:bg-teal-100"
+            >
+              <ScrollText className="h-4 w-4" />
+              <span>Izin Pulang</span>
+            </Link>
+
             <button
               onClick={() => {
                 setMessage(null);

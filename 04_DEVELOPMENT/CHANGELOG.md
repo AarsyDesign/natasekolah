@@ -1,5 +1,32 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 9.1: Tasrih / Permit Engine — Izin Pulang Santri (VERIFIED)
+
+### Added
+* **`prisma/schema.prisma`** — model `PermitRequest` (izin pulang santri): lifecycle `PENDING` → `APPROVED`/`REJECTED` → `RETURNED`/`OVERDUE`; kolom `type` (`HOME_LEAVE`/`SICK_LEAVE`/`EXCUSED`), `leaveAt`/`returnAt`, `approvedById`+`approvedAt`/`decidedAt`/`returnedAt`/`notes`; compound FK `[institutionId, studentId]` & `[academicYearId, institutionId]`, `approvedBy` → User (SetNull), `@@unique([id, institutionId])` + index `[institutionId, status]`, `[institutionId, leaveAt]`, `[institutionId, studentId, status]`; back-relations Institution/User/AcademicYear/Student.
+* **`prisma/migrations/20261002040000_permit_request_core/migration.sql`** — migrasi MANUAL (jalur `migrate deploy`, tanpa `migrate dev`); `prisma validate` valid, **`migrate diff` nihil**.
+* **`src/lib/validation/permit.ts`** — Zod: `createPermitRequestInputSchema` (+`superRefine` returnAt ≥ leaveAt), `decidePermitInputSchema`, `returnPermitInputSchema`, `markOverduePermitInputSchema`, `permitFilterSchema`.
+* **`src/lib/permit/`** — `types.ts` (konstanta `PERMIT_TYPES`/`PERMIT_STATUSES`/`PERMIT_TRANSITIONS` + 6 galat domain) dan `permit-service.ts` (`createPermitRequest` — guard santri tenant + penempatan asrama aktif + tanpa izin berjalan + tahun ajaran aktif, `approvePermitRequest` — guard transisi + AuditLog + antrean notifikasi wali, `rejectPermitRequest`, `markPermitReturned`, `markPermitOverdue` — wajib lewat `returnAt`, `listPermitRequests`, `getPermitRequestById`; semua `requirePermission` + tenant-scoped).
+* **`src/actions/permit.ts`** — 6 server action dengan `requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`.
+* **RBAC** (`src/lib/auth/permissions.ts`) — izin baru `pesantren:view` / `pesantren:manage` di `PERMISSIONS` + `ROLE_PERMISSIONS` (SUPER_ADMIN, FOUNDATION_HEAD, PRINCIPAL, ADMIN; TEACHER & FINANCE_STAFF tanpa izin ini).
+* **Notifikasi** — template `PERMIT_APPROVED` di `NOTIFICATION_TEMPLATE_KEYS`, renderer pesan WA id-ID di `templates.ts`, helper `notifyPermitApproved` di `events.ts` (idempotency `PERMIT_APPROVED:<id>`, penerima via `resolveStudentGuardianRecipient`, best-effort).
+* **UI** — `src/app/dormitories/permits/page.tsx` (daftar + filter status, badge lifecycle, modal ajukan izin dari santri asrama aktif, aksi Setujui/Tolak/Sudah Kembali/Terlambat sesuai status, empty/loading/error state, mobile-first) + tombol tautan "Izin Pulang" di header `src/app/dormitories/page.tsx`.
+* **`test/permit-engine.test.ts`** — 24 test baru (lifecycle + imutabilitas terminal, guard asrama/izin ganda/Zod/tahun ajaran, RBAC guru + sesi wali + matriks `pesantren:*`, cross-tenant, filter, AuditLog, notifikasi & template).
+
+### Verification
+* `npx tsc --noEmit` **0 error** · `npm test` **513/513 pass, 0 fail** (160 suites; baseline 489 + 24) · `npm run build` **exit 0** (route `/dormitories/permits` prerender) · `prisma validate` valid · `migrate diff` **nihil**.
+* **QA E2E DB NYATA** (`scripts/_local-qa-permit.ts`, 32/32): create → approve (+AuditLog +outbox `PERMIT_APPROVED` recipient `628…`) → returned → permit baru → overdue, reject, guard santri tanpa asrama/izin ganda/Zod, RBAC guru, tenant isolation — data QA dibersihkan.
+* **QA server action via HTTP + sesi nyata** (`scripts/_local-qa-permit-actions.ts`, `next start`): **7/7** — tanpa sesi ditolak, create→approve→outbox tercatat di DB, input ilegal → `success:false`.
+* **Smoke halaman prod:** **7/7** — `/dormitories/permits` 307→login tanpa sesi, 200 + marker UI dengan sesi, tautan dari `/dormitories` ada.
+* *Belum:* klik-manual browser (harness tidak tersedia di run cron) — QA E2E eksploratif klik UI termasuk item 9.0/9.1 opsional.
+* *Catatan environment:* `npx prisma` diblokir scanner threat-intel run cron → CLI dijalankan via `node ./node_modules/prisma/build/index.js …`; server prod stale peninggalan run sebelumnya (port 3100, build lama) dimatikan; dev server `:3000` dibiarkan berjalan.
+
+### Dokumentasi
+* `03_EXECUTION/TODO.md` — checklist 9.1 seluruhnya `[x]` dengan anotasi bukti.
+* `03_EXECUTION/ROADMAP.md` — Phase 5 Gate "Tasrih / Permit Engine" `[ ]` → `[x]` (sisa `[ ]` ROADMAP kini 2: Student 5 Kluster + Guardian CRUD staf).
+* `PROGRESS.md` (root) — baris Phase 9 di gate matrix ("BERJALAN — 9.1 SELESAI"), entri log, "Langkah Selanjutnya" → tahap berikutnya **9.2 Guardian CRUD staf**.
+* `03_EXECUTION/PROGRESS.md` — entri log Phase 9.1.
+
 ## [2026-10-02] - DOCS: PLAN Phase 9 — Penutupan Backlog Gerbang & Kesiapan Rilis
 
 ### Added

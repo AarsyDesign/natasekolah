@@ -70,6 +70,23 @@ export function renderNotificationMessage(
         `Terima kasih.`;
     }
 
+    case "PERMIT_APPROVED": {
+      const studentName = payload.studentName || "Santri";
+      const permitType = payload.permitType || "Izin Pulang";
+      const leaveAt = payload.leaveAt || "-";
+      const returnAt = payload.returnAt || "-";
+      const approvedByName = payload.approvedByName
+        ? `\nPersetujuan oleh: ${payload.approvedByName}`
+        : "";
+
+      return `[NataSekolah] IZIN PULANG (TASRIH) DISETUJUI\n\n` +
+        `Yth. Wali dari ${studentName},\n` +
+        `Permohonan ${permitType} telah DISETUJUI oleh pihak pesantren/sekolah.\n\n` +
+        `• Berangkat: ${leaveAt}\n` +
+        `• Kembali: ${returnAt}${approvedByName}\n\n` +
+        `Mohon memastikan putra/putri Anda kembali tepat waktu. Terima kasih.`;
+    }
+
     case "ANNOUNCEMENT": {
       const title = payload.title || "Pengumuman Sekolah";
       const body = payload.body || "";

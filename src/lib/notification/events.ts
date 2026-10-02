@@ -118,3 +118,39 @@ export async function notifyGuardianInvitation(
     txPrisma
   );
 }
+
+/**
+ * Notifikasi persetujuan izin pulang (tasrih) ke wali santri via Outbox.
+ */
+export async function notifyPermitApproved(
+  params: {
+    recipientPhone: string;
+    studentName: string;
+    permitType: string;
+    leaveAt: string;
+    returnAt?: string | null;
+    approvedByName?: string | null;
+    permitId?: string;
+    idempotencyKey?: string;
+  },
+  txPrisma?: typeof prisma
+) {
+  return queueNotification(
+    {
+      recipient: params.recipientPhone,
+      templateKey: "PERMIT_APPROVED",
+      payload: {
+        studentName: params.studentName,
+        permitType: params.permitType,
+        leaveAt: params.leaveAt,
+        returnAt: params.returnAt || null,
+        approvedByName: params.approvedByName || null,
+      },
+      channel: "WHATSAPP",
+      idempotencyKey:
+        params.idempotencyKey ||
+        (params.permitId ? `PERMIT_APPROVED:${params.permitId}` : undefined),
+    },
+    txPrisma
+  );
+}

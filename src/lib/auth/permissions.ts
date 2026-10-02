@@ -99,6 +99,10 @@ export const PERMISSIONS = [
   "dormitory:view",
   "dormitory:manage",
 
+  // Pesantren Permit (Tasrih / Izin Pulang Santri) Domain
+  "pesantren:view",
+  "pesantren:manage",
+
   // Guardian Management Domain (Operasi staf mengelola/mengundang wali)
   "guardian:view",
   "guardian:manage",
@@ -197,6 +201,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "tahfidz:manage",
     "dormitory:view",
     "dormitory:manage",
+    "pesantren:view",
+    "pesantren:manage",
     "guardian:view",
     "guardian:manage",
     "institution:view",
@@ -218,6 +224,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "report:manage",
     "tahfidz:view",
     "dormitory:view",
+    "pesantren:view",
+    "pesantren:manage",
     "guardian:view",
     "institution:view",
     "institution:manage",
@@ -244,6 +252,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "tahfidz:manage",
     "dormitory:view",
     "dormitory:manage",
+    "pesantren:view",
+    "pesantren:manage",
     "guardian:view",
     "institution:view",
     "settings:view",
@@ -267,6 +277,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "tahfidz:manage",
     "dormitory:view",
     "dormitory:manage",
+    "pesantren:view",
+    "pesantren:manage",
     "guardian:view",
     "guardian:manage",
     "institution:view",

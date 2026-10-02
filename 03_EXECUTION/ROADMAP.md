@@ -72,7 +72,7 @@ PHASE 7 (AI & Automation)
 
 ### Phase 5 Gate — Pesantren Living Plugin
 * [x] Asrama & Kamar Santri — `dormitory-service.ts` (kapasitas kamar, single active assignment) + `/dormitories`.
-* [ ] Tasrih / Permit Engine (Izin Pulang Santri) — **belum**: tidak ada entitas permit di skema; "Izin Pulang (Tasrih)" hanya label status `EXCUSED` pada presensi asrama (`/wali/(portal)/asrama`).
+* [x] Tasrih / Permit Engine (Izin Pulang Santri) — **selesai 2026-10-02 (Phase 9.1, run cron)**: model `PermitRequest` (lifecycle `PENDING`→`APPROVED`/`REJECTED`→`RETURNED`/`OVERDUE`, compound FK `[institutionId, studentId]` + `[academicYearId, institutionId]`) + migrasi manual `20261002040000_permit_request_core` (`migrate diff` nihil); service `src/lib/permit/permit-service.ts` (guard santri ber-assignment asrama aktif, tolak izin ganda, AuditLog, notifikasi `PERMIT_APPROVED` via outbox ke wali); RBAC `pesantren:view`/`pesantren:manage` (4 peran pimpinan/admin); 6 server action `src/actions/permit.ts`; UI `/dormitories/permits` (daftar + filter status + modal ajukan + aksi setujui/tolak/kembali/terlambat); `test/permit-engine.test.ts` **24/24** + QA E2E DB nyata **32/32** + invoke server action HTTP **7/7** + smoke halaman **7/7**.
 * [x] Mutaba'ah Tahfidz & Shalat Berjamaah — `TahfidzRecord` (114 surah) + absensi konteks `LIVING`, `test/tahfidz` + `test/pesantren-living`.
 
 ### Phase 6 Gate — Parent Experience

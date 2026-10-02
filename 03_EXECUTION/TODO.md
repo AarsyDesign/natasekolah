@@ -451,13 +451,13 @@
 - [ ] **9.0 QA E2E klik-manual modal "Generate Soal AI":**
   - [ ] Alur form → generating → review → simpan terpilih lewat browser; catat temuan.
 
-- [ ] **9.1 Tasrih / Permit Engine (Izin Pulang Santri):**
-  - [ ] Skema `PermitRequest` (lifecycle PENDING→APPROVED/REJECTED→RETURNED/OVERDUE) + migrasi MANUAL (`migrate diff` nihil).
-  - [ ] Zod `src/lib/validation/permit.ts` + service `src/lib/permit/permit-service.ts` (guard siswa ber-assignment asrama, AuditLog).
-  - [ ] RBAC `pesantren:view`/`pesantren:manage` di matriks 6 peran + test.
-  - [ ] Server actions `src/actions/permit.ts` (+ `rethrowIfSessionExpired`).
-  - [ ] UI `/dormitories/permits` (daftar, filter, modal ajukan/approve) + notifikasi `PERMIT_APPROVED` via outbox.
-  - [ ] Test `test/permit-engine.test.ts` (+15–20) + QA E2E.
+- [x] **9.1 Tasrih / Permit Engine (Izin Pulang Santri):** — **SELESAI 2026-10-02**
+  - [x] Skema `PermitRequest` (lifecycle PENDING→APPROVED/REJECTED→RETURNED/OVERDUE) + migrasi MANUAL `20261002040000_permit_request_core` diterapkan via `migrate deploy` (`migrate diff` nihil, tanpa `migrate dev`).
+  - [x] Zod `src/lib/validation/permit.ts` + service `src/lib/permit/permit-service.ts` (guard siswa ber-assignment asrama aktif, tolak izin ganda, AuditLog CREATE/UPDATE, guard tahun ajaran aktif).
+  - [x] RBAC `pesantren:view`/`pesantren:manage` di matriks 6 peran (SUPER_ADMIN, FOUNDATION_HEAD, PRINCIPAL, ADMIN) + test `permit-engine` (RBAC & matriks).
+  - [x] Server actions `src/actions/permit.ts` (6 action, `requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`).
+  - [x] UI `/dormitories/permits` (daftar, filter status, modal ajukan, aksi setujui/tolak/kembali/terlambat, empty/loading/error, mobile) + notifikasi `PERMIT_APPROVED` via outbox (template baru + `notifyPermitApproved`) + tautan dari `/dormitories`.
+  - [x] Test `test/permit-engine.test.ts` **24/24** (lifecycle, imutabilitas terminal, RBAC, sesi wali, cross-tenant, filter, template) + QA E2E **DB nyata 32/32** (`scripts/_local-qa-permit.ts`) + **server action via HTTP 7/7** (`scripts/_local-qa-permit-actions.ts`) + smoke halaman **7/7**.
 
 - [ ] **9.2 Guardian Master Data CRUD Staf + Wizard Undangan:**
   - [ ] Server actions `src/actions/guardian.ts` (list/update/deactivate/createInvitation 72 jam).
