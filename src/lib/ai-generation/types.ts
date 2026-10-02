@@ -78,6 +78,18 @@ export interface AIGenerationUsageHistoryEntry {
 
 export type AIGenerationQuotaResult = AIGenerationUsageCheckResult;
 
+/**
+ * ID pemilihan soal pada langkah review — berbasis INDEX hasil generate.
+ * Skema lama `${type}-${stem.substring(0, 20)}` tabrakan ketika dua soal
+ * memiliki 20 karakter naskah pertama sama → seleksi parsial rusak dan
+ * jumlah "Simpan Terpilih (n)" tidak sinkron dengan yang tersimpan
+ * (temuan QA E2E 9.0). Index aman karena resultJson tidak berubah
+ * setelah job selesai.
+ */
+export function aiQuestionId(index: number): string {
+  return `q${index}`;
+}
+
 export interface GenerateQuestionsActionInput {
   subjectId: string;
   type: 'MULTIPLE_CHOICE' | 'SHORT_ANSWER' | 'ESSAY';

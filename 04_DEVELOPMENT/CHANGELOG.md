@@ -1,5 +1,36 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - QA E2E 9.0 + Gate Keluar Phase 9 LULUS (VERIFIED)
+
+### Fixed (temuan QA E2E klik-manual modal Generate Soal AI)
+* **Pesan error provider ramah** — `friendlyAIGenerationError()` di
+  `ai-generation-service.ts`: "fetch failed" (mentah) → "Layanan AI tidak dapat
+  dihubungi…"; pesan ramah disimpan di `job.errorMessage`, teknis di `console.error`.
+* **Feature flag `AI_GENERATION_ENABLED` kini dievaluasi** — sebelumnya terdokumentasi
+  tapi tidak pernah dibaca. Guard di `createAIGenerationJob`, default nonaktif
+  dengan pesan menunjuk flag.
+* **Skema Mata Pelajaran toleran `null`** — form mengirim `null` utk field
+  "(Opsional)" → Zod "Invalid input"; `code`/`shortName` kini `z.preprocess`
+  (`null`/`""` → `undefined`) di `src/lib/validation/teaching.ts`.
+* **ID seleksi review tabrakan** — skema `${type}-${stem.substring(0,20)}` membuat
+  soal kembar awal naskah jadi satu id: "Simpan Terpilih (n)" tidak sinkron dan
+  seleksi kosong jatuh ke **simpan semua**. Diganti `aiQuestionId(index)` +
+  `selectQuestionsForReview()` (client `question-bank/page.tsx` + service);
+  seleksi kosong kini ditolak "Tidak ada soal yang dipilih untuk disimpan".
+
+### Added
+* `test/ai-generation-qa.test.ts` — 19 test: skema subject, pesan ramah,
+  feature flag, guard kuota 30/hari + cooldown 15 detik, seleksi review
+  index-based (termasuk naskah kembar & seleksi kosong). **565 → 584/584 pass.**
+
+### Verification (QA E2E eksploratif, browser + mock provider lokal sementara)
+* TC1 generate 5 → review → simpan **3** → "3 soal disimpan ke Bank Soal." ✓
+* TC2 kuota habis → badge "Limit harian tercapai (reset besok)" + submit blokir ✓
+* TC3 cooldown → "Generate AI diblokir: Cooldown 9 detik" ✓
+* TC4 provider/flag mati → pesan ramah, modal terbuka ✓
+* `tsc 0` · `npm test 584/584` · `build exit 0` · **Gate Phase 9 (9.5) LULUS**;
+  plan fase berikut: `03_EXECUTION/PLAN-PHASE-10.md`.
+
 ## [2026-10-02] - Phase 9.3: Student Full Profile — 5 Kluster Dapodik/EMIS (VERIFIED)
 
 ### Added

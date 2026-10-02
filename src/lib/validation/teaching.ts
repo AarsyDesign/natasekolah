@@ -12,22 +12,23 @@ export const createSubjectInputSchema = z
       .trim()
       .min(2, "Nama mata pelajaran minimal 2 karakter")
       .max(100, "Nama mata pelajaran maksimal 100 karakter"),
-    code: z
-      .string()
-      .trim()
-      .min(1, "Kode mata pelajaran minimal 1 karakter")
-      .max(20, "Kode mata pelajaran maksimal 20 karakter")
-      .toUpperCase()
-      .optional()
-      .or(z.literal(""))
-      .transform((val) => (val === "" ? undefined : val)),
-    shortName: z
-      .string()
-      .trim()
-      .max(20, "Singkatan nama maksimal 20 karakter")
-      .optional()
-      .or(z.literal(""))
-      .transform((val) => (val === "" ? undefined : val)),
+    // Field opsional: form React bisa mengirim "" ATAU null (field tak disentuh).
+    // Tanpa normalisasi, null jatuh ke .min/.max dan melempar "Invalid input"
+    // padahal field berlabel (Opsional) — temuan QA E2E 9.0.
+    code: z.preprocess(
+      (val) => (val === null || val === undefined || val === "" ? undefined : val),
+      z
+        .string()
+        .trim()
+        .min(1, "Kode mata pelajaran minimal 1 karakter")
+        .max(20, "Kode mata pelajaran maksimal 20 karakter")
+        .toUpperCase()
+        .optional()
+    ),
+    shortName: z.preprocess(
+      (val) => (val === null || val === undefined || val === "" ? undefined : val),
+      z.string().trim().max(20, "Singkatan nama maksimal 20 karakter").optional()
+    ),
     category: z
       .enum(SUBJECT_CATEGORIES, {
         message: "Kategori mata pelajaran tidak valid",

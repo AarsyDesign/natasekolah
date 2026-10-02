@@ -448,8 +448,27 @@
 
 ## Phase 9 — Penutupan Backlog Gerbang & Kesiapan Rilis (PLAN: `03_EXECUTION/PLAN-PHASE-9.md`)
 
-- [ ] **9.0 QA E2E klik-manual modal "Generate Soal AI":**
-  - [ ] Alur form → generating → review → simpan terpilih lewat browser; catat temuan.
+- [x] **9.0 QA E2E klik-manual modal "Generate Soal AI":** — **SELESAI 2026-10-02**
+  - [x] Alur form → generating → review → simpan terpilih lewat browser; catat temuan.
+  - [x] TC1: generate 5 PG → review tampil 5 soal → pilih 3 → "3 soal disimpan ke Bank Soal."
+    (3 soal masuk DRAFT, counter kuota +1). Diuji dengan mock provider lokal OpenAI-compatible
+    (`AI_LOCAL_BASE_URL` sementara, dimatikan setelah QA; `.env` dikembalikan).
+  - [x] TC2: kuota habis → badge "⏱ 0 Limit harian tercapai (reset besok)" + submit diblokir
+    "Generate AI diblokir: Limit harian 30 tercapai".
+  - [x] TC3: submit kedua dalam window 15 detik → diblokir "Generate AI diblokir: Cooldown 9 detik".
+  - [x] TC4: flag mati / provider tak terjangkau → pesan ramah, modal tetap terbuka.
+  - **Temuan diperbaiki di sesi ini (5):**
+    1. Error provider mentah ("fetch failed") tampil ke guru → `friendlyAIGenerationError()`
+       (pesan ramah di-throw & disimpan di `job.errorMessage`; detail teknis hanya `console.error`).
+    2. `AI_GENERATION_ENABLED` terdokumentasi tapi **tidak pernah dievaluasi** → kini guard di
+       `createAIGenerationJob` (default nonaktif, pesan menunjuk flag).
+    3. Form Mata Pelajaran mengirim `null` utk field ber-label "(Opsional)" → Zod "Invalid input"
+       → `z.preprocess` normalisasi `null`/`""` → `undefined` di `createSubjectInputSchema`.
+    4. ID seleksi review `${type}-${stem.substring(0,20)}` **tabrakan** bila awal naskah sama:
+       "Simpan Terpilih (n)" tidak sinkron, seleksi kosong jatuh ke **simpan semua** (5).
+       → `aiQuestionId(index)` + `selectQuestionsForReview()`; kosong kini ditolak.
+    5. Nol test utk guard kuota/cooldown & seleksi review → `test/ai-generation-qa.test.ts`
+       (19 test; total repo 565 → **584/584**, fail 0).
 
 - [x] **9.1 Tasrih / Permit Engine (Izin Pulang Santri):** — **SELESAI 2026-10-02**
   - [x] Skema `PermitRequest` (lifecycle PENDING→APPROVED/REJECTED→RETURNED/OVERDUE) + migrasi MANUAL `20261002040000_permit_request_core` diterapkan via `migrate deploy` (`migrate diff` nihil, tanpa `migrate dev`).
@@ -488,9 +507,10 @@
   - [ ] CI workflow `.github/workflows/ci.yml` (butuh token GitHub scope `workflow`).
   - [ ] Deploy Vercel permanen (butuh project baru + env Supabase).
 
-- [ ] **9.5 Gate Keluar Phase 9:**
-  - [ ] ROADMAP: 3 butir `[ ]` → `[x]` dengan anotasi bukti.
-  - [ ] `tsc 0` · `npm test` (target >500) · `build exit 0` · PROGRESS/CHANGELOG konsisten.
+- [x] **9.5 Gate Keluar Phase 9:** — **LULUS 2026-10-02**
+  - [x] ROADMAP: 3 butir `[ ]` → `[x]` dengan anotasi bukti (audit silang + implementasi 9.1–9.3; tersisa hanya anotasi prosedur).
+  - [x] `tsc 0` · `npm test` **584/584** (fail 0; target >500) · `build exit 0` · PROGRESS/CHANGELOG konsisten.
+  - [x] **Gate lulus → plan fase berikutnya ditulis: `03_EXECUTION/PLAN-PHASE-10.md`** (instruksi Arsyad: selesai → plan lagi).
 
 
 

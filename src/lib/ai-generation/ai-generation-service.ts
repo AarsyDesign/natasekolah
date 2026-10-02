@@ -19,10 +19,36 @@ import {
   AIGenerationPromptParams,
   GenerateQuestionsActionInput,
   ReviewAIGenerationJobInput,
+  aiQuestionId,
 } from './types';
 import { checkAIGenerationQuota, recordAIGenerationUsage } from './usage-service';
 import { ValidationError } from '@/lib/validation';
 import { getAIProvider } from '@/lib/ai-providers';
+
+/**
+ * Menerjemahkan error mentah provider menjadi pesan aman untuk guru.
+ * Temuan QA E2E 9.0: teks mentah ("fetch failed") tampil apa adanya di modal.
+ * Error yang sudah berbahasa Indonesia (ValidationError) diteruskan apa adanya.
+ */
+export function friendlyAIGenerationError(error: unknown): string {
+  if (error instanceof ValidationError) return error.message;
+  const msg = error instanceof Error ? error.message : '';
+  if (/fetch failed|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket hang up|network/i.test(msg)) {
+    return 'Layanan AI tidak dapat dihubungi. Coba lagi nanti atau hubungi administrator lembaga.';
+  }
+  if (/api key|not configured|API_KEY/i.test(msg)) {
+    return 'Kunci API AI belum dikonfigurasi. Hubungi administrator lembaga.';
+  }
+  return 'Generate AI gagal dijalankan. Coba lagi nanti.';
+}
+
+/**
+ * Feature flag server. Terdokumentasi di .env.example sejak Phase 8 tetapi
+ * belum pernah dievaluasi (temuan QA E2E 9.0) — default: nonaktif.
+ */
+export function isAIGenerationEnabled(): boolean {
+  return process.env.AI_GENERATION_ENABLED?.trim().toLowerCase() === 'true';
+}
 
 /**
  * Build prompt untuk AI provider
@@ -176,6 +202,13 @@ export async function createAIGenerationJob(
   }
   requirePlugin(institution, 'AI_GENERATION');
 
+  // Guard: feature flag server (temuan QA E2E 9.0 — flag terdokumentasi tapi mati)
+  if (!isAIGenerationEnabled()) {
+    throw new ValidationError(
+      'AI Generator sedang dinonaktifkan di server. Aktifkan AI_GENERATION_ENABLED=true untuk menggunakannya.'
+    );
+  }
+
   // Guard: quota check
   const quota = await checkAIGenerationQuota(ctx, ctx.userId);
   if (!quota.allowed) {
@@ -272,16 +305,37 @@ export async function executeAIGeneration(
 
     return result;
   } catch (error) {
+    // Simpan pesan ramah di job; detail teknis hanya untuk log server.
+    const friendly = friendlyAIGenerationError(error);
+    console.error(
+      `[ai-generation] job ${jobId} gagal:`,
+      error instanceof Error ? error.message : error
+    );
     // Update job with error
     await prisma.aiGenerationJob.update({
       where: { id: jobId },
       data: {
         status: 'FAILED',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage: friendly,
       },
     });
-    throw error;
+    throw new ValidationError(friendly);
   }
+}
+
+/**
+ * Memilih soal hasil generate berdasarkan ID seleksi (index-based).
+ * - `selectedQuestionIds` tidak dikirim → semua soal (kompatibel caller lama).
+ * - array kosong → 0 soal (review akan menolak: "Tidak ada soal yang dipilih").
+ * - Seleksi parsial cocok per index — dua naskah dengan awal identik tetap
+ *   dihitung terpisah.
+ */
+export function selectQuestionsForReview(
+  questions: AIGeneratedQuestion[],
+  selectedQuestionIds?: string[] | null
+): AIGeneratedQuestion[] {
+  if (!selectedQuestionIds) return questions;
+  return questions.filter((_, idx) => selectedQuestionIds.includes(aiQuestionId(idx)));
 }
 
 /**
@@ -313,14 +367,11 @@ export async function reviewAIGenerationJob(
 
   // Parse result
   const result: AIGenerationJobResult = JSON.parse(job.resultJson || '{"questions":[]}');
-  let questionsToSave = result.questions;
-
-  // If partial selection
-  if (input.selectedQuestionIds && input.selectedQuestionIds.length > 0) {
-    questionsToSave = result.questions.filter(q => 
-      input.selectedQuestionIds!.includes(`${q.type}-${q.stem.substring(0, 20)}`)
-    );
-  }
+  // Seleksi parsial berbasis index (aiQuestionId) — skema lama
+  // `${type}-${stem.substring(0,20)}` tabrakan pada naskah kemiripan awal,
+  // dan seleksi KOSONG dulu jatuh ke "simpan semua" padahal UI menampilkan 0
+  // (temuan QA E2E 9.0). selectedQuestionIds selalu terkirim dari UI saat save.
+  const questionsToSave = selectQuestionsForReview(result.questions, input.selectedQuestionIds);
 
   if (questionsToSave.length === 0) {
     throw new ValidationError('Tidak ada soal yang dipilih untuk disimpan');

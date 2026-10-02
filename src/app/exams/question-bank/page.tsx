@@ -30,7 +30,7 @@ import {
   getAIGenerationQuotaAction,
   getAIGenerationUsageHistoryAction,
 } from "@/actions/ai-generation";
-import type { AIGenerationJobResult, AIGenerationQuotaResult, AIGenerationUsageHistoryEntry } from "@/lib/ai-generation/types";
+import { AIGenerationJobResult, AIGenerationQuotaResult, AIGenerationUsageHistoryEntry, aiQuestionId } from "@/lib/ai-generation/types";
 import { getSubjectsAction } from "@/actions/teaching";
 import { downloadCSV } from "@/lib/finance/export-utils";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -397,8 +397,8 @@ export default function QuestionBankPage() {
 
       setAiResult(execRes.data);
       setAiGenerateStep("review");
-      // Select all by default
-      setSelectedQuestionIds(execRes.data.questions.map((_, i) => `${execRes.data.questions[i].type}-${execRes.data.questions[i].stem.substring(0, 20)}`));
+      // Select all by default (ID berbasis index — lihat aiQuestionId)
+      setSelectedQuestionIds(execRes.data.questions.map((_, i) => aiQuestionId(i)));
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Gagal generate soal AI");
       setAiGenerateStep("form");
@@ -1241,9 +1241,7 @@ export default function QuestionBankPage() {
                   checked={selectedQuestionIds.length === aiResult.questions.length}
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setSelectedQuestionIds(aiResult.questions.map((_, i) =>
-                        `${aiResult.questions[i].type}-${aiResult.questions[i].stem.substring(0, 20)}`
-                      ));
+                      setSelectedQuestionIds(aiResult.questions.map((_, i) => aiQuestionId(i)));
                     } else {
                       setSelectedQuestionIds([]);
                     }
@@ -1255,7 +1253,7 @@ export default function QuestionBankPage() {
 
             <div className="space-y-3">
               {aiResult.questions.map((q, idx) => {
-                const questionId = `${q.type}-${q.stem.substring(0, 20)}`;
+                const questionId = aiQuestionId(idx);
                 const isSelected = selectedQuestionIds.includes(questionId);
                 return (
                   <div
