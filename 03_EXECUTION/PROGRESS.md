@@ -1,5 +1,14 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-02 - Phase 10.5 QA E2E + Test DoD Strict + Gate Keluar Phase 10: **LULUS**
+
+* **Verifikasi:** `npx tsc --noEmit` **0** · `npm test` **624/624 pass, 0 fail** (182 suites) — unit (compose/poin/urutan/RBAC/cross-tenant/token), integration (`%PDF` header, DOCX zip, anti-leak verifikasi), smoke HTTP download · `npm run build` **exit 0** (26 routes).
+* **QA E2E manual:** 4 ekspor PDF/DOCX (SISWA+KUNCI) ter-generate untuk exam `cmur434gm0003mr2u8irj85mn` (4 soal), verify URL valid, halaman `/verify/exam/[token]` render UI + not-found state, anti-leak terbukti (tanpa stem/kunci/data tenant lain).
+* **Gate Keluar Phase 10 — LULUS:** `tsc 0` · `npm test` **>600** · `build exit 0` · docs konsisten (TODO, PROGRESS, CHANGELOG, PLAN-PHASE-10).
+* **Siklus "selesai → plan lagi":** PLAN-PHASE-11 disusun selanjutnya.
+
+---
+
 ## 2026-10-02 - Phase 10.1 Exam Paper Engine: Fondasi Data & Domain: SELESAI
 * **Skema + Migrasi MANUAL:** 2 model baru — `Exam` (naskah: judul, tipe `DAILY|MIDTERM|FINAL|REMEDIAL|PRACTICAL`, petunjuk, `showAnswers`, `columnLayout ONE|TWO`, status `DRAFT→READY→ISSUED→ARCHIVED`, **`verifyToken` unik = hash SHA-256 saja** — token mentah tidak pernah disimpan; compound FK `[academicYearId, institutionId]`/`[subjectId, institutionId]`/`[createdById, institutionId]`) + `ExamQuestion` (urutan cetak `order`, `points` default 10, compound unique `[examId, questionId]`, compound FK ke `Exam` & `Question` — soal terpakai tak bisa dihapus (Restrict)). Relasi balik ditambahkan di `Institution`/`AcademicYear`/`Subject`/`User`/`Question`. Migrasi `prisma/migrations/20261002080000_exam_paper_core` (SQL dari `migrate diff --from-url`, murni CREATE 2 tabel) via `migrate deploy` (tanpa `migrate dev`); **`migrate diff` = "empty migration" (nihil)**; `migrate status` = up to date (**7 migrasi**); `prisma validate` valid.
 * **Zod:** `src/lib/validation/exam-paper.ts` — `createExamInputSchema` (default DAILY/ONE/false), `addExamQuestionsInputSchema` (min 1, maks 100, tanpa duplikat), `setExamQuestionPointsInputSchema` (int 1–100), `reorderExamQuestionsInputSchema` (wajib lengkap), `updateExamStatusInputSchema` + `EXAM_STATUS_TRANSITIONS` (ARCHIVED terminal), `examFilterSchema`; helper `validate*`.

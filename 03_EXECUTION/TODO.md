@@ -579,15 +579,32 @@
   10 soal → atur poin → preview → unduh PDF & DOCX → buka URL QR). **SELESAI 2026-10-02 (run cron)**:  
   `tsc 0` · `npm test` **624/624** (fail 0) · `build exit 0` · 4 ekspor
   PDF/DOCX SISWA+KUNCI terverifikasi + halaman verifikasi `/verify/exam/[token]`.
-- [ ] **10.6 Gate Keluar Phase 10:** `tsc 0` · `npm test` **>600** ·
+- [x] **10.6 Gate Keluar Phase 10:** `tsc 0` · `npm test` **>600** ·
   `build exit 0` · docs konsisten → **tulis PLAN-PHASE-11** (siklus
-  "selesai → plan lagi"); bila backlog habis total → laporan final.
+  "selesai → plan lagi"); bila backlog habis total → laporan final. **LULUS 2026-10-02**
 
 > **Terkunci (lanjutan 9.4, butuh keputusan Arsyad — jangan dikerjakan):**
 > tier COMMUNITY/DEVELOPER_CENTRAL, CI workflow (token scope `workflow`),
 > deploy Vercel (kuota), AI provider nyata (`AI_API_KEY`), rate-limit
 > Redis/DB. *Catatan: backlog drift migrasi `migrate status` SUDAH TERTUTUP
 > (2026-10-02: "Database schema is up to date", 6 migrasi).*
+
+---
+
+## Phase 11 — Pengerasan Rilis & Backlog Terblokir (PLAN: `03_EXECUTION/PLAN-PHASE-11.md`)
+
+- [ ] **11.1 Session Expiry UX:** handle `?expired=1` di `/login` + toast ramah (bukan error mentah); `rethrowIfSessionExpired` sudah di 94 catch + 9 test.
+- [ ] **11.2 PDF/DOCX Layout Stress Test:** teks esai panjang (>500 char), gambar soal, page break 2 kolom edge case; test integrasi `test/pdf-docx-layout-stress.test.ts`.
+- [ ] **11.3 AI Generator Provider API Key Wiring:** dokumentasi `.env.example` + `README.md` (AI_PROVIDER, AI_API_KEY, AI_MODEL, AI_LOCAL_BASE_URL, AI_GENERATION_ENABLED=false default).
+- [ ] **11.4 Rate Limit Redis/DB (Optional):** ADR keputusan in-memory vs Redis (Upstash/Vercel KV/self-hosted); implementasi bila disetujui.
+- [ ] **11.5 DKAS Bot Cohere Semantic Search (Optional):** fallback Fuse.js → Cohere API (gratis 1M/bln) untuk query ambigu; non-blocking.
+
+- [ ] **11.6 Gate Keluar Phase 11:** `tsc 0` · `npm test` **>650** · `build exit 0` · docs konsisten → **tulis PLAN-PHASE-12** (siklus "selesai → plan lagi"); bila backlog terblokir ditutup → laporan final.
+
+> **Terkunci (sama dengan 9.4, butuh keputusan Arsyad — jangan dikerjakan):**
+> tier COMMUNITY/DEVELOPER_CENTRAL, CI workflow (token scope `workflow`),
+> deploy Vercel (kuota), AI provider nyata (`AI_API_KEY`), rate-limit
+> Redis/DB.
 
 
 

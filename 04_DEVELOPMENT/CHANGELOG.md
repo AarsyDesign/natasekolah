@@ -1,5 +1,20 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 10.5: QA E2E + Test DoD Strict + Gate Keluar Phase 10 (COMPLETED / VERIFIED)
+
+### Verified
+* **`npm test`** → 624/624 pass (0 fail, 182 suites) — covers unit (compose/poin/urutan/RBAC/cross-tenant/token), integration (`%PDF` header, DOCX zip, anti-leak verifikasi), smoke HTTP download.
+* **`npx tsc --noEmit`** → 0 error
+* **`npm run build`** → exit 0 (26 routes)
+* **4 ekspor PDF/DOCX SISWA+KUNCI** terverifikasi via skrip QA E2E (exam `cmur434gm0003mr2u8irj85mn`, 4 soal, 4 file ter-generate, verify URL valid).
+* **Halaman verifikasi publik `/verify/exam/[token]`** berfungsi (render UI, not-found state untuk token baru, anti-leak: tanpa stem/kunci/data tenant lain).
+
+### Gate Keluar Phase 10 — **LULUS**
+* `tsc 0` · `npm test` **624/624** (>600) · `build exit 0` · docs konsisten (TODO, PROGRESS, CHANGELOG, PLAN-PHASE-10).
+* Siklus "selesai → plan lagi": **PLAN-PHASE-11** akan disusun selanjutnya.
+
+---
+
 ## [2026-10-02] - Phase 10.4: Ekspor DOCX (IMPLEMENTED / VERIFIED)
 
 ### Added
