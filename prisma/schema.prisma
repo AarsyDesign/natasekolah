@@ -60,6 +60,9 @@ model Institution {
   aiGenerationUsage    AiGenerationUsage[]
   aiGenerationJobs     AiGenerationJob[]
   permitRequests       PermitRequest[]
+  studentFamilyData    StudentFamilyData[]
+  studentHealthData    StudentHealthData[]
+  studentRegistryData  StudentRegistryData[]
 
   @@index([slug])
   @@index([type])
@@ -177,6 +180,9 @@ model Student {
   tahfidzRecords  TahfidzRecord[]
   dormitoryAssignments StudentDormitoryAssignment[]
   permitRequests  PermitRequest[]
+  familyData      StudentFamilyData?
+  healthData      StudentHealthData?
+  registryData    StudentRegistryData?
 
   @@unique([id, institutionId])
   @@unique([institutionId, nis])
@@ -969,6 +975,93 @@ model AiGenerationJob {
   @@index([institutionId, userId, status])
   @@index([institutionId, createdAt])
   @@map("ai_generation_jobs")
+}
+
+// -------------------------------------------------------------
+// PHASE 9.3 — STUDENT FULL PROFILE (Kluster Dapodik/EMIS)
+// -------------------------------------------------------------
+// Tiga tabel terpisah 1-to-1 (bukan kolom lebar pada Student):
+// Keluarga, Kesehatan/Disabilitas, Registry administratif.
+
+// Kluster Keluarga (Dapodik: ayah, ibu, kontak darurat)
+model StudentFamilyData {
+  id                      String  @id @default(cuid())
+  institutionId           String
+  studentId               String
+  fatherName              String?
+  fatherNik               String?
+  fatherPhone             String?
+  fatherOccupation        String?
+  motherName              String?
+  motherNik               String?
+  motherPhone             String?
+  motherOccupation        String?
+  parentAddress           String? // Alamat orang tua bila berbeda dari alamat siswa
+  emergencyContactName    String?
+  emergencyContactPhone   String?
+  emergencyContactRelation String? // Hubungan dgn siswa (mis. Paman, Bibi)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student     Student     @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([studentId, institutionId])
+  @@index([institutionId])
+  @@map("student_family_data")
+}
+
+// Kluster Kesehatan & Disabilitas (Dapodik/EMIS: gol. darah, tinggi/berat, disabilitas, penyakit/alergi)
+model StudentHealthData {
+  id               String    @id @default(cuid())
+  institutionId    String
+  studentId        String
+  bloodType        String? // A | B | AB | O
+  heightCm         Int?
+  weightKg         Int?
+  hasDisability    Boolean   @default(false)
+  disabilityType   String? // NETRA | RUNGU | GRAHITA | WICARA | INTELEKTUAL | FISIK | PSIKOSOSIAL | LAINNYA
+  disabilityNotes  String?
+  chronicIllness   String? // Penyakit menahun
+  allergies        String? // Riwayat alergi
+  lastCheckupAt    DateTime? // Terakhir medical check-up
+  healthNotes      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student     Student     @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([studentId, institutionId])
+  @@index([institutionId])
+  @@map("student_health_data")
+}
+
+// Kluster Registry Administratif (Dapodik/EMIS: No. KK, Akta, BPJS, SKTM, kewarganegaraan)
+model StudentRegistryData {
+  id                 String  @id @default(cuid())
+  institutionId      String
+  studentId          String
+  familyCardNo       String? // Nomor Kartu Keluarga
+  birthCertificateNo String? // Nomor Akta Kelahiran
+  bpjsNumber         String? // Nomor BPJS / KIS
+  bpjsProvider       String? // Kantor cabang / provider BPJS
+  sktmNumber         String? // Nomor Surat Keterangan Tidak Mampu
+  nationality        String  @default("WNI") // WNI | WNA
+  previousSchool     String? // Asal sekolah (mutasi masuk)
+  registryNotes      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student     Student     @relation(fields: [studentId, institutionId], references: [id, institutionId], onDelete: Cascade)
+
+  @@unique([id, institutionId])
+  @@unique([studentId, institutionId])
+  @@index([institutionId])
+  @@map("student_registry_data")
 }
 
 

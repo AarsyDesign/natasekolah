@@ -1,5 +1,28 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 9.3: Student Full Profile — 5 Kluster Dapodik/EMIS (VERIFIED)
+
+### Added
+* **`prisma/schema.prisma`** — 3 model kluster profil siswa 1-to-1 compound FK `[studentId, institutionId]`: `StudentFamilyData` (ayah/ibu: nama, NIK, telepon, pekerjaan; alamat orang tua; kontak darurat + hubungan), `StudentHealthData` (gol. darah A/B/AB/O, tinggi/berat, `hasDisability` + `disabilityType` 8 jenis, catatan disabilitas, penyakit menahun, alergi, `lastCheckupAt`), `StudentRegistryData` (No. KK, No. Akta, BPJS/KIS + provider, No. SKTM, kewarganegaraan default `WNI`, asal sekolah, catatan) — masing-masing `@@unique([id, institutionId])` + `@@unique([studentId, institutionId])` + index `[institutionId]`; back-relations `Institution`/`Student`.
+* **`prisma/migrations/20261002060000_student_profile_clusters/migration.sql`** — migrasi MANUAL dari `migrate diff --from-url` (SQL murni CREATE 3 tabel + index + FK) diterapkan via `migrate deploy` (tanpa `migrate dev`); **`migrate diff --from-url → --to-schema-datamodel` = nihil ("empty migration")**.
+* **`src/lib/validation/student-profile.ts`** — Zod: konstanta `PROFILE_CLUSTERS`/`BLOOD_TYPES`/`DISABILITY_TYPES`/`NATIONALITIES`; helper `nullableName`/`nullableText`/`idNumberText`/`phoneText` ("" → null, **undefined dibiarkan absen** agar upsert parsial tidak menimpa); 3 skema `.strict()` + `superRefine` (minimal 1 bidang; `hasDisability=true` wajib `disabilityType` dan sebaliknya; NIK/KK/Akta/BPJS digit saja; rentang tinggi 40–250 cm & berat 2–300 kg); wrapper `upsertStudentClusterInputSchema` (discriminated union `cluster`) + `getStudentProfileInputSchema`.
+* **`src/lib/student/profile-service.ts`** — `getStudentProfileClusters` (`student:view`: guard siswa compound `id_institutionId` → `ResourceNotFoundError` bila lintas tenant; ketiga kluster sekaligus, baris kosong = `null`, `canEdit` = `student:edit`), `upsertStudentCluster` (`student:edit`: create/update per kluster — **hanya bidang yang dikirim** yang ikut disimpan & diaudit; AuditLog `CREATE`/`UPDATE` `entityType` per kluster dengan `detailsJson` hanya `{cluster, studentId, fields}` — **tanpa nilai pribadi**).
+* **`src/actions/student-profile.ts`** — 2 server action (`getStudentProfileClustersAction`, `upsertStudentClusterAction`) pola `requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired` + `revalidatePath("/students")`.
+* **UI `src/app/students/[id]/page.tsx`** — tab navigasi 4 kluster (Profil Inti, Keluarga, Kesehatan, Registry); komponen `ClusterForm` dengan `CLUSTER_FIELDS` render-per-tipe (text/number/date/select/textarea/checkbox), hydrate dari DB, payload ter-normalisasi (""→null, angka & tanggal tipe benar), feedback sukses/galat, tombol Simpan; **tanpa `student:edit` → tampilan read-only + empty state**; tab Profil Inti mempertahankan kartu identitas + Sacred History.
+* **`test/student-profile-clusters.test.ts`** — 30 test baru: Zod (14: payload valid/""-normalize, payload kosong, NIK non-digit, telepon invalid, enum darah, rentang tinggi, 2 guard disabilitas, default WNI, cluster tak dikenal, strict unknown-key, konstanta) + service (16: RBAC `student:view`/`student:edit`, sesi wali ditolak, cross-tenant read/write, upsert create→UPDATE idempoten, AuditLog tanpa nilai pribadi, ketiga kluster terpisah, viewer `canEdit=false`).
+
+### Verification
+* `npx tsc --noEmit` **0 error** · `npm test` **565/565 pass, 0 fail** (167 suites; baseline 535 + 30) · `npm run build` **exit 0** · `prisma validate` valid · `migrate diff` **nihil**.
+* **QA E2E DB NYATA** (`scripts/_local-qa-student-profile.ts`): **32/32 pass** — write path membuktikan ketiga kluster menempel di tabel `student_family_data`/`student_health_data`/`student_registry_data`, upsert parsial tidak menimpa bidang lain, AuditLog CREATE/UPDATE hanya daftar field (tanpa NIK/nama), guard Zod, RBAC guru/tanpa-view/sesi wali, cross-tenant 2 arah, data QA dibersihkan.
+* **QA server action via HTTP + sesi nyata** (`scripts/_local-qa-student-profile-actions.ts`, `next start` :3100): **11/11 pass** — smoke `/students/[id]` 307→login tanpa sesi & 200 + app shell dengan sesi; get `canEdit:true`; upsert FAMILY/HEALTH sukses & menempel di DB; input ilegal → `success:false`; siswa tidak ada → `success:false`; tanpa sesi ditolak.
+* *Belum:* klik-manual browser 390px (harness tidak tersedia di run cron); kolom kluster di template importer xlsx (tahap lanjut, opsional).
+
+### Dokumentasi
+* `03_EXECUTION/TODO.md` — checklist 9.3 seluruhnya `[x]` dengan anotasi bukti.
+* `03_EXECUTION/ROADMAP.md` — Phase 1 Gate "Student Full Profile" `[ ]` → `[x]` (**sisa `[ ]` ROADMAP kini 0 — checklist bersih**).
+* `PROGRESS.md` (root) — baris Phase 9 gate matrix ("BERJALAN — 9.1, 9.2 & 9.3 SELESAI", 565 test), entri log, "Langkah Selanjutnya" → tahap berikutnya **9.5 Gate Keluar Phase 9**.
+* `03_EXECUTION/PROGRESS.md` — entri log Phase 9.3.
+
 ## [2026-10-02] - Phase 9.2: Guardian Master Data CRUD Staf + Wizard Undangan (VERIFIED)
 
 ### Added

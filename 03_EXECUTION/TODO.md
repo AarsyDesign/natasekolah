@@ -477,11 +477,11 @@
     (`scripts/_local-qa-guardian-actions.ts`, `next start` :3100 — termasuk smoke
     `/guardians` 307→login tanpa sesi, 200 + marker UI dengan sesi).
 
-- [ ] **9.3 Student Full Profile — 5 Kluster Dapodik/EMIS:**
-  - [ ] Skema tabel 1-to-1 `StudentFamilyData`, `StudentHealthData`, `StudentRegistryData` + migrasi manual.
-  - [ ] Service + Zod + server actions (upsert cluster, `student:manage`).
-  - [ ] UI tab tambahan di `/students/[id]`: Keluarga, Kesehatan, Registry.
-  - [ ] Test +20 termasuk cross-tenant; importer kolom kluster (tahap lanjut).
+- [x] **9.3 Student Full Profile — 5 Kluster Dapodik/EMIS:** — **SELESAI 2026-10-02**
+  - [x] Skema tabel 1-to-1 `StudentFamilyData`, `StudentHealthData`, `StudentRegistryData` + migrasi manual `20261002060000_student_profile_clusters` (via `migrate deploy`, `migrate diff` nihil).
+  - [x] Service `src/lib/student/profile-service.ts` + Zod `src/lib/validation/student-profile.ts` + server actions `src/actions/student-profile.ts` (`getStudentProfileClusters` `student:view`, `upsertStudentCluster` `student:edit` parsial + AuditLog).
+  - [x] UI tab tambahan di `/students/[id]`: Keluarga, Kesehatan, Registry (form per kluster, read-only tanpa `student:edit`, empty/loading/error).
+  - [x] Test +30 (`test/student-profile-clusters.test.ts`) termasuk cross-tenant; QA E2E DB nyata **32/32** + server action HTTP **11/11**. *Importer kolom kluster (tahap lanjut) belum — opsional, di luar DoD tahap ini.*
 
 - [ ] **9.4 Backlog terblokir — TIDAK dikerjakan sampai keputusan Arsyad:**
   - [ ] Tier Question Bank `COMMUNITY`/`DEVELOPER_CENTRAL` (butuh keputusan produk moderasi lintas lembaga).
