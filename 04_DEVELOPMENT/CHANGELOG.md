@@ -1,5 +1,31 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 11.6 Gate Keluar + PLAN-PHASE-12 Created — COMPLETED / VERIFIED
+
+### Phase 11 Summary (All Complete)
+* **11.1 Session Expiry UX** — toast system, `?expired=1`, `rethrowIfSessionExpired` 94 catch + 9 test.
+* **11.2 PDF/DOCX Layout Stress Test** — `test/pdf-docx-layout-stress.test.ts` (14 test).
+* **11.3 AI Generator Provider API Key Wiring** — dokumentasi `.env.example` + `README.md`.
+* **11.4 Rate Limit Redis/DB (Optional)** — ADR-011 Upstash, `RateLimitStore` abstraction, factory, env vars.
+* **11.5 DKAS Bot Cohere Semantic Search (Optional)** — `CohereProvider` + `SemanticSearchService` + server action + env vars + 15 test.
+* **11.6 Gate Keluar Phase 11** — **LULUS**: `tsc 0` · `npm test` **657/657** (>650) · `build exit 0` · docs konsisten.
+
+### Added (Phase 12 Plan)
+* **`03_EXECUTION/PLAN-PHASE-12.md`** — Execution plan Phase 12 (Hardening Lanjutan & Fondasi DKAS Bot). Scope: 12.1 Search UX, 12.2 Error Boundary, 12.3 AuditLog Query API, 12.4 Performance Bundle Split, 12.5 a11y Sweep, 12.6 Observability (Pino + metrics), 12.7 DKAS Bot Planner (non-blocking). DoD Strict: test ≥700, tsc 0, build 0, lint 0.
+
+### Updated
+* **`03_EXECUTION/TODO.md`** — Phase 11 checklist all `[x]`, Phase 12 checklist 12.1–12.8 `[ ]` added.
+* **`03_EXECUTION/ROADMAP.md`** — Phase 11 all `[x]`, Phase 12 Gate 12.1–12.8 `[ ]` added + backlog terblokir B1–B5 tercantum.
+* **`PROGRESS.md`** — Gate Matrix Phase 11 SELESAI + LULUS, Next Immediate Gate updated ke Phase 12 plan.
+
+### Verification
+* `npx tsc --noEmit` → **0 error**
+* `npm test` → **657/657 pass** (0 fail, 194 suites)
+* `npm run build` → **exit 0** (47 routes)
+* `prisma validate` → **Valid** · `migrate diff` → **nihil**
+
+---
+
 ## [2026-10-02] - Phase 11.5: DKAS Bot Cohere Semantic Search (Optional) — COMPLETED / VERIFIED
 
 ### Added

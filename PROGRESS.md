@@ -28,6 +28,7 @@
 | **Phase 9** | **Penutupan Backlog Gerbang & Kesiapan Rilis** (9.0 QA E2E AI ✓, 9.1 Permit ✓, 9.2 Guardian CRUD ✓, 9.3 Student 5 Kluster ✓, 9.4 backlog terblokir, 9.5 gate LULUS) | **COMPLETE** | 2026-10-02 (584 Tests Pass) |
 | **Phase 10** | **Exam Paper Engine (PRD #31)** — naskah ujian: kop, identitas, ruang nama/nomor peserta, kolom 1/2, QR verifikasi, ekspor PDF & DOCX | **COMPLETE** | 2026-10-02 (624 Tests Pass + build OK) |
 || **Phase 11** | **Pengerasan Rilis & Backlog Terblokir** — 11.1 Session Expiry UX, 11.2 PDF/DOCX Layout Stress Test ✓, 11.3 AI Generator Provider API Key Wiring ✓, 11.4 Rate Limit Redis/DB (Optional), 11.5 DKAS Bot Cohere Semantic Search (Optional) ✓ | **11.1–11.5 SELESAI** | 2026-10-02 (657 Tests Pass + build OK) ||
+|| **Phase 11** | **Gate Keluar Phase 11** — `tsc 0` · `npm test` **>650** (657/657) · `build exit 0` · docs konsisten → **tulis PLAN-PHASE-12** (siklus "selesai → plan lagi"); bila backlog terblokir ditutup → laporan final | **LULUS 2026-10-02** | 2026-10-02 |
 
 ---
 

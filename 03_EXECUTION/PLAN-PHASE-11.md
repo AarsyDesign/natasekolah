@@ -38,6 +38,7 @@ Fokus: **Pengerasan rilis** (hardening) + **Backlog terblokir** yang butuh keput
 | **11.3 AI Generator: Provider API Key Wiring** | Infra siap (4 adapter). Butuh: dokumentasi setup `AI_PROVIDER` + `AI_API_KEY` + `AI_MODEL` di `.env.example` + `README.md`. Default `AI_GENERATION_ENABLED=false`. | Kecil |
 | **11.4 Rate Limit Redis/DB (Optional)** | Saat ini in-memory (map). Produksi butuh Redis/DB supaya persist & multi-instance. Opsional — catat di ADR bila dibutuhkan. | Sedang |
 | **11.5 DKAS Bot: Cohere Semantic Search (Optional)** | Fuse.js jalan 32k item. Cohere API gratis 1M/bln untuk semantic fallback bila query ambigu. Tidak blocking. | Kecil | ✅ **SELESAI 2026-10-02** — `CohereProvider` + `SemanticSearchService` + 15 test + env vars. |
+| **11.6 Gate Keluar Phase 11** | Target `npm test` >650 (sekarang 657), `tsc 0`, `build exit 0`, docs konsisten. Lulus → tulis PLAN-PHASE-12; bila backlog terblokir ditutup → laporan final. | Kecil | ✅ **LULUS 2026-10-02** — 657/657 test, build OK, docs konsisten. |
 
 ### 2.2 Backlog Terblokir (Butuh Keputusan Arsyad — **JANGAN DIKERJAKAN** sampai ada keputusan)
 

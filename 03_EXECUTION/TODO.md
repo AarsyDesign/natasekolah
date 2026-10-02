@@ -599,9 +599,28 @@
 - [x] **11.4 Rate Limit Redis/DB (Optional):** ADR keputusan in-memory vs Redis (Upstash) + implementasi `RateLimitStore` abstraction (`InMemoryStore` + `UpstashStore`), factory `createRateLimitStore`, env vars `RATE_LIMIT_REDIS_URL` + `RATE_LIMIT_REDIS_TOKEN`. Test suite diperbarui async. `tsc 0` · `npm test 639/639` · `build exit 0`.
 - [x] **11.5 DKAS Bot Cohere Semantic Search (Optional):** fallback Fuse.js → Cohere API (gratis 1M/bln) untuk query ambigu; non-blocking. CohereProvider + SemanticSearchService + test `test/semantic-search-cohere.test.ts` (15 test). `tsc 0` · `npm test 657/657` · `build exit 0`.
 
-- [ ] **11.6 Gate Keluar Phase 11:** `tsc 0` · `npm test` **>650** · `build exit 0` · docs konsisten → **tulis PLAN-PHASE-12** (siklus "selesai → plan lagi"); bila backlog terblokir ditutup → laporan final.
+- [x] **11.6 Gate Keluar Phase 11:** `tsc 0` · `npm test` **>650** (657/657) · `build exit 0` · docs konsisten → **tulis PLAN-PHASE-12** (siklus "selesai → plan lagi"); bila backlog terblokir ditutup → laporan final. **LULUS 2026-10-02**
 
 > **Terkunci (sama dengan 9.4, butuh keputusan Arsyad — jangan dikerjakan):**
+> tier COMMUNITY/DEVELOPER_CENTRAL, CI workflow (token scope `workflow`),
+> deploy Vercel (kuota), AI provider nyata (`AI_API_KEY`), rate-limit
+> Redis/DB.
+
+---
+
+## Phase 12 — Hardening Lanjutan & Fondasi DKAS Bot (PLAN: `03_EXECUTION/PLAN-PHASE-12.md`)
+
+- [ ] **12.1 Search UX: Fuse.js Weight Tuning + Highlight** — threshold/keys tuning + highlight snippet di `GlobalSearchDialog` (mark matched terms).
+- [ ] **12.2 Error Boundary & Recovery UI** — React Error Boundary di `app-shell` + fallback `/error` + `rethrowIfSessionExpired` toast terpusat.
+- [ ] **12.3 AuditLog Query API + UI Filter** — server action `listAuditLogAction` (filter entityType, action, date range, user) + halaman `/audit-log` (guard `audit:view`).
+- [ ] **12.4 Performance: Bundle Analyzer + Code Split** — `next build --profile`; dynamic import heavy components (PDF/DOCX export, question bank modal, AI generator modal).
+- [ ] **12.5 Accessibility (a11y) Sweep** — `eslint-plugin-jsx-a11y` rules; focus-visible, ARIA label, color contrast WCAG AA, keyboard trap modal, skip link.
+- [ ] **12.6 Observability: Structured Logging + Metrics** — Pino logger (JSON) + custom metric `ai_generation_latency_ms`, `search_fallback_cohere_count`, `rate_limit_hits`.
+- [ ] **12.7 DKAS Bot: Natural Language → SQL (Planner)** — Planner LLM → generate Prisma where clause aman (whitelist field/operator) untuk query santri/nilai/kehadiran. Non-blocking, gated `AI_GENERATION_ENABLED`.
+
+- [ ] **12.8 Gate Keluar Phase 12:** `tsc 0` · `npm test` **≥700** · `build exit 0` · `lint 0` · docs konsisten → **tulis PLAN-PHASE-13** (siklus "selesai → plan lagi"); bila backlog terblokir ditutup → laporan final.
+
+> **Terkunci (sama dengan 9.4/11.4, butuh keputusan Arsyad — jangan dikerjakan):**
 > tier COMMUNITY/DEVELOPER_CENTRAL, CI workflow (token scope `workflow`),
 > deploy Vercel (kuota), AI provider nyata (`AI_API_KEY`), rate-limit
 > Redis/DB.
