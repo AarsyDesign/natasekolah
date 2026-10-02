@@ -512,5 +512,43 @@
   - [x] `tsc 0` · `npm test` **584/584** (fail 0; target >500) · `build exit 0` · PROGRESS/CHANGELOG konsisten.
   - [x] **Gate lulus → plan fase berikutnya ditulis: `03_EXECUTION/PLAN-PHASE-10.md`** (instruksi Arsyad: selesai → plan lagi).
 
+---
+
+## Phase 10 — Exam Paper Engine (PRD #31) + Pengerasan Rilis (PLAN: `03_EXECUTION/PLAN-PHASE-10.md`)
+
+- [ ] **10.1 Fondasi data & domain:** model `Exam` + `ExamQuestion` (compound FK
+  institution, `verifyToken` unik hash-only), migrasi MANUAL
+  `20261002080000_exam_paper_core` (`migrate deploy`, `migrate diff` nihil),
+  Zod `src/lib/validation/exam-paper.ts`, service
+  `src/lib/exam-paper/exam-paper-service.ts` (create, addQuestions dengan
+  validasi kepemilikan soal, urutan/poin, list, detail, regenerateToken;
+  `requirePermission exam:*` + plugin `FORMAL_ACADEMIC` + AuditLog, ARCHIVED
+  menggantikan hard delete).
+- [ ] **10.2 Server actions + UI `/exams/papers`:** `src/actions/exam-paper.ts`
+  (`requireActionSession` + `runWithTenantContext` + `rethrowIfSessionExpired`);
+  daftar + filter, modal buat naskah, halaman detail (tarik soal dari Bank
+  Soal: filter tipe/difficulty/jumlah, atur urutan + poin), preview nomor soal,
+  toggle kunci, empty/loading/error, mobile 430px.
+- [ ] **10.3 Ekspor PDF + QR verifikasi:** dep `pdfkit` + `qrcode`;
+  `src/lib/exam-paper/export-pdf.ts` (kop, identitas ujian, ruang nama +
+  nomor peserta, kolom 1/2 configurable, footer + nomor halaman, mode SISWA
+  dan KUNCI); QR → `/verify/exam/<token>` (halaman publik identitas ringkas
+  saja, tanpa stem/kunci/tenant lain — wajib test anti-leak).
+- [ ] **10.4 Ekspor DOCX:** dep `docx`; `export-docx.ts` struktur identik PDF
+  memakai sumber data bersama `buildExamPaperData()`.
+- [ ] **10.5 QA E2E + test DoD strict:** unit (compose/poin/urutan/RBAC/
+  cross-tenant/token), integration (`%PDF` header, DOCX zip, anti-leak
+  verifikasi), smoke HTTP download, QA E2E klik-manual (buat naskah → tarik
+  10 soal → atur poin → preview → unduh PDF & DOCX → buka URL QR).
+- [ ] **10.6 Gate Keluar Phase 10:** `tsc 0` · `npm test` **>600** ·
+  `build exit 0` · docs konsisten → **tulis PLAN-PHASE-11** (siklus
+  "selesai → plan lagi"); bila backlog habis total → laporan final.
+
+> **Terkunci (lanjutan 9.4, butuh keputusan Arsyad — jangan dikerjakan):**
+> tier COMMUNITY/DEVELOPER_CENTRAL, CI workflow (token scope `workflow`),
+> deploy Vercel (kuota), AI provider nyata (`AI_API_KEY`), rate-limit
+> Redis/DB. *Catatan: backlog drift migrasi `migrate status` SUDAH TERTUTUP
+> (2026-10-02: "Database schema is up to date", 6 migrasi).*
+
 
 

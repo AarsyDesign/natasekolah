@@ -1,5 +1,22 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - DOCS: PLAN Phase 10 — Exam Paper Engine (PRD #31)
+
+### Added
+* **`03_EXECUTION/PLAN-PHASE-10.md`** — plan fase berikutnya (siklus instruksi
+  Arsyad "selesai → plan lagi" setelah Gate Phase 9 lulus): tahap 10.1 fondasi
+  `Exam`/`ExamQuestion` + migrasi manual, 10.2 actions + UI `/exams/papers`,
+  10.3 ekspor PDF (`pdfkit`) + QR verifikasi (`qrcode`) + halaman
+  `/verify/exam/[token]` anti-leak, 10.4 ekspor DOCX (`docx`) dari
+  `buildExamPaperData()` bersama, 10.5 QA E2E + DoD strict, 10.6 gate →
+  PLAN-PHASE-11. Backlog terblokir (9.4) tetap di luar lingkup.
+* Checklist **Phase 10** di `03_EXECUTION/TODO.md`.
+
+### Changed
+* `PROGRESS.md`: Phase 9 → **COMPLETE (584 test)**, Phase 10 → BERJALAN
+  (plan tersusun); backlog drift migrasi ditandai **tertutup**
+  (`prisma migrate status` = "Database schema is up to date", 6 migrasi).
+
 ## [2026-10-02] - QA E2E 9.0 + Gate Keluar Phase 9 LULUS (VERIFIED)
 
 ### Fixed (temuan QA E2E klik-manual modal Generate Soal AI)
