@@ -19,6 +19,7 @@ import {
 import { listTeacherAssignments } from "../lib/teaching";
 import { prisma } from "../lib/prisma";
 import { rethrowIfSessionExpired } from "../lib/auth/action-session";
+import { syncAttendanceBatch } from "../lib/attendance/offline/sync-service";
 
 async function getContext(): Promise<TenantContext> {
   return getAuthenticatedTenantContext();
@@ -204,6 +205,21 @@ export async function createLivingAttendanceSessionAction(input: unknown) {
     return {
       success: false,
       error: err instanceof Error ? err.message : "Gagal membuka sesi absensi asrama.",
+    };
+  }
+}
+
+export async function syncAttendanceBatchAction(input: unknown) {
+  try {
+    const ctx = await getContext();
+    const result = await syncAttendanceBatch(ctx, input);
+    revalidatePath("/attendance");
+    return { success: true, data: result };
+  } catch (err: unknown) {
+    rethrowIfSessionExpired(err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal menyinkronkan antrean absensi offline.",
     };
   }
 }

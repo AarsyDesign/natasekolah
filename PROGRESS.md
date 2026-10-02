@@ -34,6 +34,7 @@
 * **Tujuan:** Checkbox `[ ]` lama di `03_EXECUTION/ROADMAP.md` (fase 0–6) tidak ikut diperbarui seiring fase berjalan — audit silang agar peta status jujur dan tidak menyesatkan.
 * **Hasil:** 21 item diverifikasi terhadap kode/test lalu ditandai `[x]` disertai anotasi bukti (file/service/test). Tersisa 4 item `[ ]` yang benar-benar belum/ belum lengkap: `Offline Sync & Idempotency Key`, `Tasrih/Permit Engine`, `Student Full Profile (5 Kluster Dapodik/EMIS)`, `Guardian Master Data` (CRUD staf) — keempatnya backlog terpisah, bukan blocker fase 0–8.
 * **Verifikasi run ini:** `npx tsc --noEmit` 0 · `npm test` **473/473 pass, 0 fail** (150 suites) · perubahan murni dokumen (tidak menyentuh kode/schema/.github).
+* **Update di run yang sama (sesudah audit):** merge cabang `feature/offline-attendance-sync` → `Offline Sync & Idempotency Key` ikut selesai (total test 489/489), jadi sisa `[ ]` tinggal 3 (lihat "Next Immediate Gate" butir 4).
 
 ### [2026-09-20] - Phase 2: Academic Teaching Core (Subject, Teacher & Teaching Assignment) (IMPLEMENTED & VERIFIED)
 * **Tujuan:** Membangun fondasi hubungan: $\text{Teacher} \rightarrow \text{TeacherAssignment} \rightarrow (\text{Subject}, \text{Classroom}, \text{AcademicYear})$ sehingga sistem mengetahui secara presisi: *Guru siapa mengajar mata pelajaran apa, di rombel mana, pada tahun ajaran mana*, tanpa menduplikasi sistem otentikasi.
@@ -129,9 +130,8 @@
    * Klik-manual UI AI Generator (butuh harness browser — tidak tersedia di run cron).
    * Simulasi timeout provider AI menggantung (belum disimulasikan).
    * Pasang API key provider AI nyata (OpenAI/Anthropic/Gemini) di deployment — keputusan Arsyad.
-   * ~~Checkbox legacy di ROADMAP fase lama (Phase 0–6) sebagian basi~~ → **Audit silang SELESAI 2026-10-02 (run cron):** 21 checkbox legacy diverifikasi terhadap kode/test lalu ditandai `[x]` dengan bukti/referensi di anotasi ROADMAP; tersisa **4 item `[ ]` yang benar-benar belum / belum lengkap**:
-     1. `Offline Sync & Idempotency Key` — sync offline nihil (`idempotencyKey` saja sudah ada di notifikasi/promosi/pembayaran/raport).
-     2. `Tasrih / Permit Engine` — tidak ada entitas permit; "Izin Pulang (Tasrih)" hanya label status `EXCUSED` di presensi asrama.
-     3. `Student Full Profile (5 Kluster Dapodik/EMIS)` — profil inti + importer ada; kluster terstruktur (keluarga, kesehatan, registry) belum.
-     4. `Guardian Master Data` — model/service/aktivasi/portal wali ada & teruji; CRUD wali + wizard undangan untuk staf (UI + server action) belum ada.
-   * Keempatnya backlog terpisah di luar fase berjalan — butuh keputusan Arsyad untuk dijadikan fase baru; **bukan blocker rilis fase 0–8**.
+   * ~~Checkbox legacy di ROADMAP fase lama (Phase 0–6) sebagian basi~~ → **Audit silang SELESAI 2026-10-02 (run cron):** 21 checkbox legacy diverifikasi terhadap kode/test lalu ditandai `[x]` dengan bukti/referensi di anotasi ROADMAP; awalnya tersisa 4 item `[ ]`, kini **tinggal 3** (item `Offline Sync & Idempotency Key` ikut selesai setelah merge cabang `feature/offline-attendance-sync` di run yang sama):
+     1. `Tasrih / Permit Engine` — tidak ada entitas permit; "Izin Pulang (Tasrih)" hanya label status `EXCUSED` di presensi asrama.
+     2. `Student Full Profile (5 Kluster Dapodik/EMIS)` — profil inti + importer ada; kluster terstruktur (keluarga, kesehatan, registry) belum.
+     3. `Guardian Master Data` — model/service/aktivasi/portal wali ada & teruji; CRUD wali + wizard undangan untuk staf (UI + server action) belum ada.
+   * Ketiganya backlog terpisah di luar fase berjalan — butuh keputusan Arsyad untuk dijadikan fase baru; **bukan blocker rilis fase 0–8**.

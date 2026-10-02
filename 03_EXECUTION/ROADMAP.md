@@ -55,7 +55,7 @@ PHASE 7 (AI & Automation)
 
 ### Phase 2 Gate — Daily Operations
 * [x] Attendance Engine (< 60 detik) — Phase 3 (sesi + roster + "Tandai Semua Hadir").
-* [ ] Offline Sync & Idempotency Key — **sebagian**: `idempotencyKey` sudah dipakai di notifikasi/promosi/pembayaran/raport; **sinkronisasi offline (antrian klien + sync) belum ada sama sekali**.
+* [x] Offline Sync & Idempotency Key — presensi offline **selesai digabung 2026-10-02** (cabang `feature/offline-attendance-sync` → staging): `AttendanceOfflineStore` (IndexedDB + fallback in-memory), `AttendanceSyncWorker` (deteksi online/offline + resolusi konflik), batch sync `syncAttendanceBatch` dengan **idempotency ledger deterministik via `AuditLog`** (`clientMutationId`) + penolakan konflik no-silent-overwrite; `test/offline-attendance-sync` 16/16. *Catatan: cakupan domain presensi (sesuai asal butir ini di Phase 2); tidak ada sync lintas domain lain.*
 * [x] Finance 3-Tier Layer (FeeCategory, StudentCharge, PaymentTransaction) — Phase 4 finance-core.
 * [x] Cashbook & Unique Receipt Generator (`KW-...`) — `cashbook-service` + `receipt-service` (penomoran atomis `KW-YYYYMM-XXXXXX`).
 * [x] Operational Dashboard (Bukan sekadar statistik, fokus aksi pengguna) — `/dashboard` + `getOperationalDashboardAction` (quick action sesuai hak akses).

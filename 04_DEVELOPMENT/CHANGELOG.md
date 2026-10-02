@@ -1,5 +1,25 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - MERGE: Offline Attendance & Sync Engine dari `feature/offline-attendance-sync` (VERIFIED)
+
+### Added (dari cabang, 2 commit `a36eb68` + `5eceaf4`)
+* `src/lib/attendance/offline/*` — `types.ts`, `idempotency.ts`, `offline-store.ts` (IndexedDB `natasekolah_offline_v1` + fallback in-memory), `sync-service.ts` (`syncAttendanceBatch` dengan idempotency ledger deterministik via `AuditLog` + deteksi konflik no-silent-overwrite), `sync-worker.ts` (deteksi online/offline + resolusi konflik KEEP_SERVER/FORCE_LOCAL).
+* Server action `syncAttendanceBatchAction` di `src/actions/attendance.ts` + integrasi offline (antrean, indikator jaringan, lencana status per siswa, dialog konflik) di `src/app/attendance/page.tsx`.
+* `test/offline-attendance-sync.test.ts` — 16 test integrasi (DB nyata): idempotency retry, konflik payload, immutabilitas sesi CLOSED, RBAC/teacher scope, isolasi tenant.
+
+### Fixed (saat merge)
+* `syncAttendanceBatchAction` kini memanggil `rethrowIfSessionExpired(err)` di catch — konsisten dengan invarian ~94 server action lain (cabang dibuat sebelum guard session-expiry dipasang).
+* `tsconfig.tsbuildinfo` (artefak build yang ter-track) dihapus dari repo via merge (modify/delete conflict diarahkan ke penghapusan; sesuai rencana repo hygiene).
+
+### Conflict resolution (3 file)
+* `src/actions/attendance.ts` — gabung kedua sisi (import `rethrowIfSessionExpired` + `syncAttendanceBatch`).
+* `03_EXECUTION/PROGRESS.md` & `04_DEVELOPMENT/CHANGELOG.md` — kedua entri log disimpan (offline sync 2026-09-28 + seluruh entri HEAD 2026-10-01/10-02).
+
+### Verification (run ini)
+* `npx tsc --noEmit` **0 error** · `npm test` **489/489 pass, 0 fail** (156 suites; 473 + 16 offline sync) · `npm run build` **exit 0**.
+* Smoke prod (`next start`): `GET /login` **200**, `/attendance` & `/exams/question-bank` **307 → /login** (tidak ada 500 — kelas bug `use server` export sync tidak muncul).
+* *Belum:* klik-manual UI presensi offline (harness browser tidak tersedia di run cron) — regresi visual dialog konflik & indikator jaringan perlu dicek saat ada QA browser.
+
 ## [2026-10-02] - DOCS: Audit Silang Checkbox Legacy ROADMAP (Phase 0–6) (VERIFIED)
 
 ### Changed
@@ -7,10 +27,10 @@
 * `PROGRESS.md` — catatan log audit + pembaruan "Next Immediate Gate" butir 4: daftar 4 item `[ ]` yang tersisa setelah audit.
 
 ### Findings (sisa `[ ]` — benar-benar belum / belum lengkap, bukan blocker fase 0–8)
-1. **Offline Sync & Idempotency Key** — sinkronisasi offline tidak ada; `idempotencyKey` sudah dipakai di notifikasi/promosi/pembayaran/raport.
-2. **Tasrih / Permit Engine** — tidak ada entitas permit di skema; "Izin Pulang (Tasrih)" hanya label status `EXCUSED` pada presensi asrama.
-3. **Student Full Profile (5 Kluster Dapodik/EMIS)** — profil inti siswa + importer xlsx ada; kluster terstruktur Dapodik/EMIS (keluarga, kesehatan/disabilitas, registry) belum ada di skema.
-4. **Guardian Master Data** — model `Guardian`/`GuardianStudent`/`GuardianInvitation`, service, aktivasi, dan portal wali ada & teruji; **CRUD wali + wizard undangan untuk staf (UI + server action) belum ada**.
+> Catatan: butir awal `Offline Sync & Idempotency Key` ikut selesai di run yang sama — lihat entri merge di atasnya.
+1. **Tasrih / Permit Engine** — tidak ada entitas permit di skema; "Izin Pulang (Tasrih)" hanya label status `EXCUSED` pada presensi asrama.
+2. **Student Full Profile (5 Kluster Dapodik/EMIS)** — profil inti siswa + importer xlsx ada; kluster terstruktur Dapodik/EMIS (keluarga, kesehatan/disabilitas, registry) belum ada di skema.
+3. **Guardian Master Data** — model `Guardian`/`GuardianStudent`/`GuardianInvitation`, service, aktivasi, dan portal wali ada & teruji; **CRUD wali + wizard undangan untuk staf (UI + server action) belum ada**.
 
 ### Verification (run ini)
 * `npx tsc --noEmit` **0 error** · `npm test` **473/473 pass, 0 fail** (150 suites).
@@ -357,6 +377,29 @@
 * `prisma validate` → valid (3 warning `onDelete: SetNull` lama, tidak berubah; skema tidak diubah → tanpa migrasi baru).
 * `npm run build` → sukses (seluruh route terkompilasi, middleware aktif).
 * `npm audit` → kerentanan `next` (RCE) dan `xlsx` (prototype pollution + ReDoS) **hilang**; tersisa 3 high yang semuanya dev-only toolchain (`prisma` → `@prisma/config` → `deepmerge-ts`), dijadwalkan di run berikutnya.
+
+## [2026-09-28] - Milestone: Offline Attendance & Sync Engine — Local IndexedDB Storage & Conflict Resolution (IMPLEMENTED / VERIFIED)
+
+### Added
+* `src/lib/attendance/offline/types.ts`: Kontrak data offline (`OfflineAttendanceMutation`, `CachedAttendanceRoster`, `BatchSyncInput`, `BatchSyncItemInput`, `BatchSyncItemResult`, `BatchSyncItemResult`, `BatchSyncResult`, `OfflineSyncStatus`).
+* `src/lib/attendance/offline/idempotency.ts`: Modul idempotensi server-side dan client (`generateDeterministicMutationLogId`, `generateClientMutationId`, `fastHashString`, `RecordedMutationDetails`) untuk pembuatan kunci stabil deterministik yang isomorfik di browser maupun Node.js runtime.
+* `src/lib/attendance/offline/offline-store.ts`: Abstraksi penyimpanan data lokal IndexedDB `AttendanceOfflineStore` (`natasekolah_offline_v1`) dengan fallback otomatis ke *in-memory storage* saat server-side rendering atau runtime pengujian Node.js. Menangani operasi antrean mutasi presensi, pengambilan berurutan, pelacakan transisi status, pembersihan mutasi tersinkron, penghitungan statistik antrean, dan *caching* roster siswa.
+* `src/lib/attendance/offline/sync-service.ts`: Layanan server-side batch sync `syncAttendanceBatch` dengan **true server-side idempotency ledger** berbasis `AuditLog` (`action: "OFFLINE_ATTENDANCE_MUTATION"`, `entityType: "AttendanceMutation"`, `entityId: clientMutationId`). Mendeteksi retry identik (kembali `SYNCED` tanpa mutasi ganda) dan menolak keras payload berbeda dengan `clientMutationId` yang sama sebagai **idempotency conflict** (`status: "CONFLICT"`, pesan: *"Client mutation ID sudah digunakan untuk mutation berbeda."*). Dilengkapi validasi Zod, sanitasi anti-tampering, verifikasi batas tenant, RBAC guard, teacher scope check, immutabilitas sesi `CLOSED`, penentuan enrollment aktif, dan opsi override terkontrol (`forceOverwrite: true`).
+* `src/lib/attendance/offline/sync-worker.ts`: Worker sinkronisasi client `AttendanceSyncWorker` yang mendeteksi perubahan koneksi browser (`online`/`offline`), menjalankan background batch sync, memberikan callback status progres, dan menyediakan mekanisme resolusi konflik bagi pengguna ("KEEP_SERVER" vs "FORCE_LOCAL").
+* `test/offline-attendance-sync.test.ts`: Rangkaian 16 unit & integration test komprehensif mencakup abstraksi penyimpanan offline, pemrosesan batch sync & true server-side idempotency ledger, penolakan konflik mutasi payload berbeda dengan mutation ID sama, retry setelah network timeout tanpa duplikasi, deteksi konflik sekuensial siswa sama, penegakan immutabilitas sesi closed, override konflik terkontrol, otorisasi RBAC & teacher scope, isolasi tenant lintas institusi, penolakan mutasi siswa luar rombel, serta penghitungan akurat statistik antrean (16/16 PASS).
+
+### Changed
+* `src/actions/attendance.ts`: Menambahkan Server Action `syncAttendanceBatchAction` yang memanggil `syncAttendanceBatch` secara terautentikasi dan melakukan `revalidatePath("/attendance")`.
+* `src/lib/attendance/index.ts`: Mengekspor tipe offline, `AttendanceOfflineStore`, `generateClientMutationId`, `generateDeterministicMutationLogId`, `syncAttendanceBatch`, dan `AttendanceSyncWorker`.
+* `src/app/attendance/page.tsx`:
+  * Mengintegrasikan `AttendanceOfflineStore` dan `AttendanceSyncWorker`.
+  * Menggunakan `generateClientMutationId` deterministik saat presensi siswa ditandai secara offline.
+  * Menambahkan indikator status jaringan real-time (`● Online` / `○ Mode Terputus (Offline)`).
+  * Menambahkan penghitung antrean offline aktif (`X perubahan menunggu sinkronisasi`) dan tombol manual "Sinkronkan Sekarang".
+  * Mendukung update lokal optimistik dan penyimpanan antrean offline seketika saat presensi ditandai.
+  * Menampilkan lencana status per baris siswa (`✓ Tersinkron`, `◷ Menunggu Sinkron`, `↻ Menyinkronkan`, `⚠ Konflik`).
+  * Dialog modal resolusi konflik saat terdeteksi perbedaan data server dengan pilihan "Gunakan Pilihan Server" atau "Timpa ke Server".
+  * Memenuhi panduan `DESIGN.md` (target sentuh min 44px, kontras WCAG AA, bebas horizontal overflow, mobile-first).
 
 ---
 
