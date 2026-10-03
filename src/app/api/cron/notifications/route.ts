@@ -19,13 +19,19 @@ async function handleCron(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
 
-  if (cronSecret) {
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized cron execution" },
-        { status: 401 }
-      );
-    }
+  if (!cronSecret) {
+    // Fail-closed: tolak bila secret belum dikonfigurasi (secure by default)
+    return NextResponse.json(
+      { success: false, error: "Cron secret not configured" },
+      { status: 500 }
+    );
+  }
+
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized cron execution" },
+      { status: 401 }
+    );
   }
 
   const now = new Date();

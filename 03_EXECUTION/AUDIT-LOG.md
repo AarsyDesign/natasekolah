@@ -307,3 +307,19 @@ kebocoran markdown mentah `**...**` di halaman depan, tombol aplikasi internal d
 **Verifikasi:** murni Markdown + prompt cron → unit test/typecheck/eslint **SKIPPED** (tidak ada kode diubah); secret scan diff `README`+`AUDIT-CHARTER` = bersih; `git status` dicatat.
 
 **Status:** B-13 **VERIFIED (belum di-commit)** · standarisasi laporan **VERIFIED** (charter + cron aktif; bukti: update API sukses).
+
+---
+
+## SIKLUS 7 — 2026-10-03 (B-02 Cron fail-closed, oleh Mizan)
+
+**Pekerjaan:** B-02 — ubah cron notifications dari fail-open ke fail-closed (`route.ts:19-27`).
+
+**File:** `src/app/api/cron/notifications/route.ts` (1 file, 6 baris ditambah).
+
+**Implementasi:** tambah guard `if (!cronSecret) { return 500 "Cron secret not configured" }` sebelum validasi Bearer token. Kalau env `CRON_SECRET` kosong/belum diset, cron menolak request (HTTP 500) — **fail-closed**. Sebelumnya: secret kosong = auth dilewati.
+
+**Verifikasi:** `tsc 0` · `eslint 0 error` · `npm test 773/773` · `npm run build exit 0`.
+
+**Dampak & Risiko:** notifikasi terjadwal (pengingat pembayaran, absensi, dsb) **berhenti** sampai `CRON_SECRET` di-set di Vercel → butuh kamu set env produksi. Rollback: revert 1 commit.
+
+**Status:** IMPLEMENTED → VERIFIED (belum di-commit, menunggu izin).
