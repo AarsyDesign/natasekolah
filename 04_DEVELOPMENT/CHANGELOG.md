@@ -1,5 +1,35 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-03] - Phase 12.7: DKAS Bot — Natural Language → Prisma Planner (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`src/lib/dkas/catalog.ts`** — katalog whitelist **4 dataset** (`santri`, `kehadiran`, `nilai`, `izin`): per dataset berisi model Prisma, izin dataset (`student:view`/`attendance:view`/`academic:view`/`pesantren:view`), daftar field + operator yang diizinkan, `orderBy` tunggal, `select` kolom, limit default (50), dan pembentuk `select`/mapper baris → `{title, subtitle, badge, meta}`. Setiap field punya builder `where()` yang mengembalikan **fragmen lengkap ber-key kolom/relnya** (mis. `{status:{equals}}`, `{session:{attendanceDate:{gte,lte}}}`, `{score:{lte}}`) — hasil temuan QA E2E (lihat *Fixed*).
+* **`src/lib/dkas/plan.ts`** — `validatePlan()`: **gerbang validasi tunggal** untuk semua sumber rencana (rule & LLM): dataset dikenal → field/operator ada di whitelist dataset → nilai enum sah → string ≤ `DKAS_VALUE_MAX` → tanggal ISO valid → limit int 1..50 (di-**clamp**, bukan error, agar rencana AI tidak gagal total) → maksimum `DKAS_CONDITIONS_MAX` (5) → `orderBy` harus milik whitelist. Galat `ValidationError` berbahasa Indonesia lengkap dengan daftar field yang diizinkan.
+* **`src/lib/dkas/rule-planner.ts`** — planner deterministik bahasa Indonesia (jalur utama saat AI mati, fallback saat LLM gagal): deteksi dataset ber-skor dengan **aturan prioritas** (kehadiran > izin > nilai > santri — "siswa yang alpha" → presensi, bukan buku induk), ekstrak status multi-kata dengan **masking** teks terkonsumsi (frasa "belum disetujui" tidak lagi tertangkap aturan "disetujui"), ambang nilai (`di bawah/dibawah 70`, `>`, `>=`, `skor ≥`), tanggal (`hari ini`, `kemarin`, `minggu ini`, `bulan ini`), nama dikutip (`"..."`) / `nama X` / rombel (`kelas 7A` → contains), limit dari kata `teratas/N`.
+* **`src/lib/dkas/llm-planner.ts`** — planner LLM: prompt ketat (JSON rencana saja, batas katalog dari konstanta, `institutionId`/relasi liar dilarang), hanya menghasilkan rencana yang diterima `validatePlan`; gagal/timeout/JSON rusak → **non-blocking** (dilempar ke pemanggil untuk fallback) + opsi `skipLLM` (`DKAS_PLANNER_SKIP_LLM=true`).
+* **`src/lib/dkas/planner.ts`** — orkestrasi `planQuery()`: `AI_GENERATION_ENABLED` + provider siap → coba LLM → validate → fallback `rule-planner`; hasil memuat `mode: "ai"|"rule"`, `aiEnabled` (terpisah dari fitur AI Generator), dan `fallbackReason` bila fallback terjadi.
+* **`src/lib/dkas/executor.ts`** — `executePlanQuery()`: `buildCompiledQuery()` **selalu menyuntikkan `institutionId` dari ctx** (klien/LLM tidak pernah menentukan tenant), `where.AND` + `orderBy`/`take` dari katalog + `select` dari field terpilih; parameter Prisma bertipe `AdministeredTx` (**bukan `any`**) sehingga tx `$queryRaw` tetap sah; `count` + `findMany` + mapping baris (badge manusiawi: "Alpha", "Menunggu", "75", "Nama"); guard izin dataset ulang di level executor.
+* **`src/lib/dkas/rate-limit.ts`** — rate limit **per-akun** (bukan per-IP) in-memory via `RateLimitStore`, 20 pertanyaan/menit (`DKAS_RATE_LIMIT_MAX`, `DKAS_RATE_LIMIT_WINDOW_MS`), mencatat metrik `rate_limit_hits` + log `warn`; `resetDkasRateLimit()` untuk test. + barrel `src/lib/dkas/index.ts`.
+* **`src/lib/validation/dkas.ts`** + **`src/actions/dkas.ts`** — Zod strict (query 3–300 char, di-trim) + 2 server action `dkasQueryAction` / `dkasCatalogAction` dengan pola `requireActionSession` → `runWithTenantContext` → `rethrowIfSessionExpired`; catalog cukup `hasPermission`.
+* **UI `src/components/dkas-chat.tsx` + halaman `src/app/dkas/page.tsx`** — chat (`role="log"`, `aria-live="polite"`, `aria-busy`), chip saran (fallback statis bila catalog gagal), ringkasan rencana (dataset/kondisi/limit + tanda "Aturan" vs "AI"), state loading/error/rate-limit; nav **"Asisten Data (DKAS)"** (`Bot`) di `app-shell.tsx` + `nav-header.tsx`.
+* **`test/dkas-planner.test.ts` — 37 test** (suite test terbesar fase ini): whitelist/validator (12), rule planner (14: dataset, status, nilai, tanggal, limit, error), jalur LLM + fallback (6), RBAC 4 peran + sesi wali (4), executor + injeksi tenant + bentuk fragmen where (7), rate limit + guard input (2), struktural action/nav/halaman (4).
+
+### Changed
+* **`src/lib/auth/permissions.ts`** — izin baru **`dkas:query`** untuk `FOUNDATION_HEAD`, `HEAD`, `ADMIN`, `TEACHER`, `FINANCE_STAFF` (ditarik per-dataset sehingga guru dapat presensi/nilai tetapi **tidak** data izin).
+
+### Fixed
+* **Bug tertangkap QA E2E DB nyata (tertutup test mock, pola Phase 7.4):** `where()` pada builder field katalog mengembalikan filter telanjang (`{equals:"ACTIVE"}`) yang didorong ke `AND` — Prisma memakainya sebagai kondisi **record**, bukan field → seluruh kondisi field **diabaikan diam-diam** (query alumni "berhasil" tanpa filter status). Diperbaiki dengan `nest(path, filter)` (path kolom/relnya eksplisit; kolom beda nama: `nama→fullName`, `skor→score`, `tanggal izin→leaveAt`, `jenis→type`/`assessment.type`) + test regresi bentuk `where.AND`.
+
+### Notes
+* Tidak ada perubahan skema DB. Rencana selalu divalidasi ulang di executor — tidak ada "mode tepercaya". Token/kredensial tidak pernah dicetak; QA scripts lokal ditambahkan ke `.git/info/exclude`.
+
+### Verification
+* `npx tsc --noEmit` → **0 error**; `npm test` → **770/770 pass, 0 fail** (226 suites; +37); `npm run lint` → **0 error** (368 warning, tidak bertambah di file tersentuh); `npm run build` → **exit 0** (route `○ /dkas`).
+* **QA E2E DB nyata** `scripts/_local-qa-dkas.ts` → **28/28 pass**: 4 dataset ter-query sungguhan (alumni, presensi ABSENT hari ini, skor 55 ≤ 70, izin PENDING), rencana AI limit 9999 di-clamp 50, `institutionId` dari klien ditolak validator + tenant selalu dari ctx, isolasi lembaga A↔B, RBAC (guru ditolak dataset izin, staf keuangan & sesi wali ditolak total), LLM gagal → fallback aturan tetap jawab dari DB, rate limit ke-3 diblokir, fixture dibersihkan.
+* **QA HTTP + sesi nyata** `scripts/_local-qa-dkas-actions.ts` (`next start`) → **7/7 pass**: `/dkas` 307→login tanpa sesi & 200 dengan sesi, action ditolak tanpa sesi, query sah sukses, catalog 4 dataset, query <3 karakter & di luar domain → `success:false`.
+
+---
+
 ## [2026-10-03] - Phase 12.6: Observability — Structured Logging + Metrics (IMPLEMENTED / VERIFIED)
 
 ### Added

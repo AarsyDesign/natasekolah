@@ -114,6 +114,9 @@ export const PERMISSIONS = [
   // Settings Domain
   "settings:view",
   "settings:manage",
+
+  // DKAS Bot Domain (Natural Language Query — Phase 12.7)
+  "dkas:query",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -209,6 +212,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "institution:manage",
     "settings:view",
     "settings:manage",
+    "dkas:query",
   ],
   FOUNDATION_HEAD: [
     "student:view",
@@ -231,6 +235,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "institution:manage",
     "settings:view",
     "settings:manage",
+    "dkas:query",
   ],
   PRINCIPAL: [
     "student:view",
@@ -257,6 +262,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "guardian:view",
     "institution:view",
     "settings:view",
+    "dkas:query",
   ],
   ADMIN: [
     "student:view",
@@ -283,6 +289,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "guardian:manage",
     "institution:view",
     "settings:view",
+    "dkas:query",
   ],
   TEACHER: [
     "student:view",
@@ -296,6 +303,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "tahfidz:view",
     "tahfidz:manage",
     "dormitory:view",
+    "dkas:query",
   ],
   FINANCE_STAFF: [
     "student:view",

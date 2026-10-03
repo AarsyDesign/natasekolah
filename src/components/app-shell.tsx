@@ -28,6 +28,7 @@ import {
   ChevronDown,
   UsersRound,
   ScrollText,
+  Bot,
 } from "lucide-react";
 // Dialog pencarian hanya dimuat saat dibuka (Ctrl+K) — code split 12.4.
 const GlobalSearchDialog = dynamic(
@@ -80,6 +81,7 @@ const MASTER_DATA_ITEMS = [
   { href: "/tahfidz", label: "Tahfidz & Mutaba'ah", icon: BookMarked },
   { href: "/notifications", label: "Outbox Notifikasi WA", icon: MessageSquare },
   { href: "/audit-log", label: "Jejak Audit", icon: ScrollText },
+  { href: "/dkas", label: "Asisten Data (DKAS)", icon: Bot },
   { href: "/settings", label: "Pengaturan Lembaga", icon: Settings },
 ];
 

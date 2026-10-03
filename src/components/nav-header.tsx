@@ -25,6 +25,7 @@ import {
   Settings,
   UsersRound,
   ScrollText,
+  Bot,
 } from "lucide-react";
 // Dialog pencarian lazy-load (code split 12.4) — hanya perlu saat dibuka.
 const GlobalSearchDialog = dynamic(
@@ -73,6 +74,7 @@ export function NavHeader({ subtitle }: { subtitle?: string }) {
     { href: "/classrooms", label: "Rombel", icon: School },
     { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen },
     { href: "/audit-log", label: "Jejak Audit", icon: ScrollText },
+    { href: "/dkas", label: "Asisten Data", icon: Bot },
     { href: "/teachers", label: "Direktori Guru", icon: GraduationCap },
     { href: "/teacher-assignments", label: "Penugasan", icon: Briefcase },
   ];

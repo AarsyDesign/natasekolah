@@ -1,5 +1,16 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-03 - Phase 12.7 DKAS Bot Natural Language → Prisma Planner: **SELESAI (Run 6)**
+
+* **Modul `src/lib/dkas/`:** katalog whitelist 4 dataset (`catalog.ts`) → validator rencana tunggal `plan.ts` (gerbang satu-satunya; kolom tenant ditolak) → `rule-planner.ts` (parser Indonesia, selalu tersedia) + `llm-planner.ts` (AI non-blocking) → `planner.ts` (`mode: ai|rule` + `fallbackReason`) → `executor.ts` (tenant dari ctx, select/orderBy/take dari katalog, `AdministeredTx` bukan `any`) + `rate-limit.ts` per-akun.
+* **RBAC:** izin baru `dkas:query` + guard per-dataset (`student:view`/`attendance:view`/`academic:view`/`pesantren:view`) — guru boleh tanya presensi/nilai tapi ditolak untuk data izin.
+* **Action + UI:** `dkasQueryAction`/`dkasCatalogAction` (Zod strict, pola session/tenant/rethrow), halaman `/dkas` + komponen chat `dkas-chat.tsx` (aria-live, chip saran, ringkasan rencana), nav "Asisten Data (DKAS)".
+* **Bug nyata tertangkap QA E2E DB (mock test tidak melihat):** builder `where()` field katalog mengembalikan filter tanpa key kolom → Prisma mengabaikan seluruh kondisi field. Diperbaiki via `nest(path, filter)` + test regresi bentuk where.
+* **Verifikasi:** `npx tsc --noEmit` **0** · `npm test` **770/770 pass, 0 fail** (+37 `test/dkas-planner.test.ts`) · `npm run lint` **0 error** · `npm run build` **exit 0** (`○ /dkas`) · **QA DB nyata 28/28** · **QA HTTP + sesi 7/7** (`next start`).
+* **Dokumentasi:** TODO 12.7 ✓, CHANGELOG + PROGRESS diupdate. Tahap berikut: **12.8 Gate Keluar Phase 12** (target test ≥700 → 770) → **tulis PLAN-PHASE-13**.
+
+---
+
 ## 2026-10-02 - Phase 12.5 Accessibility Sweep + Lint Gate: **SELESAI (Run 4)**
 
 * **Toolchain:** eslint 8 + eslint-config-next 15 + eslint-plugin-jsx-a11y 6, `.eslintrc.json`, npm `lint`/`lint:fix`.

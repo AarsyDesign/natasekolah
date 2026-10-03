@@ -16,3 +16,4 @@ export * from "./formal-academic";
 export * from "./tahfidz";
 export * from "./dormitory";
 export * from "./audit";
+export * from "./dkas";
