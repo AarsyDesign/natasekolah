@@ -24,6 +24,31 @@ import {
 import { checkAIGenerationQuota, recordAIGenerationUsage } from './usage-service';
 import { ValidationError } from '@/lib/validation';
 import { getAIProvider } from '@/lib/ai-providers';
+import { recordAIGenerationLatency } from '@/lib/observability/metrics';
+import { logger } from '@/lib/observability/logger';
+
+/**
+ * Membungkus eksekusi generate dengan pengukuran latensi
+ * (metrik `ai_generation_latency_ms`, Phase 12.6).
+ *
+ * Outcome `success` hanya bila seluruh rantai (panggil provider + validasi +
+ * simpan hasil) selesai; galat apa pun (provider, validasi, DB) tercatat
+ * `failure`. Metrik selalu tercatat di `finally`, termasuk bila `fn` melempar
+ * error secara sinkron.
+ */
+export async function withAIGenerationLatency<T>(
+  fn: () => Promise<T>
+): Promise<T> {
+  const startedAt = Date.now();
+  let outcome: 'success' | 'failure' = 'failure';
+  try {
+    const value = await fn();
+    outcome = 'success';
+    return value;
+  } finally {
+    recordAIGenerationLatency(Date.now() - startedAt, outcome);
+  }
+}
 
 /**
  * Menerjemahkan error mentah provider menjadi pesan aman untuk guru.
@@ -269,6 +294,9 @@ export async function executeAIGeneration(
     throw new ValidationError('Kuota generate habis atau cooldown aktif');
   }
 
+  // Pengukuran latensi `ai_generation_latency_ms` (Phase 12.6) membungkus
+  // seluruh rantai eksekusi: provider → validasi → simpan hasil → usage.
+  return await withAIGenerationLatency(async () => {
   try {
     // Call AI provider
     // Parse promptParams from the stored prompt JSON
@@ -307,9 +335,9 @@ export async function executeAIGeneration(
   } catch (error) {
     // Simpan pesan ramah di job; detail teknis hanya untuk log server.
     const friendly = friendlyAIGenerationError(error);
-    console.error(
-      `[ai-generation] job ${jobId} gagal:`,
-      error instanceof Error ? error.message : error
+    logger.error(
+      { jobId, err: error instanceof Error ? error.message : String(error) },
+      "ai generation job gagal"
     );
     // Update job with error
     await prisma.aiGenerationJob.update({
@@ -321,6 +349,7 @@ export async function executeAIGeneration(
     });
     throw new ValidationError(friendly);
   }
+  });
 }
 
 /**

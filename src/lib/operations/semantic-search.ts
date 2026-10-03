@@ -16,6 +16,8 @@ import type { GlobalSearchResultItem } from './types';
 import { getCohereProvider, isCohereConfigured } from '../ai-providers/cohere.provider';
 import { getAuthenticatedTenantContext } from '../auth/service';
 import { searchGlobalEntities } from './search-service';
+import { recordSearchFallbackCohere } from '../observability/metrics';
+import { logger } from '../observability/logger';
 
 export interface SemanticSearchOptions {
   query: string;
@@ -134,6 +136,26 @@ export function mapRerankToResults(
 }
 
 /**
+ * Keputusan semantic fallback (diekstrak agar bisa diuji tanpa DB/network).
+ *
+ * Fallback dipakai bila: flag aktif DAN Cohere terkonfigurasi DAN
+ * (hasil keyword < threshold ATAU query panjang >20 char = bahasa natural).
+ */
+export function shouldUseSemanticFallback(params: {
+  useSemanticFallback: boolean;
+  cohereConfigured: boolean;
+  keywordResultCount: number;
+  minKeywordResults: number;
+  query: string;
+}): boolean {
+  if (!params.useSemanticFallback || !params.cohereConfigured) return false;
+  return (
+    params.keywordResultCount < params.minKeywordResults ||
+    params.query.length > 20
+  );
+}
+
+/**
  * Semantic Search dengan Cohere Rerank sebagai fallback
  * 
  * 1. Jalankan keyword search dulu (existing searchGlobalEntities)
@@ -141,6 +163,10 @@ export function mapRerankToResults(
  *    - Bangun korpus dari data tenant
  *    - Rerank dengan Cohere
  *    - Return hasil rerank (top 20)
+ *
+ * Observability (Phase 12.6): tiap keputusan fallback tercatat di counter
+ * `search_fallback_cohere_count` (attempt; kegagalan rerank tetap terhitung
+ * sebagai fallback yang dicoba).
  */
 export async function searchGlobalEntitiesWithSemanticFallback(
   options: SemanticSearchOptions
@@ -151,9 +177,18 @@ export async function searchGlobalEntitiesWithSemanticFallback(
   const keywordResults = await searchGlobalEntities(ctx, query);
 
   // Cek apakah butuh semantic fallback
-  const needFallback = useSemanticFallback && 
-    isCohereConfigured() && 
-    (keywordResults.length < minKeywordResults || query.length > 20); // query panjang = kemungkinan natural language
+  const needFallback = shouldUseSemanticFallback({
+    useSemanticFallback,
+    cohereConfigured: isCohereConfigured(),
+    keywordResultCount: keywordResults.length,
+    minKeywordResults,
+    query,
+  });
+
+  if (needFallback) {
+    // Metrik observability: fallback Cohere terpicu (Phase 12.6)
+    recordSearchFallbackCohere();
+  }
 
   if (!needFallback) {
     return {
@@ -184,7 +219,10 @@ export async function searchGlobalEntitiesWithSemanticFallback(
     };
   } catch (error) {
     // Fallback gagal (rate limit, network, dll) → return keyword results
-    console.error('[SemanticSearch] Cohere rerank failed, falling back to keyword:', error);
+    logger.warn(
+      { err: error instanceof Error ? error.message : String(error) },
+      "cohere rerank gagal, kembali ke keyword search"
+    );
     return {
       results: keywordResults,
       source: 'keyword',

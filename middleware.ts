@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { childLogger } from "@/lib/observability/logger";
 
 const SESSION_COOKIE_NAME =
   process.env.NODE_ENV === "production" ? "__Host-nata_session" : "nata_session";
@@ -20,25 +21,70 @@ const PUBLIC_PREFIXES = [
  * CATATAN KEAMANAN: Middleware BUKAN satu-satunya boundary keamanan.
  * Server Actions, Route Handlers, dan Domain Services tetap wajib memvalidasi
  * sesi dan otorisasi tenant secara independen pada layer server.
+ *
+ * Observability (Phase 12.6): tiap request menghasilkan SATU baris log
+ * terstruktur (requestId, method, path, status, durationMs) — tanpa cookie,
+ * query sensitif, atau kredensial. Logging dibungkus try/catch: kegagalan
+ * observasi tidak boleh mematikan request.
  */
 export function middleware(request: NextRequest) {
+  const startedAt = Date.now();
   const { pathname } = request.nextUrl;
+  const requestId = createRequestId();
+
+  let response: NextResponse;
 
   // Izinkan akses bebas ke homepage landing page visi (PRD 1.1) dan aset statis
   if (pathname === "/" || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
-    return NextResponse.next();
+    response = NextResponse.next();
+  } else {
+    // Cek keberadaan cookie sesi pada rute terlindungi
+    const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+
+    if (!sessionCookie || !sessionCookie.value) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", `${pathname}${request.nextUrl.search}`);
+      response = NextResponse.redirect(loginUrl);
+    } else {
+      response = NextResponse.next();
+    }
   }
 
-  // Cek keberadaan cookie sesi pada rute terlindungi
-  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+  logRequest(request, response.status, Date.now() - startedAt, requestId);
+  return response;
+}
 
-  if (!sessionCookie || !sessionCookie.value) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", `${pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(loginUrl);
+/** ID permintaan acak (UUID bila tersedia; fallback ke random). */
+function createRequestId(): string {
+  try {
+    const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+    if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  } catch {
+    // jatuh ke fallback di bawah
   }
+  return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
-  return NextResponse.next();
+/** Satu baris log JSON per request; tidak pernah melempar. */
+function logRequest(
+  request: NextRequest,
+  status: number,
+  durationMs: number,
+  requestId: string
+): void {
+  try {
+    childLogger({ requestId }).info(
+      {
+        method: request.method,
+        path: request.nextUrl.pathname,
+        status,
+        durationMs,
+      },
+      "request"
+    );
+  } catch {
+    // observasi gagal → abaikan, request tetap dilayani
+  }
 }
 
 export const config = {

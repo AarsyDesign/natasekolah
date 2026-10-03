@@ -30,6 +30,7 @@ import {
   InMemoryStore,
   createRateLimitStore,
 } from "./rate-limit-store";
+import { recordRateLimitHit } from "../observability/metrics";
 
 /**
  * Pembatas sliding-window untuk satu kategori key.
@@ -106,15 +107,26 @@ export class LoginRateLimiter {
 
   async check(keys: LoginAttemptKey, now: number = Date.now()): Promise<RateLimitDecision> {
     const byAccount = await this.accountLimiter.check(keys.account, now);
-    if (!byAccount.allowed) return byAccount;
-    return this.ipLimiter.check(keys.ip, now);
+    if (!byAccount.allowed) {
+      recordRateLimitHit("account"); // observability Phase 12.6
+      return byAccount;
+    }
+    const byIp = await this.ipLimiter.check(keys.ip, now);
+    if (!byIp.allowed) recordRateLimitHit("ip");
+    return byIp;
   }
 
   async recordFailure(keys: LoginAttemptKey, now: number = Date.now()): Promise<RateLimitDecision> {
     const byAccount = await this.accountLimiter.recordFailure(keys.account, now);
     const byIp = await this.ipLimiter.recordFailure(keys.ip, now);
-    if (!byAccount.allowed) return byAccount;
-    if (!byIp.allowed) return byIp;
+    if (!byAccount.allowed) {
+      recordRateLimitHit("account");
+      return byAccount;
+    }
+    if (!byIp.allowed) {
+      recordRateLimitHit("ip");
+      return byIp;
+    }
     return { allowed: true };
   }
 

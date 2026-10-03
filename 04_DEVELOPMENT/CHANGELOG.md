@@ -1,5 +1,32 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-03] - Phase 12.6: Observability — Structured Logging + Metrics (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`src/lib/observability/logger.ts`** — logger Pino terstruktur: `LOG_LEVEL` (default `info`, otomatis `silent` di test runner via `NODE_TEST_CONTEXT`/`npm_lifecycle_event`), `LOG_FORMAT=json` untuk JSON mentah, formatter dev satu-baris tanpa `pino-pretty` (`formatDevLine`), child logger `childLogger({requestId,…})`. Sink kustom lewat `console.log` **bukan `process.stdout`** — middleware Next dibundle Edge Runtime dan static-analyzer Next menolak `process.stdout` (temuan build run ini).
+* **`src/lib/observability/metrics.ts`** — registry metrik in-memory: counter (`incrementCounter`/`getCounter`), histogram (`observeHistogram`/`getHistogram` dengan count/sum/min/max/avg/p50/p95), `metricsSnapshot()` (siap di-export), `resetMetrics()` untuk test. **Anti high-cardinality**: maksimum 100 kombinasi label per metrik, selebihnya bucket `__overflow__` (`getOverflowCounter`). Ketiga metrik wajib plan: **`ai_generation_latency_ms`** (histogram label `outcome`), **`search_fallback_cohere_count`** (counter), **`rate_limit_hits`** (counter label `scope`); tiap pencatatan juga mengeluarkan baris log terstruktur (`debug`, `warn` untuk rate limit).
+* **`test/observability.test.ts`** — **24 test**: logger (mode, child, formatter valid/tidak valid), registry (counter berlabel, statistik histogram, non-finite diabaikan, overflow cardinalitas 150→101 seri, snapshot+reset), wiring `withAIGenerationLatency` (success/failure/sync-throw), wiring `LoginRateLimiter` (allowed→0 hit, blokir akun→`scope=account`, blokir IP→`scope=ip`), `shouldUseSemanticFallback` (5 kasus), middleware (redirect tanpa sesi, lanjut dengan cookie, rute publik).
+* **`.env.example`** — blok Observability: `LOG_LEVEL`, `LOG_FORMAT` + catatan ketiga metrik.
+
+### Changed
+* **`middleware.ts`** — SATU baris log JSON per request (`requestId`, method, path, status, durationMs; tanpa cookie/query sensitif) di setiap jalur keluar, dibungkus try/catch — logging gagal tidak boleh menjatuhkan request. Perilaku guard tidak berubah (redirect `/login?redirect=…` sama persis).
+* **`src/lib/ai-generation/ai-generation-service.ts`** — `executeAIGeneration` dibungkus **`withAIGenerationLatency()`** (helper baru): latensi tercatat di `finally` dengan outcome `success` hanya bila provider→validasi→simpan hasil→usage selesai; `console.error` → `logger.error` terstruktur (tanpa pesan mentah ke user).
+* **`src/lib/operations/semantic-search.ts`** — keputusan fallback diekstrak ke **`shouldUseSemanticFallback()`** (murni, teruji tanpa DB/network); tiap keputusan fallback mencatat `search_fallback_cohere_count`; `console.error` → `logger.warn`.
+* **`src/lib/auth/rate-limit.ts`** — `LoginRateLimiter.check`/`recordFailure` mencatat `rate_limit_hits` dengan `scope` `account`/`ip` saat keputusan diblokir (sinyal brute-force jadi teramati).
+* **`package.json`** — dep produksi **`pino@^10.4.0`**.
+
+### Notes
+* Metrik tersistor **in memori per proses** (cukup untuk dev/staging single instance); backend eksternal (Redis) tetap backlog terblokir keputusan Arsyad. Logger & metrik murni observasi — tidak pernah menyentuh domain logika; token/kredensial tidak pernah dicetak.
+
+### Verification
+* `npm run typecheck` → **0 error** (catatan: `npx tsc` diblokir scanner threat-intel run ini — ecosyste.ms deadline; jalur `npm run typecheck` lolos dan memakai binary lokal yang sama)
+* `npm test` → **733/733 pass** (0 fail, 219 suites; +24 `test/observability.test.ts`)
+* `npm run lint` → **exit 0, 0 error** (warning di file yang disentuh: 0 baru)
+* `npm run build` → **exit 0** (middleware ter-bundle sebagai Proxy/Edge; `process.stdout` di logger diganti `console.log`)
+* Probe runtime: format dev (`01:36:55 WARN … scope=account value=1`) & `LOG_FORMAT=json` (baris JSON utuh + snapshot metrik) keduanya valid.
+
+---
+
 ## [2026-10-02] - Phase 12.5: Accessibility Sweep + Lint Gate (IMPLEMENTED / VERIFIED)
 
 ### Added
