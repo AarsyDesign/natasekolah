@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppShellWrapper } from "../components/app-shell-wrapper";
+import { ToastProvider } from "../components/ui/toast";
 
 export const metadata: Metadata = {
   title: "NataSekolah - Menata Pendidikan, Merapikan Masa Depan",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className="min-h-screen bg-[#fbfbfa] text-[#18181b] antialiased selection:bg-[#0f766e] selection:text-white">
-        <AppShellWrapper>{children}</AppShellWrapper>
+        <ToastProvider>
+          <AppShellWrapper>{children}</AppShellWrapper>
+        </ToastProvider>
       </body>
     </html>
   );

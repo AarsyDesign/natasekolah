@@ -39,7 +39,6 @@ const GlobalSearchDialog = dynamic(
   { ssr: false, loading: () => null }
 );
 import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from "./ui/dropdown";
-import { ToastProvider } from "./ui/toast";
 import { cn } from "../lib/utils";
 
 // 1. App Shell Context for Subtitle & Title coordination
@@ -114,8 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShellContext.Provider value={{ subtitle, setSubtitle, isInsideShell: true }}>
-      <ToastProvider>
-        <div className="min-h-screen bg-[#fbfbfa] text-[#18181b] flex flex-col font-sans antialiased">
+      <div className="min-h-screen bg-[#fbfbfa] text-[#18181b] flex flex-col font-sans antialiased">
         {/* Persistent Top Navigation Bar */}
         <header className="sticky top-0 z-30 border-b border-stone-200 bg-white/95 backdrop-blur-md transition-shadow">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -384,7 +382,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onClose={() => setIsSearchOpen(false)}
         />
       </div>
-    </ToastProvider>
-  </AppShellContext.Provider>
-);
+    </AppShellContext.Provider>
+  );
 }
