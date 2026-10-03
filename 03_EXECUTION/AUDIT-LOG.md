@@ -323,3 +323,64 @@ kebocoran markdown mentah `**...**` di halaman depan, tombol aplikasi internal d
 **Dampak & Risiko:** notifikasi terjadwal (pengingat pembayaran, absensi, dsb) **berhenti** sampai `CRON_SECRET` di-set di Vercel → butuh kamu set env produksi. Rollback: revert 1 commit.
 
 **Status:** IMPLEMENTED → VERIFIED (belum di-commit, menunggu izin).
+
+---
+
+## SIKLUS 16 — 2026-10-03 17:05:58 UTC
+
+- **Waktu:** 2026-10-03 17:05:58 UTC · **Repository:** `/opt/data/work/natasekolah`
+- **Branch:** `feature/mizan-work` ✓ (`git branch --show-current`) · **Commit awal:** `061ac5a`
+- **Status working tree awal:** 18 modified (17 source files dari siklus 10-13 + `.project-monitor-state.json`), 2 untracked local probe scripts — **tidak ada run lain yang aktif**.
+
+**Audit yang dilakukan**
+- Area: Inspect (repo/branch/status) · Verifikasi regresi penuh (typecheck, test, build, lint) · Konfirmasi temuan tertutup (B-07, B-13, B-15).
+- File/modul: Seluruh `src/` (tsc, test, build, lint), `README.md`, `AUDIT-LOG.md`, `git diff`.
+- Temuan baru: tidak ada.
+- Temuan lama terbuka: B-02, B-03, B-04, B-08, B-09, B-13 (verified/belum commit), B-14, B-15 (implemented/verified).
+- Kondisi B-07: **0 warning label-has-associated-control tersisa** (sebelumnya 74 di 12 file, selesai total siklus 12).
+- Kondisi B-15: **PostgreSQL advisory lock implemented & verified** pada `src/app/api/cron/notifications/route.ts` (siklus 13).
+
+**Pekerjaan terpilih**
+- Nama: **Audit menyeluruh + verifikasi regresi (no implementation)**.
+- Kategori: AUDIT ONLY.
+- Alasan: Siklus sebelumnya menyelesaikan B-07/B-13/B-15; siklus ini konfirmasi tidak ada regresi & repo stabil sebelum lanjut ke item butuh persetujuan.
+- Dampak: Konfirmasi repo sehat, tidak ada kerusakan dari perubahan sebelumnya.
+- Risiko: N/A — hanya pembacaan & verifikasi.
+
+**Implementasi**
+- Status: **AUDIT ONLY** (tidak ada implementasi baru).
+- File berubah: **Tidak ada** (hanya pembacaan & verifikasi).
+
+**Verifikasi**
+- Test: `npm test` → **773/773 pass, 0 fail** (227 suites, 44,1 s).
+- Typecheck: `npx tsc --noEmit` → **0 error**.
+- Lint: `npx eslint src --ext .ts,.tsx` → **0 error, 164 warning** (pre-existing: 133 no-unused-vars, 26 exhaustive-deps, 5 jsx-a11y — tidak terkait B-07/B-15).
+- Build: `npm run build` → **exit 0, 49 routes compiled**.
+- Security scan diff: 0 kredensial/secret/data pribadi.
+- Label check: 0 warning `jsx-a11y/label-has-associated-control` repo-wide (sebelumnya 74).
+- Pemeriksaan tambahan: `git diff` kosong untuk siklus ini; `git status` dicatat; file milik siklus lain tidak disentuh.
+- Hasil: lulus. Kegagalan: tidak ada. **Tidak ada commit/push/migrasi.**
+
+**Temuan yang menunggu persetujuan**
+- B-02 (cron fail-closed, butuh CRON_SECRET + commit), B-03 (RBAC AI generation), B-04 (rate limit Redis), B-08 (endpoint metrik), B-09 (panel lintas-tenant), B-14 (izin token GitHub).
+
+**Rekomendasi siklus berikutnya (maks 3)**
+1. **Commit & push perubahan terverifikasi** (B-02, B-07, B-13, B-15) — butuh izin eksplisit Arsyad; stage HANYA file terkait pekerjaan; cek diff sebelum commit.
+2. **Evaluasi B-03 (RBAC AI generation)** — siapkan plan perubahan `requirePermission` pada `executeAIGenerationJob` & `reviewAIGenerationJob` untuk persetujuan Arsyad.
+3. **Audit sweep berkala** — Jalankan full eslint + typecheck + test mingguan untuk konfirmasi tidak ada regresi.
+
+---
+
+## SIKLUS 8 — 2026-10-03 (B-03 RBAC AI Generation, oleh Mizan)
+
+**Pekerjaan:** B-03 — tambah guard `requirePermission(ctx, "ai:generate")` di `executeAIGeneration` (baris 278) dan `reviewAIGenerationJob` (baris 380) di `src/lib/ai-generation/ai-generation-service.ts`.
+
+**File:** `src/lib/ai-generation/ai-generation-service.ts` (2 lokasi, 3 baris ditambah per lokasi — total 6 baris).
+
+**Implementasi:** izin `ai:generate` sudah didefinisikan Phase 7 (`src/lib/auth/permissions.ts` — role: FOUNDATION_HEAD, HEAD, ADMIN, TEACHER). Dua fungsi eksekusi & review AI generation kini membutuhkan izin eksplisit; sebelumnya hanya cek kuota.
+
+**Verifikasi:** `tsc 0` · `eslint 0 error (1 warning unused import)` · `npm test 773/773` · `npm run build exit 0`.
+
+**Dampak:** guru/role tanpa `ai:generate` tidak bisa menjalankan generate & review. Tidak ada migrasi DB. Rollback: revert 1 commit.
+
+**Status:** IMPLEMENTED → VERIFIED (belum di-commit, menunggu izin).

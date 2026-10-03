@@ -275,6 +275,9 @@ export async function executeAIGeneration(
   ctx: TenantContext,
   jobId: string
 ): Promise<AIGenerationJobResult> {
+  // RBAC Guard
+  requirePermission(ctx, "ai:generate");
+
   // Get job
   const job = await prisma.aiGenerationJob.findFirst({
     where: { id: jobId, institutionId: ctx.institutionId },
@@ -374,6 +377,9 @@ export async function reviewAIGenerationJob(
   ctx: TenantContext,
   input: ReviewAIGenerationJobInput
 ): Promise<{ saved: number }> {
+  // RBAC Guard
+  requirePermission(ctx, "ai:generate");
+
   const job = await prisma.aiGenerationJob.findFirst({
     where: { id: input.jobId, institutionId: ctx.institutionId },
   });
