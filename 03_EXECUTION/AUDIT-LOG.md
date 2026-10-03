@@ -139,4 +139,4 @@ kebocoran markdown mentah `**...**` di halaman depan, tombol aplikasi internal d
 **Verifikasi**
 - Test: **773/773 pass** (770 + 3 baru) · Typecheck `tsc --noEmit` → **0 error** · Lint 3 file → **0 error** · `npm run build` → **exit 0**.
 - Pemeriksaan tambahan: browser QA E2E eksploratif `localhost:3000/login` → form login tampil penuh, **tanpa** boundary; grep `useToast must be used` di HTML = **0** (sebelum fix: ada).
-- Risiko tersisa: **perbaikan BELUM aktif di produksi** (`natasekolah.vercel.app` masih commit lama) — butuh commit + push + deploy, yang menunggu izin Arsyad (B-02…B-09 tetap NEEDS_APPROVAL).
+- Risiko tersisa: ~~perbaikan BELUM aktif di produksi~~ → **DEPLOYED 2026-10-03 ~06:40 UTC**: commit `d003a2d` (fix) + `c8f5141` (docs/label) di-push ke `feature/mizan-work` **dan** `staging` → Vercel Git integration membangun otomatis. Verifikasi produksi via browser+CDP: `natasekolah.vercel.app/login` menampilkan form penuh, **0 console error**, boundary hilang; `/` dan `/wali/aktivasi` juga OK.
