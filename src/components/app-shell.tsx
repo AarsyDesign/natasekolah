@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -28,7 +29,14 @@ import {
   UsersRound,
   ScrollText,
 } from "lucide-react";
-import { GlobalSearchDialog } from "./global-search-dialog";
+// Dialog pencarian hanya dimuat saat dibuka (Ctrl+K) — code split 12.4.
+const GlobalSearchDialog = dynamic(
+  () =>
+    import("./global-search-dialog").then((m) => ({
+      default: m.GlobalSearchDialog,
+    })),
+  { ssr: false, loading: () => null }
+);
 import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from "./ui/dropdown";
 import { ToastProvider } from "./ui/toast";
 import { cn } from "../lib/utils";

@@ -1,5 +1,24 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 12.4: Bundle Report + Code Split (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`scripts/bundle-report.mjs`** — pengukur bundel produksi: total raw/gzip, 10 chunk terbesar, budget 100 kB per chunk gzip (env `BUNDLE_BUDGET_GZ`), exit 1 bila ada chunk klien melewati budget. Berformat `.mjs` agar Node pakai ESM tanpa menyetel `type: module` (script JS lama masih CommonJS). npm script **`bundle:report`**.
+* **`test/bundle-report.test.ts`** — 8 test: struktur tooling (`.mjs`, npm script, tanpa `type: mode`, pesan bila belum build), code split (dynamic import di app-shell + nav-header, `ssr:false`), dan menjalankan skrip asli terhadap artefak `.next/static` (auto-skip bila belum build).
+
+### Changed
+* **`src/components/app-shell.tsx`** & **`src/components/nav-header.tsx`** — `GlobalSearchDialog` (~10 kB, hanya dibuka via Ctrl+K) diubah dari impor statis menjadi `next/dynamic` `ssr:false` sehingga tidak masuk bundle awal tiap halaman.
+
+### Notes
+* Audit bundel menemukan `pdfkit`, `docx`, `qrcode`, `fuse` **tidak ada di satu pun chunk klien** (hanya `.next/server`) — modul ekspor memang server-only, jadi tidak perlu dynamic import tambahan. Modal question-bank & AI generator sudah tercakup code-split per-rute Next.js.
+
+### Verification
+* `npx tsc --noEmit` → 0 error
+* `npm test` → **705/705 pass** (0 fail, 210 suites)
+* `npm run build` → exit 0; `npm run bundle:report` → **66 chunk, total 1.658,2 kB raw / 477,9 kB gzip, chunk terbesar 71,6 kB — semua dalam budget**
+
+---
+
 ## [2026-10-02] - Phase 12.3: AuditLog Query API + UI Filter (IMPLEMENTED / VERIFIED)
 
 ### Added

@@ -1,5 +1,15 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-02 - Phase 12.4 Bundle Report + Code Split: **SELESAI (Run 3)**
+
+* **Tooling:** `scripts/bundle-report.mjs` + npm `bundle:report` — laporan raw/gzip per chunk dengan budget 100 kB gz, exit 1 bila regresi bundling.
+* **Code split:** `GlobalSearchDialog` lazy (`next/dynamic`, `ssr:false`) di `app-shell` + `nav-header` — tidak lagi masuk bundle awal halaman.
+* **Temuan audit:** `pdfkit`/`docx`/`qrcode`/`fuse` server-only (tidak ada di chunk klien) → tidak ada dynamic import tambahan yang diperlukan untuk ekspor; modal sudah ter-cover route-split.
+* **Verifikasi:** `npx tsc --noEmit` **0** · `npm test` **705/705 pass, 0 fail** (210 suites; +8 `test/bundle-report.test.ts`) · `npm run build` **exit 0** · `npm run bundle:report` **66 chunk · 477,9 kB gzip total · chunk terbesar 71,6 kB · dalam budget**.
+* **Dokumentasi:** TODO 12.4 ✓, ROADMAP 12.4 ✓, CHANGELOG diupdate. Tahap berikut: **12.5 Screenshots UI (Playwright) — menunggu keputusan install `playwright` (kueri npm berisiko ditolak scanner; alternatif: capture halaman `app/preview-landing` via browser tunnel)**.
+
+---
+
 ## 2026-10-02 - Phase 12.3 AuditLog Query API + UI Filter: **SELESAI (Run 2)**
 
 * **Validasi:** `src/lib/validation/audit.ts` — filter strict (aksi/entitas maks 64 char terbuka, id pelaku, rentang tanggal `YYYY-MM-DD` + `from ≤ to`, pageSize 10–50 default 20).

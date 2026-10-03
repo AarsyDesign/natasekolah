@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -25,7 +26,14 @@ import {
   UsersRound,
   ScrollText,
 } from "lucide-react";
-import { GlobalSearchDialog } from "./global-search-dialog";
+// Dialog pencarian lazy-load (code split 12.4) — hanya perlu saat dibuka.
+const GlobalSearchDialog = dynamic(
+  () =>
+    import("./global-search-dialog").then((m) => ({
+      default: m.GlobalSearchDialog,
+    })),
+  { ssr: false, loading: () => null }
+);
 import { useAppShell } from "./app-shell";
 
 export function NavHeader({ subtitle }: { subtitle?: string }) {
