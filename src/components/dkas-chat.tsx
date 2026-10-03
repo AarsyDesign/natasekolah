@@ -165,7 +165,7 @@ export function DkasChat() {
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 font-medium text-teal-800">
           <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-          DKAS Bot aktif
+          Nata Insight siap
         </span>
         <span
           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${
@@ -197,7 +197,7 @@ export function DkasChat() {
         role="log"
         aria-live="polite"
         aria-busy={busy}
-        aria-label="Percakapan DKAS Bot"
+        aria-label="Percakapan Nata Insight"
         className="max-h-[55vh] min-h-64 overflow-y-auto rounded-xl border border-stone-200 bg-white p-4 shadow-2xs"
       >
         <ul className="flex flex-col gap-3">

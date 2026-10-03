@@ -14,16 +14,16 @@ import { DkasChat } from "@/components/dkas-chat";
 export default function DkasPage() {
   return (
     <div className="min-h-dvh bg-stone-50">
-      <NavHeader subtitle="Asisten Data" />
+      <NavHeader subtitle="Nata Insight" />
 
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6 lg:px-8">
         <div>
           <h1 className="text-xl font-bold text-stone-900">
-            Asisten Data (DKAS Bot)
+            Nata Insight
           </h1>
           <p className="text-sm text-stone-500">
             Tanya data santri, presensi, nilai, dan izin dalam bahasa
-            sehari-hari — server menerjemahannya menjadi query ber-whitelist.
+            sehari-hari — server menerjemahinya menjadi query ber-whitelist.
           </p>
         </div>
 

@@ -74,7 +74,7 @@ export function NavHeader({ subtitle }: { subtitle?: string }) {
     { href: "/classrooms", label: "Rombel", icon: School },
     { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen },
     { href: "/audit-log", label: "Jejak Audit", icon: ScrollText },
-    { href: "/dkas", label: "Asisten Data", icon: Bot },
+    { href: "/dkas", label: "Nata Insight", icon: Bot },
     { href: "/teachers", label: "Direktori Guru", icon: GraduationCap },
     { href: "/teacher-assignments", label: "Penugasan", icon: Briefcase },
   ];

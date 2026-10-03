@@ -81,7 +81,7 @@ const MASTER_DATA_ITEMS = [
   { href: "/tahfidz", label: "Tahfidz & Mutaba'ah", icon: BookMarked },
   { href: "/notifications", label: "Outbox Notifikasi WA", icon: MessageSquare },
   { href: "/audit-log", label: "Jejak Audit", icon: ScrollText },
-  { href: "/dkas", label: "Asisten Data (DKAS)", icon: Bot },
+  { href: "/dkas", label: "Nata Insight", icon: Bot },
   { href: "/settings", label: "Pengaturan Lembaga", icon: Settings },
 ];
 
