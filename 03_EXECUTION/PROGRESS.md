@@ -1,5 +1,16 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-02 - Phase 12.5 Accessibility Sweep + Lint Gate: **SELESAI (Run 4)**
+
+* **Toolchain:** eslint 8 + eslint-config-next 15 + eslint-plugin-jsx-a11y 6, `.eslintrc.json`, npm `lint`/`lint:fix`.
+* **Hasil lint:** **0 error / 368 warning** (utang `htmlFor` 90 + unused-vars 248 + exhaustive-deps 26 dicatat, bukan disembunyikan).
+* **Fix nyata:** `CardTitle`/`DialogTitle` merender `{children}`, backdrop dialog justified, prefer-const + `require(docx)` dibersihkan, komentar rule tak-ada dihapus.
+* **Bug ditemukan & diperbaiki:** footer DOCX lama memakai `PageNumberElement({type})` yang argumennya diabaikan konstruktor → diganti API resmi `PageNumber.CURRENT/TOTAL_PAGES`.
+* **Verifikasi:** `npx tsc --noEmit` **0** · `npm run lint` **0 error** · `npm test` **709/709 pass, 0 fail** (213 suites) · `npm run build` **exit 0**.
+* **Dokumentasi:** TODO 12.5 ✓, ROADMAP 12.5 ✓, CHANGELOG diupdate. Tahap berikut: **12.6 Observability (Pino logger + metrik)**.
+
+---
+
 ## 2026-10-02 - Phase 12.4 Bundle Report + Code Split: **SELESAI (Run 3)**
 
 * **Tooling:** `scripts/bundle-report.mjs` + npm `bundle:report` — laporan raw/gzip per chunk dengan budget 100 kB gz, exit 1 bila regresi bundling.

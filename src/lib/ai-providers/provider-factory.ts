@@ -11,7 +11,7 @@ import { GeminiProvider } from './gemini.provider';
 import { LocalProvider } from './local.provider';
 import type { AIProvider } from '@/lib/ai-generation/types';
 
-let providerCache: Map<AIProvider, IAIProvider> = new Map();
+const providerCache: Map<AIProvider, IAIProvider> = new Map();
 
 export function getAIProvider(providerType: AIProvider): IAIProvider {
   // Check cache first

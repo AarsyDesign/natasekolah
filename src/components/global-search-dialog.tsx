@@ -159,6 +159,9 @@ export function GlobalSearchDialog({ isOpen, onClose }: GlobalSearchDialogProps)
   };
 
   return (
+    // Backdrop click-to-close adalah pola modal standar; area dialog sendiri
+    // tetap interaktif lewat kontrol di dalamnya.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       role="dialog"
       aria-modal="true"

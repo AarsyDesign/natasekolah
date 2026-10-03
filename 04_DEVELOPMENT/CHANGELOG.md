@@ -1,5 +1,32 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 12.5: Accessibility Sweep + Lint Gate (IMPLEMENTED / VERIFIED)
+
+### Added
+* **Toolchain lint**: `eslint@8`, `eslint-config-next@15`, `eslint-plugin-jsx-a11y@6` (devDependencies) + **`.eslintrc.json`** — `next/core-web-vitals` + `next/typescript` + `plugin:jsx-a11y/recommended`; `ignorePatterns` (.next/scripts/public), `no-unused-vars` dengan pola `^_`.
+* **npm script** `lint` (`eslint .`) dan `lint:fix` (`eslint . --fix`).
+* **`test/lint-gate.test.ts`** — 4 test: konfigurasi (extends jsx-a11y/next, npm script, dependensi terpasang) + menjalankan ESLint sungguhan ke `.next/eslint-report.json` dan gagal manakala `errorCount > 0` (DoD Strict: **0 error**).
+
+### Changed
+* **`src/components/ui/card.tsx`** — `CardTitle` merender `{children}` eksplisit (fix `jsx-a11y/heading-has-content`: heading sebelumnya hanya `{...props}` sehingga konten tak terdeteksi).
+* **`src/components/ui/dialog.tsx`** — `DialogTitle` idem.
+* **`src/components/global-search-dialog.tsx`** — backdrop click-to-close diberi justifikasi `eslint-disable` (pola modal standar, `role="dialog"` + `aria-modal` tetap).
+* **`src/lib/exam-paper/export-docx.ts`** — footer halaman memakai API resmi `PageNumber.CURRENT` / `PageNumber.TOTAL_PAGES` pada `children` TextRun. **Bug lama terungkap**: `new (require("docx").PageNumberElement)({ type: ... })` memanggil konstruktor 0-arg — seluruh argumen diabaikan runtime, sehingga `w:pgNum` dirender tanpa atribut tipe. Juga membuang `require()` (`no-require-imports`).
+* **`src/lib/notification/templates.ts`** — hapus `eslint-disable` untuk rule `antislop/no-slop-words` yang pluginnya tidak terpasang.
+* `prefer-const` (4 file) dan impor tak terpakai yang berstatus error dibersihkan lewat `--fix`.
+
+### Notes
+* Kebijakan severity: `@typescript-eslint/no-explicit-any` **off** (1.174 temuan legacy di luar scope a11y — biaya perbaikan tak sebanding), `react/no-unescaped-entities` **off** (tanda kutip teks Indonesia), `jsx-a11y/label-has-associated-control` **warn** — **90 temuan `htmlFor`/`id` tercatat sebagai utang a11y** (19 file), bukan blocker gate.
+* Total: **0 error, 368 warning** (248 unused-vars, 90 label-association, 26 exhaustive-deps, 4 a11y lain).
+
+### Verification
+* `npx tsc --noEmit` → 0 error
+* `npm run lint` → **exit 0, 0 error**
+* `npm test` → **709/709 pass** (0 fail, 213 suites; +4 `test/lint-gate.test.ts`)
+* `npm run build` → exit 0
+
+---
+
 ## [2026-10-02] - Phase 12.4: Bundle Report + Code Split (IMPLEMENTED / VERIFIED)
 
 ### Added

@@ -457,11 +457,14 @@ export async function renderExamPaperDocx(
                 [
                   createTextRun(data.institution.name, { size: 15, color: "6B7280" }),
                   createTextRun("   ", { size: 15 }),
+                  // API resmi docx: PageNumber enum di children TextRun
+                  // (PageNumberElement konstruktor tanpa argumen — tipe tidak
+                  // bisa dikirim lewatnya, dan argumen lama memang diabaikan).
                   new TextRun({
                     children: [
-                      new (require("docx").PageNumberElement)({ type: "CURRENT" }),
+                      PageNumber.CURRENT,
                       createTextRun(" dari ", { size: 15, color: "6B7280" }),
-                      new (require("docx").PageNumberElement)({ type: "TOTAL_PAGES" }),
+                      PageNumber.TOTAL_PAGES,
                     ],
                   }),
                 ],

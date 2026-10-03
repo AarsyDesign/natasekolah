@@ -66,8 +66,12 @@ export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLD
   return <div className={cn("mb-4 space-y-1 pr-6", className)} {...props} />;
 }
 
-export function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn("text-lg font-bold text-stone-900 leading-tight", className)} {...props} />;
+export function DialogTitle({ className, children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
+  return (
+    <h2 className={cn("text-lg font-bold text-stone-900 leading-tight", className)} {...props}>
+      {children}
+    </h2>
+  );
 }
 
 export function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {

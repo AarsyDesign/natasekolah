@@ -1,0 +1,29 @@
+{
+  "root": true,
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript",
+    "plugin:jsx-a11y/recommended"
+  ],
+  "ignorePatterns": [
+    ".next/**",
+    "node_modules/**",
+    "out/**",
+    "build/**",
+    "scripts/**",
+    "public/**",
+    "**/*.d.ts"
+  ],
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }
+    ],
+    "react/no-unescaped-entities": "off",
+    "jsx-a11y/label-has-associated-control": "warn",
+    "jsx-a11y/anchor-is-valid": "warn",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/no-static-element-interactions": "warn"
+  }
+}

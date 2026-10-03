@@ -178,7 +178,7 @@ function createMockPrismaFormalAcademic() {
   const mock: any = {
     teacherAssignment: {
       findUnique: async ({ where }: any) => {
-        let key = where.id;
+        const key = where.id;
         if (where.id_institutionId) {
           const item = teacherAssignmentsStore.get(where.id_institutionId.id);
           if (item && item.institutionId === where.id_institutionId.institutionId) {

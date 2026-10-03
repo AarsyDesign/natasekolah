@@ -269,7 +269,7 @@ export async function getTeacherWorkspaceSummary(
   );
 
   // 8. Ambil Penilaian (Asesmen) per Assignment (jika plugin FORMAL_ACADEMIC aktif)
-  let assessmentCountMap = new Map<string, number>();
+  const assessmentCountMap = new Map<string, number>();
   let pendingAssessmentsCount = 0;
 
   if (isFormalAcademicEnabled && assignmentIds.length > 0 && db.assessment?.findMany) {

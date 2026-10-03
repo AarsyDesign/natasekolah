@@ -155,7 +155,7 @@ function createMockPrismaTahfidz() {
         }));
       },
       count: async ({ where }: any) => {
-        let results = Array.from(recordsStore.values()).filter((r) => {
+        const results = Array.from(recordsStore.values()).filter((r) => {
           if (where?.institutionId && r.institutionId !== where.institutionId) return false;
           if (where?.studentId && r.studentId !== where.studentId) return false;
           if (where?.type && r.type !== where.type) return false;

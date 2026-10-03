@@ -30,7 +30,6 @@ export function renderNotificationMessage(
       const classroom = payload.classroomName ? ` (Kelas: ${payload.classroomName})` : "";
       const statusText =
         status === "ABSENT" || status === "ALPA"
-          // eslint-disable-next-line antislop/no-slop-words
           ? "TIDAK HADIR (ALPA)"
           : status === "SICK"
           ? "SAKIT"

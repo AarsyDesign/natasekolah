@@ -9,6 +9,8 @@
     "test": "node --env-file-if-exists=.env --import tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "bundle:report": "node scripts/bundle-report.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "seed": "node --env-file-if-exists=.env --import tsx scripts/seed.ts"
   },
   "dependencies": {
@@ -33,6 +35,9 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.27",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "prisma": "^6.4.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
