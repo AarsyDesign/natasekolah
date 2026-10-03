@@ -161,7 +161,12 @@ Setiap pemanggilan: (1) baca progress log dulu; (2) cek perubahan repo untuk hin
 (3) jangan ulang temuan yang sudah ditutup; (4) jangan implement kerja yang menunggu persetujuan;
 (5) jangan membuat perubahan hanya untuk memenuhi jadwal; (6) **bila tak ada kerjaan aman & bernilai,
 cukup audit dan laporkan tidak ada implementasi baru**; (7) jangan jalankan beberapa implementasi
-bergantungan bersamaan; **(8) JANGAN commit atau push otomatis; (9) JANGAN deployment otomatis**;
+bergantungan bersamaan; **(8) JANGAN commit atau push otomatis — hanya boleh bila Arsyad memberi izin
+eksplisit dalam obrolan; kalau diizinkan: (a) stage HANYA file yang benar-benar terkait pekerjaan itu,
+(b) WAJIB periksa `git diff` sebelum commit: tanpa kredensial (`.env`, API key, password, token, cookie),
+tanpa data pribadi (nama/NIK/alamat/no. HP santri & wali, keuangan perorangan), tanpa berkas QA lokal
+`scripts/_local-*`, `.project-monitor-state.json`, `next-env.d.ts`, atau file proyek lain, (c) `git status`
+wajib disertakan di laporan; (9) JANGAN deployment otomatis**;
 (10) **kerentanan serius → hentikan perubahan lain & segera lapor ke pemilik proyek.**
 
 Pakai lock/pencegahan bila cron bisa berjalan bersamaan; beri batas waktu & sumber daya wajar;

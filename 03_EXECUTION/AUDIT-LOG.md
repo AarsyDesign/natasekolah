@@ -21,7 +21,7 @@ Status: `DISCOVERED` = baru dicatat · `READY` = aman dikerjakan sendiri ·
 | B-03 | `executeAIGeneration` & `reviewAIGenerationJob` tanpa `requirePermission` (tenant tetap aman, RBAC tidak) | SECURITY | `src/lib/ai-generation/ai-generation-service.ts:274`, `:373`; banding `:218` (`exam:manage`), `:464` (`exam:view`) | Role tanpa izin ujian bisa mengeksekusi/me-review job AI di lembaganya | NEEDS_APPROVAL (perubahan RBAC) |
 | B-04 | Rate limit login masih **in-memory**; `UpstashStore` siap tapi butuh env | SECURITY | `rate-limit-store.ts:232-237`; `.env.example:37-38` | Di multi-instance, brute-force terbagi per instance (N× percobaan) | NEEDS_APPROVAL (butuh kredensial Upstash) |
 | B-05 | README masih menginstruksikan `npx prisma db push`; strategi baseline migrasi produksi belum terdokumentasi | DOCUMENTATION | `README.md:58`; `prisma/migrations/` kini 7 migrasi; `migrate status` = up to date, `migrate diff` = nihil (lokal) | P500/P3005 saat baseline; risiko `migrate dev` menawarkan reset | READY (dokumentasi saja) |
-| B-06 | Label UI **"Akses penuh platform"** untuk `SUPER_ADMIN` — padahal role intra-tenant | UI/UX | `src/app/settings/users/page.tsx:555` | Salah paham cakupan kuasa admin lembaga | READY (teks saja) |
+| B-06 | Label UI **"Akses penuh platform"** untuk `SUPER_ADMIN` — padahal role intra-tenant | UI/UX | `src/app/settings/users/page.tsx:555` | Salah paham cakupan kuasa admin lembaga | **VERIFIED** (Siklus 2) |
 | B-07 | 90 warning eslint `label-has-associated-control` (a11y) + 248 `no-unused-vars` | ACCESSIBILITY | `npm run lint` → 0 error / 368 warning | Form tidak punya label programatik; utang a11y | DISCOVERED (pecah per halaman, jangan satu siklus) |
 | B-08 | Metrik observability tak terjangkau dari luar proses (`metricsSnapshot` tak dipakai; tidak ada `/api/metrics`) | MAINTAINABILITY | `src/lib/observability/metrics.ts` (grep pemakaian kosong) | Angka kumulatif hilang saat proses mati | NEEDS_APPROVAL (endpoint baru) |
 | B-09 | Belum ada panel super admin lintas-tenant (daftar lembaga, impersonation, provisioning UI) | FEATURE | `find src/app -ipath "*super*"` kosong; `impersonatedByUserId` tak pernah diisi | Operasi lembaga baru hanya via seed/skrip lokal | NEEDS_APPROVAL (fitur baru, keamanan tinggi) |
@@ -76,3 +76,67 @@ kebocoran markdown mentah `**...**` di halaman depan, tombol aplikasi internal d
 3. Audit fungsional halaman `/finance` + `/attendance` (empty state, tombol mati) — inspeksi statis bila browser tidak dipakai.
 
 **Catatan proses:** belum ada commit/push pada siklus ini (sesuai aturan baru).
+→ Dilaporkan: siklus 1 **di-commit oleh Arsyad** sebagai `33bb2a1` (bukan oleh cron).
+
+---
+
+## SIKLUS 2 — 2026-10-03 (interval +30 mnt)
+
+- **Waktu:** 2026-10-03 · **Repository:** `/opt/data/work/natasekolah`
+- **Branch:** `feature/mizan-work` ✓ · **Commit awal:** `33bb2a1` (siklus 1 sudah di-commit Arsyad)
+- **Status working tree awal:** bersih kecuali `.project-monitor-state.json` + `next-env.d.ts` (artefak dev — tidak disentuh).
+
+**Audit yang dilakukan**
+- Area: Inspect (repo/branch/status) · UI/UX (label role di modal kelola peran) · verifikasi bukti SUPER_ADMIN bersifat intra-tenant.
+- File/modul: `src/app/settings/users/page.tsx`, `prisma/schema.prisma:81`, `test/user-management.test.ts`, `test/seed-bootstrap.test.ts`.
+- Temuan baru: tidak ada.
+- Temuan lama terbuka: B-02 … B-05, B-07 … B-11 (B-06 dikerjakan siklus ini).
+
+**Pekerjaan terpilih**
+- Nama: **Ganti label UI "Akses penuh platform" → "Akses penuh lembaga"** (B-06).
+- Kategori: UI/UX (teks saja).
+- Alasan: sisa satu-satunya temuan `READY` yang bernilai langsung; bukti SUPER_ADMIN adalah role per-lembaga (seed bootstrap membuat 1 SUPER_ADMIN per lembaga; `user-management.test.ts` membatasi akses pada `ctx.instA`) sehingga kata "platform" menyesatkan.
+- Dampak: admin memahami kuasanya terbatas pada lembaganya sendiri.
+- Risiko: sangat rendah — 1 string literal, tidak ada test/logic yang memakai string itu (grep `test/` = 0).
+
+**Implementasi**
+- Status: **COMPLETED → VERIFIED**
+- File berubah: `src/app/settings/users/page.tsx:555` (1 baris).
+- Ringkasan: `{role === "SUPER_ADMIN" && "Akses penuh platform"}` → `"Akses penuh lembaga"`. Grep UI-wide `Akses penuh|penuh platform` tinggal 1 kecocokan (baris ini sudah diganti); `src/lib/plugins/registry.ts:31` memakai kata "platform" dalam komentar internal — dibiarkan.
+
+**Verifikasi**
+- Test: `npm test` → **770/770 pass, 0 fail**.
+- Typecheck: `npm run typecheck` (`tsc --noEmit`) → **0 error**.
+- Lint: `node node_modules/eslint/bin/eslint.js src/app/settings/users/page.tsx` → **0 error, 6 warning** (4× `no-unused-vars`, 2× `label-has-associated-control` — semuanya pre-existing, tercakup backlog B-07).
+- Pemeriksaan tambahan: `git diff` hanya 1 baris untuk file ini; scan `git diff` untuk `api_key|password|secret|token` = **nol**; catatan: `npx eslint`/`npx tsc` **diblokir gateway** (scan ancaman paket tidak bisa selesai di cron) → verifikasi dijalankan via `npm run typecheck` & bin lokal `node_modules/eslint/bin/eslint.js` (hasil sah, tanpa fetching remote).
+- Hasil: lulus. Kegagalan: tidak ada.
+
+**Temuan yang menunggu persetujuan**
+- B-02 (cron fail-open), B-03 (RBAC AI generation), B-04 (rate limit Redis), B-08 (endpoint metrik), B-09 (panel lintas-tenant) — tetap NEEDS_APPROVAL.
+
+**Rekomendasi siklus berikutnya (maks 3)**
+1. B-05 — dokumentasi strategi baseline migrasi produksi di README (tulisan saja; jangan menjalankan migrasi).
+2. Audit fungsional statis halaman `/finance` & `/attendance`: empty state, tombol mati, alur error.
+3. B-07 bertahap: perbaiki `label-has-associated-control` pada 1–2 halaman formulir (per file, jangan seluruh repo dalam satu siklus).
+
+---
+
+## SIKLUS 3 — 2026-10-03 ~06:25 UTC — BUG PRODUKSI /login (laporan manual oleh Mizan, di luar urutan cron)
+
+**Temuan baru**
+- **B-12 · BUG FIX**: halaman `/login` produksi menampilkan error boundary "Terjadi gangguan tak terduga".
+  Akar: `useToast()` di `src/app/login/page.tsx:27` tapi `ToastProvider` hanya ada di
+  `src/components/app-shell.tsx:117` — dan `AppShellWrapper` mengecualikan `/login`, `/`, `/wali` dari
+  shell. Diperkenalkan bersamaan session-expiry UX (commit `8fd1f22`, Phase 11.1). Terbukti di produksi
+  via CDP: `Error: useToast must be used within a ToastProvider`; terreproduksi juga lokal (dev).
+
+**Implementasi**
+- Status: **COMPLETED → VERIFIED**
+- `src/app/layout.tsx` — `ToastProvider` kini membungkus `AppShellWrapper` di root layout (tersedia semua route).
+- `src/components/app-shell.tsx` — import + pembungkus `<ToastProvider>` dihapus (hindari provider ganda).
+- `test/toast-provider.test.ts` — 3 test regresi struktural (provider di layout, pengecualian shell tetap, shell tanpa provider ganda).
+
+**Verifikasi**
+- Test: **773/773 pass** (770 + 3 baru) · Typecheck `tsc --noEmit` → **0 error** · Lint 3 file → **0 error** · `npm run build` → **exit 0**.
+- Pemeriksaan tambahan: browser QA E2E eksploratif `localhost:3000/login` → form login tampil penuh, **tanpa** boundary; grep `useToast must be used` di HTML = **0** (sebelum fix: ada).
+- Risiko tersisa: **perbaikan BELUM aktif di produksi** (`natasekolah.vercel.app` masih commit lama) — butuh commit + push + deploy, yang menunggu izin Arsyad (B-02…B-09 tetap NEEDS_APPROVAL).

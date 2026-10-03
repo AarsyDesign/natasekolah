@@ -552,7 +552,7 @@ export default function UsersSettingsPage() {
                       {role === "ADMIN" && "Administrasi siswa & rombel"}
                       {role === "PRINCIPAL" && "Kepala sekolah"}
                       {role === "FOUNDATION_HEAD" && "Pimpinan yayasan"}
-                      {role === "SUPER_ADMIN" && "Akses penuh platform"}
+                      {role === "SUPER_ADMIN" && "Akses penuh lembaga"}
                     </span>
                   </label>
                 );
