@@ -26,6 +26,7 @@ import {
   X,
   ChevronDown,
   UsersRound,
+  ScrollText,
 } from "lucide-react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from "./ui/dropdown";
@@ -70,6 +71,7 @@ const MASTER_DATA_ITEMS = [
   { href: "/dormitories", label: "Asrama Santri", icon: Home },
   { href: "/tahfidz", label: "Tahfidz & Mutaba'ah", icon: BookMarked },
   { href: "/notifications", label: "Outbox Notifikasi WA", icon: MessageSquare },
+  { href: "/audit-log", label: "Jejak Audit", icon: ScrollText },
   { href: "/settings", label: "Pengaturan Lembaga", icon: Settings },
 ];
 

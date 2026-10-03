@@ -1,5 +1,16 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-02 - Phase 12.3 AuditLog Query API + UI Filter: **SELESAI (Run 2)**
+
+* **Validasi:** `src/lib/validation/audit.ts` — filter strict (aksi/entitas maks 64 char terbuka, id pelaku, rentang tanggal `YYYY-MM-DD` + `from ≤ to`, pageSize 10–50 default 20).
+* **Service:** `src/lib/audit/audit-query.ts` — `listAuditLog` guard `institution:view`, `buildAuditLogWhere` menanam `institutionId` dari ctx (bukan klien), `to` inklusif akhir hari, `detailsJson` invalid/array → `null`, `actor` null → "Sistem", terbaru-dahulu + total; `getAuditLogFacets` distinct maks 50.
+* **Server action:** `src/actions/audit.ts` — `listAuditLogAction`, `getAuditLogFacetsAction` (pola session/tenant/rethrow).
+* **UI:** `/audit-log` — panel filter + badge jumlah filter, tabel layar lebar / kartu mobile, paginasi, loading/empty/error (pesan akses saat 403), nav "Jejak Audit" di `app-shell` + `nav-header`.
+* **Verifikasi:** `npx tsc --noEmit` **0** · `npm test` **697/697 pass, 0 fail** (206 suites; +25 `test/audit-log-query.test.ts`) · `npm run build` **exit 0** (`○ /audit-log` prerender). Tanpa perubahan skema DB.
+* **Dokumentasi:** TODO 12.3 ✓, ROADMAP 12.3 ✓, CHANGELOG diupdate. Tahap berikut: **12.4 Performance: Bundle Analyzer + Code Split**.
+
+---
+
 ## 2026-10-02 - Phase 12.1 Search Highlight + 12.2 Error Boundary: **SELESAI (Run 1)**
 
 * **12.1 Search UX:** `src/lib/operations/search-highlight.ts` — helper murni `highlightSearchMatches` (case-insensitive, normalisasi spasi, semua kecocokan, teks asli utuh, query <2 char tanpa highlight) + `normalizeHighlightQuery` + `hasSearchMatch`. `global-search-dialog.tsx` → komponen `HighlightedText` render `<mark>` amber pada title & subtitle hasil. *Koreksi rencana: pencarian global pakai Prisma `contains` (RBAC + tenant-scoped), bukan Fuse.js — tuning Fuse.js tidak relevan di sini (Fuse.js hanya DKAS Bot).*

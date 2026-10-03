@@ -1,5 +1,25 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 12.3: AuditLog Query API + UI Filter (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`src/lib/validation/audit.ts`** — `auditLogFilterSchema` (`.strict()`): filter `action`/`entityType` (string terbuka maks 64 — entri audit baru dari modul manapun tidak membuat filter lama gagal), `entityId`/`userId` (idSchema), rentang tanggal `YYYY-MM-DD` dengan `from ≤ to` (superRefine), `page` ≥1, `pageSize` 10–50 default 20. Helper `validateAuditLogFilter`.
+* **`src/lib/audit/audit-query.ts`** — `buildAuditLogWhere()` menanam `institutionId` dari **ctx, bukan klien** (tenant boundary), `to` inklusif sampai `23:59:59.999Z`; `listAuditLog(ctx, filter, tx)` guard `institution:view` (sinonim legacy `audit:read` → `institution:view` via `LEGACY_PERMISSION_MAP`), terbaru-dahulu + `total`/`totalPages`, `detailsJson` invalid **atau array** → `null` (raw string tidak pernah bocor ke UI), `actor` null = "Sistem"; `getAuditLogFacets()` distinct aksi/entitas maks 50 untuk dropdown.
+* **`src/actions/audit.ts`** — `listAuditLogAction` + `getAuditLogFacetsAction` (pola `requireActionSession` → `runWithTenantContext` → `rethrowIfSessionExpired`).
+* **`src/app/audit-log/page.tsx`** — halaman Jejak Audit: panel filter (aksi/entitas via facets, ID pelaku, rentang tanggal) + badge jumlah filter aktif, tabel 5 kolom di layar lebar → kartu di mobile, paginasi Sebelumnya/Berikutnya, state loading/empty/error (pesan "tidak memiliki akses" saat 403), tombol Muat Ulang. Mobile-first, target sentuh 44px.
+* **Nav** — item "Jejak Audit" (`ScrollText`) di `app-shell.tsx` MASTER_DATA dan `nav-header.tsx`.
+* **`test/audit-log-query.test.ts`** — 25 test: validasi Zod (7), where-clause + tenant boundary (4), RBAC (5: SUPER_ADMIN/PRINCIPAL lolos, TEACHER & wali murid 403, facets terguard), isolasi lintas lembaga + bentuk data (8), facets (1).
+
+### Notes
+* Izin yang dipakai `institution:view` (bukan `audit:view` yang tidak ada di matriks izin) — 4 peran: SUPER_ADMIN, FOUNDATION_HEAD, PRINCIPAL, ADMIN.
+
+### Verification
+* `npx tsc --noEmit` → 0 error
+* `npm test` → **697/697 pass** (0 fail, 206 suites; +40 dari Phase 12 sejauh ini)
+* `npm run build` → exit 0, route `○ /audit-log` ter-prerender
+
+---
+
 ## [2026-10-02] - Phase 12.1 + 12.2: Search Highlight & Error Boundary (IMPLEMENTED / VERIFIED)
 
 ### Added

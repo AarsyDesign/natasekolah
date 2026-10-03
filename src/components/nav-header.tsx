@@ -23,6 +23,7 @@ import {
   Search,
   Settings,
   UsersRound,
+  ScrollText,
 } from "lucide-react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { useAppShell } from "./app-shell";
@@ -63,6 +64,7 @@ export function NavHeader({ subtitle }: { subtitle?: string }) {
     { href: "/academic-years", label: "Tahun Ajaran", icon: Calendar },
     { href: "/classrooms", label: "Rombel", icon: School },
     { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen },
+    { href: "/audit-log", label: "Jejak Audit", icon: ScrollText },
     { href: "/teachers", label: "Direktori Guru", icon: GraduationCap },
     { href: "/teacher-assignments", label: "Penugasan", icon: Briefcase },
   ];
