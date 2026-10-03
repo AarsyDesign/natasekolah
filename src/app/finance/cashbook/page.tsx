@@ -460,10 +460,10 @@ export default function CashbookPage() {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+          <div role="group" aria-labelledby="cashbook-manual-type-label">
+            <span id="cashbook-manual-type-label" className="block text-xs font-semibold text-stone-700 mb-1.5">
               Jenis Mutasi *
-            </label>
+            </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -504,10 +504,11 @@ export default function CashbookPage() {
           />
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-stone-700">
+            <label htmlFor="cashbook-manual-description" className="block text-xs font-semibold text-stone-700">
               Keterangan / Keperluan *
             </label>
             <textarea
+              id="cashbook-manual-description"
               required
               rows={3}
               value={formDescription}

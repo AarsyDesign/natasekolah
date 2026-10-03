@@ -554,11 +554,15 @@ export default function BulkPromotionPage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 mb-8">
               {/* Source Academic Year */}
               <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-                <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <label
+                  htmlFor="promotion-source-year"
+                  className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-2 flex items-center gap-2"
+                >
                   <Calendar className="h-4 w-4 text-stone-500" />
                   Tahun Ajaran Asal (Saat Ini)
                 </label>
                 <select
+                  id="promotion-source-year"
                   value={sourceYearId}
                   onChange={(e) => {
                     setSourceYearId(e.target.value);
@@ -580,11 +584,15 @@ export default function BulkPromotionPage() {
 
               {/* Target Academic Year */}
               <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-                <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <label
+                  htmlFor="promotion-target-year"
+                  className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-2 flex items-center gap-2"
+                >
                   <Calendar className="h-4 w-4 text-teal-700" />
                   Tahun Ajaran Target (Tujuan Kenaikan)
                 </label>
                 <select
+                  id="promotion-target-year"
                   value={targetYearId}
                   onChange={(e) => {
                     setTargetYearId(e.target.value);

@@ -595,10 +595,14 @@ export default function PaymentsPage() {
                           </div>
 
                           <div className="w-36">
-                            <label className="block text-[10px] text-stone-500 uppercase font-semibold mb-0.5">
+                            <label
+                              htmlFor={`payment-allocation-${c.id}`}
+                              className="block text-[10px] text-stone-500 uppercase font-semibold mb-0.5"
+                            >
                               Alokasi (Rp)
                             </label>
                             <input
+                              id={`payment-allocation-${c.id}`}
                               type="number"
                               min={0}
                               max={c.remainingAmount}

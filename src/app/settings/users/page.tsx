@@ -449,10 +449,10 @@ export default function UsersSettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-stone-700">
+            <div className="space-y-2" role="group" aria-labelledby="new-user-roles-label">
+              <span id="new-user-roles-label" className="block text-xs font-semibold text-stone-700">
                 Peran (paling sedikit 1):
-              </label>
+              </span>
               <div className="flex flex-wrap gap-1.5">
                 {ROLES.map((role) => {
                   const isChecked = selectedRoles.includes(role as Role);
@@ -522,10 +522,10 @@ export default function UsersSettingsPage() {
               </button>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-stone-700 mb-2">
+            <div className="space-y-2" role="group" aria-labelledby="edit-user-roles-label">
+              <span id="edit-user-roles-label" className="block text-xs font-semibold text-stone-700 mb-2">
                 Pilih Hak Akses Peran Internal (Paling Sedikit 1):
-              </label>
+              </span>
               {ROLES.map((role) => {
                 const isChecked = selectedRoles.includes(role as Role);
                 return (
