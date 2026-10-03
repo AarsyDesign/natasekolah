@@ -1,5 +1,24 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-03] - Halaman Depan: Landing Page + CTA (IMPLEMENTED / VERIFIED)
+
+### Changed
+* **`src/app/page.tsx`** — ditulis ulang total dari "dokumen PRD internal" menjadi landing page produk:
+  * **Hero** baru (badge, H1 tagline, subheadline, **2 CTA**: "Masuk ke NataSekolah" → `/login` dan "Lihat 7 Kendala Manual" → anchor) + 3 kartu jangkar (*Satu sumber data*, *Riwayat tidak tertimpa*, *Hak akses per peran*).
+  * **Header sticky** yang benar-benar berfungsi sebagai navigasi publik: anchor `#fitur` / `#kendala` / `#lembaga` + tombol **Masuk** yang selalu terlihat. Tombol-tombol aplikasi internal (`/dashboard`, `/students`, `/classrooms`, `/subjects`, `/teachers`, `/teacher-assignments`) dihapus dari header — semuanya rute terlindungi sesi, membingungkan pengunjung yang belum masuk.
+  * **Section "Modul"** baru (`#fitur`) yang menampilkan modul nyata hasil rute yang ada: Kesiswaan & Buku Induk, Presensi & Izin Santri, Keuangan & SPP, Nilai/Ujian/Raport, Asrama & Tahfidz, Portal Wali Murid. **Tanpa angka statistik fiktif** (sesuai aturan *Evidence Over Claims*).
+  * **CTA penutup**: "Siap merapikan lembaga Anda?" + *Masuk ke Akun Lembaga* + *Aktivasi Akun Wali* (`/wali/aktivasi`, route yang memang ada).
+  * Konten bernilai lama dipertahankan: 7 kendala manual (tab interaktif), 5 jenis lembaga, kartu *Single Source of Truth*.
+  * Footer kini memuat anchor navigasi + link Masuk (sebelumnya statis).
+
+### Removed
+* Label dokumen internal dari halaman publik: badge **"Dokumen Spesifikasi Produk (PRD 1.1)"**, judul **"1.1 Visi NataSekolah"**, label **"Solusi NataSekolah (1.1)"**, **"Tujuan Utama 1.1"**, dan blok **"Status Eksekusi Batasan Kerja (PRD 1.1)"** (juga memuat markup markdown mentah `**Bagian 1.1 Visi Produk**` yang tampil sebagai asterisk di layar). Isinya tetap ada di `00_PRODUCT/MASTER_PRD.md`.
+* **Footer lama** menampilkan *"NataSekolah (PRD v5.0 : Modul 1.1 Visi Produk)"* — teks roadmap internal yang tidak layak untuk pengunjung.
+
+### Verification
+* `npx tsc --noEmit` → **0 error**; `npx eslint src/app/page.tsx` → **0 error**; `npm test` → **770/770 pass, 0 fail**; `npm run build` → **exit 0**.
+* QA E2E eksploratif via browser pada `http://localhost:3000/` (dev) — desktop 1280px & mobile 390px: kedua CTA terlihat, teks tidak terpotong, tidak ada scroll horizontal, tidak ada elemen tumpang tindih.
+
 ## [2026-10-03] - Phase 12.7: DKAS Bot — Natural Language → Prisma Planner (IMPLEMENTED / VERIFIED)
 
 ### Added

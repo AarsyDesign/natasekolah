@@ -2,20 +2,26 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { 
-  Building2, 
-  FileSpreadsheet, 
-  FileText, 
-  MessageSquare, 
-  CreditCard, 
-  History, 
-  UserCheck, 
-  BookOpen, 
-  CheckCircle2, 
+import {
+  Building2,
+  FileSpreadsheet,
+  FileText,
+  MessageSquare,
+  CreditCard,
+  History,
+  UserCheck,
+  BookOpen,
+  CheckCircle2,
   ArrowRight,
   ShieldCheck,
   School,
-  GraduationCap
+  GraduationCap,
+  Users,
+  CalendarCheck,
+  Wallet,
+  ClipboardList,
+  BedDouble,
+  HeartHandshake,
 } from "lucide-react";
 
 interface PainPoint {
@@ -78,7 +84,70 @@ const PAIN_POINTS: PainPoint[] = [
   },
 ];
 
-const INSTITUTION_TYPES = [
+interface Module {
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const MODULES: Module[] = [
+  {
+    title: "Kesiswaan & Buku Induk",
+    description: "Biodata, rombongan belajar, kenaikan kelas, dan riwayat akademik tiap siswa dalam satu tempat.",
+    icon: Users,
+  },
+  {
+    title: "Presensi & Izin Santri",
+    description: "Absensi harian, riwayat kehadiran, dan izin keluar yang tercatat lengkap dengan alasannya.",
+    icon: CalendarCheck,
+  },
+  {
+    title: "Keuangan & SPP",
+    description: "Tagihan, kas harian, pembayaran per wali murid, sampai laporan keuangan yang bisa diaudit.",
+    icon: Wallet,
+  },
+  {
+    title: "Nilai, Ujian & Raport",
+    description: "Bank soal, naskah ujian siap cetak, penilaian, hingga raport yang dibekukan saat diterbitkan.",
+    icon: ClipboardList,
+  },
+  {
+    title: "Asrama & Tahfidz",
+    description: "Kamar asrama, kegiatan harian, halaqah, setoran hafalan, dan muroja'ah santri.",
+    icon: BedDouble,
+  },
+  {
+    title: "Portal Wali Murid",
+    description: "Wali dapat melihat nilai, presensi, keuangan, dan tagihan lembaga lewat akunnya sendiri.",
+    icon: HeartHandshake,
+  },
+];
+
+const HIGHLIGHTS = [
+  {
+    title: "Satu sumber data",
+    description: "Nilai, presensi, dan pembayaran disimpan sekali lalu dipakai bersama di seluruh modul.",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Riwayat tidak tertimpa",
+    description: "Data semester lalu tetap tersimpan utuh saat siswa naik kelas atau lulus.",
+    icon: History,
+  },
+  {
+    title: "Hak akses per peran",
+    description: "Guru, wali kelas, bendahara, dan admin lembaga melihat bagian yang berbeda.",
+    icon: UserCheck,
+  },
+];
+
+interface InstitutionType {
+  name: string;
+  scope: string;
+  focus: string;
+}
+
+const INSTITUTION_TYPES: InstitutionType[] = [
   {
     name: "Sekolah Formal",
     scope: "SD, SMP, SMA, SMK",
@@ -106,273 +175,289 @@ const INSTITUTION_TYPES = [
   },
 ];
 
-export default function VisionPage() {
+export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<number>(1);
   const selectedPoint = PAIN_POINTS.find((p) => p.id === activeTab) || PAIN_POINTS[0];
 
   return (
     <div className="min-h-screen bg-[#fbfbfa] text-[#18181b] flex flex-col">
-      {/* Top Bar / Header Navigasi Resmi */}
-      <header className="bg-white border-b border-[#e5e5e0] sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#0f766e] text-white flex items-center justify-center font-bold text-lg shadow-xs">
+      {/* Header */}
+      <header className="bg-white/90 backdrop-blur border-b border-[#e5e5e0] sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <Link href="/" className="flex items-center gap-3 touch-target rounded-lg" aria-label="NataSekolah, kembali ke beranda">
+            <div className="w-10 h-10 rounded-lg bg-teal-800 text-white flex items-center justify-center font-bold text-lg shadow-xs">
               N
             </div>
-            <div>
+            <div className="text-left">
               <span className="text-lg font-bold tracking-tight text-[#18181b] block leading-tight">
                 NataSekolah
               </span>
-              <span className="text-xs text-[#52525b] block">
-                Unified Education Management Platform
+              <span className="text-xs text-[#52525b] block leading-tight">
+                Manajemen Lembaga Pendidikan
               </span>
             </div>
-          </div>
+          </Link>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard"
-              className="touch-target rounded-lg bg-teal-800 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-teal-700"
-            >
-              Dashboard Operasional
-            </Link>
-            <Link
-              href="/students"
-              className="touch-target rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50"
-            >
-              Buku Induk
-            </Link>
-            <Link
-              href="/classrooms"
-              className="touch-target hidden rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 sm:inline-flex"
-            >
-              Rombel
-            </Link>
-            <Link
-              href="/subjects"
-              className="touch-target hidden rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 md:inline-flex"
-            >
-              Mapel
-            </Link>
-            <Link
-              href="/teachers"
-              className="touch-target hidden rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 md:inline-flex"
-            >
-              Guru
-            </Link>
-            <Link
-              href="/teacher-assignments"
-              className="touch-target hidden rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 lg:inline-flex"
-            >
-              Penugasan
-            </Link>
-          </div>
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#52525b]" aria-label="Navigasi utama">
+            <a href="#fitur" className="hover:text-[#0f766e] transition-colors">Fitur</a>
+            <a href="#kendala" className="hover:text-[#0f766e] transition-colors">Kendala Manual</a>
+            <a href="#lembaga" className="hover:text-[#0f766e] transition-colors">Jenis Lembaga</a>
+          </nav>
+
+          <Link
+            href="/login"
+            className="touch-target rounded-lg bg-teal-800 px-5 text-sm font-semibold text-white shadow-xs hover:bg-teal-700"
+          >
+            Masuk
+          </Link>
         </div>
       </header>
 
-      {/* Konten Utama */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12">
-        
-        {/* Banner Tagline & Visi Utama */}
-        <section className="text-center sm:text-left border-b border-[#e5e5e0] pb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-stone-100 border border-[#e5e5e0] text-[#52525b] text-xs font-medium mb-4">
-            <ShieldCheck className="w-4 h-4 text-[#0f766e]" />
-            <span>Dokumen Spesifikasi Produk (PRD 1.1)</span>
-          </div>
-          
-          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-[#18181b] leading-snug sm:leading-tight">
-            Menata Pendidikan, Merapikan Masa Depan.
-          </h1>
-          
-          <p className="mt-2 text-base sm:text-lg text-[#52525b]">
-            Tinggalkan Cara Manual, Saatnya Lembaga Anda Tertata Rapi.
-          </p>
-
-          <div className="mt-6 p-5 sm:p-6 rounded-xl bg-white border border-[#e5e5e0] shadow-xs">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-lg bg-[#ecfdf5] text-[#0f766e] flex-shrink-0 flex items-center justify-center mt-1">
-                <School className="w-6 h-6" />
-              </div>
-              <div className="space-y-2 text-left">
-                <h2 className="text-lg font-bold text-[#18181b]">
-                  1.1 Visi NataSekolah
-                </h2>
-                <p className="text-sm sm:text-base text-[#18181b] leading-relaxed">
-                  NataSekolah adalah platform SaaS multi-tenant yang menjadi <strong className="font-semibold text-[#0f766e]">pusat data dan operasional lembaga pendidikan</strong> Indonesia.
-                </p>
-                <p className="text-xs sm:text-sm text-[#52525b] leading-relaxed">
-                  NataSekolah tidak sekadar menggantikan buku dan Excel. Tujuan utamanya adalah menciptakan satu rujukan tunggal data (<span className="italic font-medium text-[#18181b]">Single Source of Truth</span>) untuk seluruh aktivitas administratif dan pembelajaran di lembaga Anda.
-                </p>
-              </div>
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="border-b border-[#e5e5e0] bg-gradient-to-b from-white to-[#fbfbfa]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#e5e5e0] text-[#52525b] text-xs font-medium shadow-xs mb-6">
+              <Building2 className="w-4 h-4 text-[#0f766e]" />
+              <span>Satu sistem untuk sekolah &amp; pesantren di Indonesia</span>
             </div>
-          </div>
-        </section>
 
-        {/* 7 Masalah Operasional Manual yang Diselesaikan */}
-        <section className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-[#18181b]">
-                7 Kendala Manual yang Ditata Rapi
-              </h2>
-              <p className="text-sm text-[#52525b]">
-                Kenyataan lapangan yang saat ini membebani guru, ustadz, dan staf tata usaha:
-              </p>
+            <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#18181b] leading-[1.15] max-w-3xl mx-auto">
+              Menata Pendidikan, Merapikan Masa Depan.
+            </h1>
+
+            <p className="mt-5 text-base sm:text-xl text-[#52525b] max-w-2xl mx-auto leading-relaxed">
+              Tinggalkan Excel yang tersebar dan arsip kertas yang menumpuk. NataSekolah merapikan kesiswaan,
+              presensi, keuangan, sampai raport dalam satu sistem.
+            </p>
+
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/login"
+                className="touch-target w-full sm:w-auto rounded-lg bg-teal-800 px-7 py-3.5 text-sm font-semibold text-white shadow-xs hover:bg-teal-700"
+              >
+                Masuk ke NataSekolah
+              </Link>
+              <a
+                href="#kendala"
+                className="touch-target w-full sm:w-auto rounded-lg border border-stone-300 bg-white px-7 py-3.5 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+              >
+                Lihat 7 Kendala Manual
+              </a>
             </div>
-            <span className="text-xs text-[#52525b]">
-              Pilih kendala untuk melihat solusinya
-            </span>
-          </div>
 
-          {/* Navigasi Pill / Tab Berdimensi Sentuh Nyaman (min 44px) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-            {PAIN_POINTS.map((item) => {
-              const IconComponent = item.icon;
-              const isActive = item.id === activeTab;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  type="button"
-                  className={`touch-target p-2 rounded-lg border text-left flex flex-col justify-between transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f766e] ${
-                    isActive
-                      ? "bg-[#0f766e] text-white border-[#0f766e] shadow-xs"
-                      : "bg-white text-[#18181b] border-[#e5e5e0] hover:bg-stone-50"
-                  }`}
-                  aria-pressed={isActive}
-                >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <IconComponent className={`w-4 h-4 ${isActive ? "text-white" : "text-[#0f766e]"}`} />
-                    <span className={`text-[10px] font-bold ${isActive ? "text-teal-200" : "text-[#52525b]"}`}>
-                      0{item.id}
-                    </span>
+            <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-left">
+              {HIGHLIGHTS.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <div key={item.title} className="bg-white rounded-xl border border-[#e5e5e0] p-4 shadow-xs">
+                    <IconComponent className="w-5 h-5 text-[#0f766e] mb-2" />
+                    <h2 className="text-sm font-bold text-[#18181b] mb-1">{item.title}</h2>
+                    <p className="text-xs text-[#52525b] leading-relaxed">{item.description}</p>
                   </div>
-                  <span className="text-xs font-semibold line-clamp-1">
-                    {item.title}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Kartu Fokus Detail Transformasi */}
-          <div className="bg-white rounded-xl border border-[#e5e5e0] p-6 shadow-xs">
-            <div className="flex flex-col md:flex-row md:items-center gap-6">
-              {/* Sisi Kondisi Manual */}
-              <div className="flex-1 space-y-2 border-b md:border-b-0 md:border-r border-[#e5e5e0] pb-4 md:pb-0 md:pr-6">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-[#fef2f2] text-[#dc2626] border border-[#fecaca]">
-                    Kondisi Manual Saat Ini
-                  </span>
-                  <span className="text-xs text-[#52525b]">Kendala #{selectedPoint.id}</span>
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-[#18181b]">
-                  {selectedPoint.title}
-                </h3>
-                <p className="text-sm text-[#52525b] leading-relaxed">
-                  {selectedPoint.problem}
-                </p>
-              </div>
-
-              {/* Panah Transisi */}
-              <div className="hidden md:flex items-center justify-center w-8 text-[#0f766e]">
-                <ArrowRight className="w-6 h-6" />
-              </div>
-
-              {/* Sisi Transformasi NataSekolah */}
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-[#ecfdf5] text-[#16a34a] border border-[#a7f3d0]">
-                    Solusi NataSekolah (1.1)
-                  </span>
-                  <CheckCircle2 className="w-4 h-4 text-[#16a34a]" />
-                </div>
-                <h4 className="text-base sm:text-lg font-bold text-[#0f766e]">
-                  Tertata Otomatis & Terpusat
-                </h4>
-                <p className="text-sm text-[#18181b] leading-relaxed font-medium">
-                  {selectedPoint.solution}
-                </p>
-              </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {/* Sasaran Lembaga Pendidikan */}
-        <section className="space-y-6 border-t border-[#e5e5e0] pt-10">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-[#18181b]">
-              Dirancang untuk Karakter Lembaga Indonesia
+        {/* Modul Fitur */}
+        <section id="fitur" className="max-w-6xl mx-auto px-4 sm:px-6 py-14 scroll-mt-20">
+          <div className="mb-8">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#0f766e]">Modul</span>
+            <h2 className="text-2xl font-bold tracking-tight text-[#18181b] mt-1">
+              Apa saja yang bisa dikelola
             </h2>
-            <p className="text-sm text-[#52525b]">
-              Satu arsitektur terpadu yang fleksibel melayani berbagai model pendidikan di tanah air:
+            <p className="text-sm text-[#52525b] mt-1">
+              Satu akun lembaga mengakses seluruh modul di bawah ini, tanpa perangkat lunak tambahan.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {INSTITUTION_TYPES.map((inst, idx) => (
-              <div 
-                key={idx}
-                className="bg-white p-5 rounded-xl border border-[#e5e5e0] shadow-xs flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-bold text-base text-[#18181b]">
-                      {inst.name}
-                    </h3>
-                    <GraduationCap className="w-4 h-4 text-[#0f766e]" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {MODULES.map((mod) => {
+              const IconComponent = mod.icon;
+              return (
+                <div
+                  key={mod.title}
+                  className="bg-white rounded-xl border border-[#e5e5e0] p-5 shadow-xs hover:border-teal-300 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[#f0fdfa] text-[#0f766e] flex items-center justify-center mb-3">
+                    <IconComponent className="w-5 h-5" />
                   </div>
-                  <span className="inline-block text-xs font-medium px-2 py-0.5 rounded bg-stone-100 text-[#52525b] mb-3">
-                    {inst.scope}
-                  </span>
-                  <p className="text-xs sm:text-sm text-[#52525b] leading-relaxed">
-                    {inst.focus}
-                  </p>
+                  <h3 className="font-bold text-base text-[#18181b] mb-1">{mod.title}</h3>
+                  <p className="text-sm text-[#52525b] leading-relaxed">{mod.description}</p>
                 </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 7 Kendala Manual */}
+        <section id="kendala" className="border-y border-[#e5e5e0] bg-white scroll-mt-20">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-6">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#0f766e]">Kendala</span>
+                <h2 className="text-2xl font-bold tracking-tight text-[#18181b] mt-1">
+                  7 Kendala Manual yang Ditata Rapi
+                </h2>
+                <p className="text-sm text-[#52525b]">
+                  Kenyataan lapangan yang saat ini membebani guru, ustadz, dan staf tata usaha:
+                </p>
+              </div>
+              <span className="text-xs text-[#52525b]">Pilih kendala untuk melihat solusinya</span>
+            </div>
+
+            {/* Tab pill berdimensi sentuh (min 44px) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+              {PAIN_POINTS.map((item) => {
+                const IconComponent = item.icon;
+                const isActive = item.id === activeTab;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    type="button"
+                    className={`touch-target p-2 rounded-lg border text-left flex flex-col justify-between transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f766e] ${
+                      isActive
+                        ? "bg-[#0f766e] text-white border-[#0f766e] shadow-xs"
+                        : "bg-white text-[#18181b] border-[#e5e5e0] hover:bg-stone-50"
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <IconComponent className={`w-4 h-4 ${isActive ? "text-white" : "text-[#0f766e]"}`} />
+                      <span className={`text-[10px] font-bold ${isActive ? "text-teal-200" : "text-[#52525b]"}`}>
+                        0{item.id}
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold line-clamp-1">{item.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Kartu fokus: kondisi manual -> solusi */}
+            <div className="mt-4 bg-[#fbfbfa] rounded-xl border border-[#e5e5e0] p-6 shadow-xs">
+              <div className="flex flex-col md:flex-row md:items-center gap-6">
+                <div className="flex-1 space-y-2 border-b md:border-b-0 md:border-r border-[#e5e5e0] pb-4 md:pb-0 md:pr-6">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-[#fef2f2] text-[#dc2626] border border-[#fecaca]">
+                      Kondisi Manual Saat Ini
+                    </span>
+                    <span className="text-xs text-[#52525b]">Kendala #{selectedPoint.id}</span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-[#18181b]">{selectedPoint.title}</h3>
+                  <p className="text-sm text-[#52525b] leading-relaxed">{selectedPoint.problem}</p>
+                </div>
+
+                <div className="hidden md:flex items-center justify-center w-8 text-[#0f766e]">
+                  <ArrowRight className="w-6 h-6" />
+                </div>
+
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-[#ecfdf5] text-[#16a34a] border border-[#a7f3d0]">
+                      Solusi NataSekolah
+                    </span>
+                    <CheckCircle2 className="w-4 h-4 text-[#16a34a]" />
+                  </div>
+                  <h4 className="text-base sm:text-lg font-bold text-[#0f766e]">Tertata Otomatis &amp; Terpusat</h4>
+                  <p className="text-sm text-[#18181b] leading-relaxed font-medium">{selectedPoint.solution}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Jenis Lembaga */}
+        <section id="lembaga" className="max-w-6xl mx-auto px-4 sm:px-6 py-14 scroll-mt-20">
+          <div className="mb-8">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#0f766e]">Cakupan</span>
+            <h2 className="text-2xl font-bold tracking-tight text-[#18181b] mt-1">
+              Dirancang untuk Karakter Lembaga Indonesia
+            </h2>
+            <p className="text-sm text-[#52525b]">
+              Satu sistem yang menyesuaikan istilah dan alur kerja tiap model pendidikan di tanah air.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {INSTITUTION_TYPES.map((inst) => (
+              <div key={inst.name} className="bg-white p-5 rounded-xl border border-[#e5e5e0] shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-base text-[#18181b]">{inst.name}</h3>
+                  <GraduationCap className="w-4 h-4 text-[#0f766e]" />
+                </div>
+                <span className="inline-block text-xs font-medium px-2 py-0.5 rounded bg-stone-100 text-[#52525b] mb-3">
+                  {inst.scope}
+                </span>
+                <p className="text-xs sm:text-sm text-[#52525b] leading-relaxed">{inst.focus}</p>
               </div>
             ))}
 
-            {/* Kotak Pernyataan Single Source of Truth */}
-            <div className="bg-[#0f766e] text-white p-5 rounded-xl shadow-xs flex flex-col justify-between sm:col-span-2 md:col-span-1">
+            <div className="bg-teal-800 text-white p-5 rounded-xl shadow-xs flex flex-col justify-between sm:col-span-2 lg:col-span-1">
               <div>
                 <span className="text-xs uppercase tracking-wider font-semibold text-teal-200 block mb-1">
-                  Tujuan Utama 1.1
+                  Prinsip Utama
                 </span>
-                <h3 className="text-lg font-bold text-white mb-2 leading-tight">
-                  Single Source of Truth
-                </h3>
+                <h3 className="text-lg font-bold text-white mb-2 leading-tight">Single Source of Truth</h3>
                 <p className="text-xs sm:text-sm text-teal-50 leading-relaxed">
-                  Menghilangkan duplikasi identitas siswa. Satu peserta didik, satu identitas terpadu, dan riwayat yang terlindungi abadi.
+                  Satu peserta didik, satu identitas terpadu. Data nilai dan riwayat kelas tetap tersimpan abadi,
+                  bukan saling menimpa antar file.
                 </p>
               </div>
               <div className="mt-4 pt-4 border-t border-teal-600/60 flex items-center justify-between text-xs text-teal-100 font-medium">
-                <span>Pusat Data & Operasional</span>
+                <span>Pusat Data &amp; Operasional Lembaga</span>
                 <CheckCircle2 className="w-4 h-4 text-teal-200" />
               </div>
             </div>
           </div>
         </section>
 
-        {/* Ringkasan Status & Komitmen Lingkup Terbatas */}
-        <section className="bg-white rounded-xl border border-[#e5e5e0] p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#16a34a]" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[#18181b]">
-              Status Eksekusi Batasan Kerja (PRD 1.1)
+        {/* CTA Penutup */}
+        <section className="bg-white border-t border-[#e5e5e0]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 text-center">
+            <School className="w-8 h-8 text-[#0f766e] mx-auto mb-4" />
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#18181b]">
+              Siap merapikan lembaga Anda?
             </h2>
+            <p className="mt-3 text-sm sm:text-base text-[#52525b] max-w-xl mx-auto">
+              Masuk dengan akun yang diberikan admin lembaga, lalu kelola siswa, kelas, keuangan, dan raport
+              dari satu tempat.
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/login"
+                className="touch-target w-full sm:w-auto rounded-lg bg-teal-800 px-7 py-3.5 text-sm font-semibold text-white shadow-xs hover:bg-teal-700"
+              >
+                Masuk ke Akun Lembaga
+              </Link>
+              <Link
+                href="/wali/aktivasi"
+                className="touch-target w-full sm:w-auto rounded-lg border border-stone-300 px-7 py-3.5 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+              >
+                Aktivasi Akun Wali
+              </Link>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-[#52525b] leading-relaxed">
-            Pengerjaan ini secara ketat hanya mencakup **Bagian 1.1 Visi Produk**. Seluruh modul operasional selanjutnya (seperti Kesiswaan, Presensi, Keuangan, E-Raport) tidak dikerjakan mendahului urutan, sesuai instruksi pembatasan ketat (*tidak boleh lebih*) dan aturan *Development Order* PRD v5.0.
-          </p>
         </section>
-
       </main>
 
-      {/* Footer Bersahaja */}
-      <footer className="bg-white border-t border-[#e5e5e0] py-6 text-center text-xs text-[#52525b]">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>NataSekolah (PRD v5.0 : Modul 1.1 Visi Produk)</span>
-          <span>Menata Pendidikan, Merapikan Masa Depan</span>
+      {/* Footer */}
+      <footer className="bg-white border-t border-[#e5e5e0] py-6">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#52525b]">
+          <div className="flex items-center gap-2">
+            <School className="w-4 h-4 text-[#0f766e]" />
+            <span>NataSekolah — Menata Pendidikan, Merapikan Masa Depan</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href="#fitur" className="hover:text-[#0f766e] transition-colors">Fitur</a>
+            <a href="#lembaga" className="hover:text-[#0f766e] transition-colors">Jenis Lembaga</a>
+            <Link href="/login" className="hover:text-[#0f766e] transition-colors">
+              Masuk
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
