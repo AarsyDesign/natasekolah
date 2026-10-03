@@ -1,5 +1,23 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-02] - Phase 12.1 + 12.2: Search Highlight & Error Boundary (IMPLEMENTED / VERIFIED)
+
+### Added
+* **`src/lib/operations/search-highlight.ts`** — helper murni (tanpa DOM) `highlightSearchMatches(text, query)` → segmen `{text, matched}`; normalisasi kueri (trim + rapatkan spasi + lowercase), case-insensitive, semua kecocokan ditandai, teks asli selalu utuh (rekonstruksi identik), query < 2 karakter → tanpa highlight. `normalizeHighlightQuery` + `hasSearchMatch` pendamping. Tanpa `innerHTML` (murni array → aman dari injeksi).
+* **`src/components/global-search-dialog.tsx`** — komponen lokal `HighlightedText` merender segmen matched sebagai `<mark class="bg-amber-100">` pada **title** dan **subtitle** tiap hasil pencarian (NIS/NISN/nama/WA ikut tersorot).
+* **`src/app/error.tsx`** — React error boundary Next.js (segmen di bawah root layout): fallback manusiawi ("Terjadi gangguan tak terduga"), tombol **Coba Lagi** (`reset`) + tautan **Ke Dasbor**, target sentuh 44px, fokus terlihat; pesan error mentah TIDAK dirender (hanya `digest` pendek untuk dukungan) — log ke console klien saja.
+* **`src/app/global-error.tsx`** — boundary root (menggantikan layout): merender `<html lang="id">` + `<body>` sendiri dengan inline style (tidak bergantung CSS global yang ikut crash), tombol Muat Ulang 44px.
+
+### Notes
+* Pencarian global memakai Prisma `contains` (per-entitas, RBAC + tenant-scoped), **bukan Fuse.js** — tuning threshold Fuse.js dari plan tidak relevan di jalur ini (Fuse.js hanya dipakai DKAS Bot).
+
+### Verification
+* `npx tsc --noEmit` → 0 error
+* `npm test` → **672/672 pass** (0 fail, 200 suites; +15 baru `test/search-highlight.test.ts`)
+* `npm run build` → exit 0 ("Compiled successfully", kedua boundary ter-kompilasi)
+
+---
+
 ## [2026-10-02] - Phase 11.6 Gate Keluar + PLAN-PHASE-12 Created — COMPLETED / VERIFIED
 
 ### Phase 11 Summary (All Complete)

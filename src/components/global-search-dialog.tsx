@@ -15,10 +15,36 @@ import {
 } from "lucide-react";
 import { searchGlobalAction } from "../actions/operations";
 import type { GlobalSearchResultItem, SearchEntityType } from "../lib/operations/types";
+import { highlightSearchMatches } from "../lib/operations/search-highlight";
 
 interface GlobalSearchDialogProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+/**
+ * Render teks dengan bagian yang cocok dengan kueri dibungkus <mark>.
+ * Segmen dibangun dari `highlightSearchMatches` (murni, teruji unit test)
+ * sehingga tidak ada innerHTML / injection.
+ */
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  const segments = highlightSearchMatches(text, query);
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.matched ? (
+          <mark
+            key={i}
+            className="rounded-xs bg-amber-100 px-0.5 text-amber-900"
+          >
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        )
+      )}
+    </>
+  );
 }
 
 export function GlobalSearchDialog({ isOpen, onClose }: GlobalSearchDialogProps) {
@@ -213,7 +239,9 @@ export function GlobalSearchDialog({ isOpen, onClose }: GlobalSearchDialogProps)
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium truncate">{item.title}</span>
+                            <span className="font-medium truncate">
+                              <HighlightedText text={item.title} query={query} />
+                            </span>
                             <span className="shrink-0 rounded-xs bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600">
                               {getTypeLabel(item.type)}
                             </span>
@@ -223,7 +251,9 @@ export function GlobalSearchDialog({ isOpen, onClose }: GlobalSearchDialogProps)
                               </span>
                             )}
                           </div>
-                          <p className="truncate text-xs text-stone-500">{item.subtitle}</p>
+                          <p className="truncate text-xs text-stone-500">
+                            <HighlightedText text={item.subtitle} query={query} />
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 pl-2 text-stone-400 group-hover:text-teal-700 shrink-0">

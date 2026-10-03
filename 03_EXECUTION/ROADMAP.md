@@ -107,8 +107,8 @@ PHASE 7 (AI & Automation)
 
 ### Phase 12 Gate — Hardening Lanjutan & Fondasi DKAS Bot
 
-* [ ] **12.1 Search UX: Fuse.js Weight Tuning + Highlight** — threshold/keys tuning + highlight snippet di `GlobalSearchDialog` (mark matched terms). | Kecil |
-* [ ] **12.2 Error Boundary & Recovery UI** — React Error Boundary di `app-shell` + fallback `/error` + `rethrowIfSessionExpired` toast terpusat. | Kecil |
+* [x] **12.1 Search UX: Highlight matched terms** — **selesai 2026-10-02 (Run 1)**: helper murni `src/lib/operations/search-highlight.ts` (`highlightSearchMatches` case-insensitive + normalisasi spasi, teks asli utuh, tanpa innerHTML) + `HighlightedText` (`<mark>` amber) pada title & subtitle `GlobalSearchDialog`. *Koreksi plan: pencarian global pakai Prisma `contains`, bukan Fuse.js (Fuse.js hanya DKAS Bot).* 12 test. | Kecil |
+* [x] **12.2 Error Boundary & Recovery UI** — **selesai 2026-10-02 (Run 1)**: `src/app/error.tsx` (fallback: Coba Lagi + Ke Dasbor, tanpa pesan error mentah, hanya `digest`) + `src/app/global-error.tsx` (root, render `<html>/<body>` sendiri, inline style). Sesi berakhir tetap via `rethrowIfSessionExpired` → `/login?expired=1`. 3 test struktural. | Kecil |
 * [ ] **12.3 AuditLog Query API + UI Filter** — server action `listAuditLogAction` (filter entityType, action, date range, user) + halaman `/audit-log` (guard `audit:view`). | Sedang |
 * [ ] **12.4 Performance: Bundle Analyzer + Code Split** — `next build --profile`; dynamic import heavy components (PDF/DOCX export, question bank modal, AI generator modal). | Sedang |
 * [ ] **12.5 Accessibility (a11y) Sweep** — `eslint-plugin-jsx-a11y` rules; focus-visible, ARIA label, color contrast WCAG AA, keyboard trap modal, skip link. | Sedang |

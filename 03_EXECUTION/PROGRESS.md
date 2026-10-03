@@ -1,5 +1,14 @@
 # Progress & Development Log - NataSekolah
 
+## 2026-10-02 - Phase 12.1 Search Highlight + 12.2 Error Boundary: **SELESAI (Run 1)**
+
+* **12.1 Search UX:** `src/lib/operations/search-highlight.ts` — helper murni `highlightSearchMatches` (case-insensitive, normalisasi spasi, semua kecocokan, teks asli utuh, query <2 char tanpa highlight) + `normalizeHighlightQuery` + `hasSearchMatch`. `global-search-dialog.tsx` → komponen `HighlightedText` render `<mark>` amber pada title & subtitle hasil. *Koreksi rencana: pencarian global pakai Prisma `contains` (RBAC + tenant-scoped), bukan Fuse.js — tuning Fuse.js tidak relevan di sini (Fuse.js hanya DKAS Bot).*
+* **12.2 Error Boundary:** `src/app/error.tsx` (fallback segmen: "Coba Lagi" reset + "Ke Dasbor", 44px touch, fokus terlihat, tanpa pesan error mentah — hanya `digest` pendek) + `src/app/global-error.tsx` (root boundary, render `<html>/<body>` sendiri dengan inline style). Sesi berakhir tetap ditangani `rethrowIfSessionExpired` → `/login?expired=1`, tidak sampai boundary.
+* **Verifikasi:** `npx tsc --noEmit` **0** · `npm test` **672/672 pass, 0 fail** (200 suites; +15 baru `test/search-highlight.test.ts`) · `npm run build` **exit 0** ("Compiled successfully"). Tanpa perubahan skema DB.
+* **Dokumentasi:** TODO 12.1 ✓ 12.2 ✓, CHANGELOG diupdate. Tahap berikut: **12.3 AuditLog Query API + UI Filter**.
+
+---
+
 ## 2026-10-02 - Phase 10.5 QA E2E + Test DoD Strict + Gate Keluar Phase 10: **LULUS**
 
 * **Verifikasi:** `npx tsc --noEmit` **0** · `npm test` **624/624 pass, 0 fail** (182 suites) — unit (compose/poin/urutan/RBAC/cross-tenant/token), integration (`%PDF` header, DOCX zip, anti-leak verifikasi), smoke HTTP download · `npm run build` **exit 0** (26 routes).
