@@ -1,5 +1,14 @@
 # Development Changelog - NataSekolah
 
+## [2026-10-03] - Gate 12.8: Keluar Phase 12 (VERIFIED)
+
+### Changed
+* **`03_EXECUTION/ROADMAP.md` + `03_EXECUTION/TODO.md`** — item **12.8** ditandai **LULUS**: `tsc --noEmit` 0 error · `npm test` **773/773** (227 suites) · `npm run build` exit 0 · `npm run lint` 0 error (368 warning tercatat) · docs konsisten (README "Migrasi Database" dari siklus B-05 + angka test 773).
+* **`03_EXECUTION/PLAN-PHASE-13.md`** (baru) — rencana Phase 13 "Kesiapan Produksi & Bayar Utang Kualitas": Jalur A (B-13 kanal rilis, B-07a a11y tahap 1, audit fungsional `/finance`+`/attendance`, M2 `as any`, QA E2E eksploratif, Gate 13) + Jalur B (B-02/03/04/08/09/14, tier COMMUNITY, AI key — **butuh keputusan Arsyad**). Siklus "selesai → plan lagi" ditepati.
+* Backlog terblokir (ROADMAP 9.4) **belum ditutup** → laporan final Phase 12 ditahan sampai ada keputusan.
+
+---
+
 ## [2026-10-03] - Halaman Depan: Landing Page + CTA (IMPLEMENTED / VERIFIED)
 
 ### Changed

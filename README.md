@@ -34,10 +34,10 @@ src/
 │   └── tenant/             # Multi-tenancy context & guards
 ├── actions/                # Server Actions (RBAC protected)
 ├── hooks/                  # React hooks
-└── test/                   # Vitest suites (473+ tests)
+└── test/                   # node:test suites (773+ tests)
 ```
 
-**Stack:** Next.js 15 (Turbopack) · TypeScript · Prisma/PostgreSQL · Tailwind CSS · shadcn/ui · Vitest · Zod
+**Stack:** Next.js 15 (Turbopack) · TypeScript · Prisma/PostgreSQL · Tailwind CSS · shadcn/ui · node:test · Zod
 
 ---
 
@@ -53,7 +53,7 @@ npm install
 cp .env.example .env
 # Edit .env: DATABASE_URL, NEXTAUTH_SECRET, AI_PROVIDER, AI_API_KEY, dll
 
-# Database
+# Database (setup lokal BARU saja — lihat "Migrasi Database" di bawah)
 npx prisma generate
 npx prisma db push
 
@@ -62,6 +62,29 @@ npm run dev
 ```
 
 **Akses:** `http://localhost:3000` → Login institusi → Pilih modul dari sidebar.
+
+---
+
+## 🗄️ Migrasi Database
+
+Sumber kebenaran skema = **file migrasi Prisma** di `prisma/migrations/` (7 file), bukan `db push`.
+
+```bash
+# Terapkan migrasi yang belum jalan (aman: tanpa reset, tanpa mengubah data)
+npx prisma migrate deploy
+
+# Verifikasi status & konsistensi
+npx prisma migrate status
+npx prisma migrate diff --from-migrations --to-schema-datamodel prisma/schema.prisma
+npx prisma validate
+```
+
+**Aturan wajib:**
+- **Jangan jalankan `npx prisma migrate dev`.** Pada database yang dibuat lewat `db push`, perintah itu menawarkan *reset database* (data hilang). Pakai `migrate deploy` / apply manual.
+- **Menambah skema:** tulis file migrasi manual `prisma/migrations/<timestamp>_<nama>/migration.sql` (SQL dari `prisma migrate diff ... --script`; bila shadow DB tak tersedia, tulis `CREATE TABLE` langsung sesuai `schema.prisma`), apply via `migrate deploy` atau `prisma db execute --file ...`, lalu wajib `migrate diff` → **No difference detected**. `db push` tidak dipakai lagi setelah baseline (menambah drift).
+- **Baseline database lama:** bila `migrate status` melaporkan migrasi sudah terlanjur ada di DB namun belum tercatat (P3005), rekam dengan `npx prisma migrate resolve --applied <nama_migrasi>` — **bukan** reset.
+- **Produksi:** rilis skema cukup `npx prisma migrate deploy`; `db push` tidak dipakai di produksi.
+- **Skema & CI:** setiap perubahan skema **wajib** datang bersama file migrasi yang sudah di-review; pipeline memakai `npx prisma migrate deploy`, bukan `db push`. Catatan: `.github/workflows/ci.yml` saat ini belum ter-commit ke remote (folder `.github/` dikecualikan lokal), jadi GitHub Actions belum berjalan.
 
 ---
 
@@ -106,17 +129,21 @@ npm run build
 npx prisma validate
 ```
 
-**Current:** `473/473 tests pass` · `tsc 0 error` · `build exit 0`
+**Current:** `773/773 tests pass` · `tsc 0 error` · `build exit 0`
 
 ---
 
 ## 📦 Deployment
 
-| Platform | Status |
-|----------|--------|
-| Vercel Preview | ❌ Kuota penuh (butuh project baru + env Supabase) |
-| Cloudflare Tunnel | ✅ Active: `https://fighter-monsters-upgrades-tulsa.trycloudflare.com` |
-| Local (PM2) | ✅ `npm run dev` background |
+| Kanal | Status |
+|-------|--------|
+| **Produksi** `natasekolah.vercel.app` | ✅ **Auto-deploy** — Vercel Git integration membangun dari `origin/staging` setiap push (terverifikasi 2026-10-03: dua push berturut-turut tayang otomatis tanpa trigger manual; `curl -I` → `server: Vercel`, `x-vercel-id: sin1`) |
+| Vercel Preview (PR/branch) | ⚠️ Historis "kuota penuh" (per 2026-10-02) — belum diverifikasi ulang; jangan diandalkan |
+| Cloudflare Tunnel | ✅ Aktif: `https://fighter-monsters-upgrades-tulsa.trycloudflare.com` (lihat `npx next dev` background) |
+| Local (dev) | ✅ `npm run dev -p 3000` |
+
+**Rilis aman:** cukup push ke `staging` (wajib lewat persetujuan pemilik proyek) — jangan `prisma migrate dev`; rilis skema pakai `migrate deploy`.
+**Rollback:** revert commit di `staging` lalu push, atau pakai dashboard Vercel → Deployments → Redeploy versi lama.
 
 ---
 

@@ -180,28 +180,90 @@ NataSekolah; menghapus file tak dikenal tanpa pemeriksaan; mengubah branch sourc
 persetujuan. Temukan direktori/modul di luar scope → catat & minta klarifikasi, jangan masukkan otomatis
 ke roadmap. **Jangan menimpa perubahan yang belum di-commit.**
 
-## 13. REPORTING FORMAT (setiap siklus)
+## 13. REPORTING FORMAT (WAJIB — setiap eksekusi cron memakai format ini, verbatim)
 
 ```
-NataSekolah Continuous Audit
-- Waktu: · Repository: · Branch: · Commit: · Status working tree:
+NATasekolah — CONTINUOUS AUDIT REPORT
 
-Audit yang dilakukan
-- Area: · File/modul: · Temuan baru: · Temuan lama yang masih terbuka:
+1. INFORMASI EKSEKUSI
+- Tanggal dan waktu:
+- Job ID:
+- Repository:
+- Branch:
+- Commit:
+- Status working tree:
+- Nomor siklus:
 
-Pekerjaan terpilih
-- Nama pekerjaan: · Kategori: · Alasan: · Dampak diharapkan: · Risiko:
+2. RINGKASAN EKSEKUTIF
+(Singkat: apa yang diperiksa, apa yang selesai, ada masalah baru atau tidak,
+ kondisi umum repository, hal yang perlu perhatian. Bahasa Indonesia jelas,
+ hindari pengulangan teknis yang tidak perlu.)
 
-Implementasi
-- Status: COMPLETED / BLOCKED / NO CHANGE · File berubah: · Ringkasan:
+3. HASIL AUDIT
+(Kelompokkan per kategori — tampilkan hanya yang relevan:
+ UI/UX dan Accessibility · Frontend · Backend dan API · Database dan Integritas Data
+ · Security dan Authorization · Performance · Testing dan Code Quality
+ · Infrastruktur dan Deployment.
+ Tiap temuan: ID · Prioritas (Critical/High/Medium/Low) · Status (Baru/Terbuka/
+ Dalam Pengerjaan/Selesai/Menunggu Persetujuan) · Lokasi · Ringkasan masalah ·
+ Dampak dan risiko · Rekomendasi. Bedakan tegas: baru vs lama terbuka vs selesai.)
 
-Verifikasi
-- Test: · Typecheck: · Lint: · Pemeriksaan tambahan: · Hasil: · Kegagalan:
+4. PEKERJAAN SIKLUS INI
+- Target pekerjaan:
+- Alasan pemilihan:
+- File yang diperiksa:
+- File yang diubah:
+- Implementasi:
+- Risiko perubahan:
+- Status pekerjaan:
+(Jangan mengklaim selesai bila implementasi/verifikasi belum tuntas.)
 
-Temuan yang menunggu persetujuan
-- Temuan: · Alasan perlu keputusan: · Rekomendasi:
+5. HASIL VERIFIKASI
+| Pemeriksaan | Hasil | Status |
+| Unit/Integration Test | lulus/gagal | PASS/FAIL/SKIPPED |
+| TypeScript | jumlah error | PASS/FAIL/SKIPPED |
+| ESLint | error dan warning | PASS/FAIL/SKIPPED |
+| Security Scan | ringkasan | PASS/FAIL/SKIPPED |
+| Pemeriksaan tambahan | ringkasan | PASS/FAIL/SKIPPED |
+(Jangan mengarang hasil. Tidak dikerjakan → SKIPPED + alasannya.
+ Pisahkan warning baru dari warning lama. Jangan klaim "sistem aman" dari
+ pemeriksaan terbatas.)
 
-Rekomendasi siklus berikutnya (maksimal 3, jangan ulang yang selesai)
+6. DAMPAK TERHADAP REPOSITORY
+- Daftar file berubah · perubahan belum di-commit · file milik siklus lain
+  tersentuh? · perubahan database/konfigurasi/dependensi? · status commit & push ·
+  potensi konflik/pekerjaan berjalan.
+(TANPA commit/push/migrasi/ubah cron tanpa otorisasi yang sesuai.)
+
+7. DAFTAR TEMUAN TERBUKA
+| ID | Temuan | Prioritas | Status | Tindakan Berikutnya |
+(Pertahankan ID lama — jangan bikin ID baru untuk masalah yang sama.)
+
+8. REKOMENDASI SIKLUS BERIKUTNYA (maksimal 3)
+Tiap rekomendasi: target · manfaat · tingkat risiko · mandiri atau butuh persetujuan.
+Prioritaskan yang aman, berdampak, bisa dikerjakan dengan kondisi kode saat ini.
+
+9. KESIMPULAN
+- Status keseluruhan: COMPLETED / PARTIALLY COMPLETED / BLOCKED / AUDIT ONLY
+- Temuan baru: · Temuan diselesaikan: · Temuan masih terbuka: · Rekomendasi utama:
+
+ATURAN PELAPORAN:
+1. Bahasa Indonesia profesional, lugas; istilah teknis Inggris boleh bila lebih tepat.
+2. Hindari laporan terlalu panjang/berulang/log mentah — detail diagnostik disimpan
+   di AUDIT-LOG.md.
+3. Gunakan heading, tabel, daftar, dan penanda status secara konsisten.
+4. Jangan mencampur fakta hasil pemeriksaan dengan asumsi atau rekomendasi.
+5. Jangan menyembunyikan kegagalan pengujian, regresi, risiko keamanan, atau pekerjaan
+   yang belum selesai.
+6. Pastikan laporan sesuai dengan kondisi repository yang benar-benar diperiksa, bukan
+   hanya berdasarkan catatan siklus sebelumnya.
+7. Perbarui "AUDIT-LOG.md" dengan detail historis dan simpan laporan ringkas pada
+   keluaran setiap cronjob.
+8. Hindari menulis ulang seluruh laporan lama. Tambahkan laporan baru dengan penanda
+   waktu dan nomor siklus.
+9. Jangan mengubah implementasi aplikasi hanya demi mempercantik laporan.
+10. Pertahankan seluruh batasan otorisasi yang telah ditetapkan sebelumnya
+    (tanpa commit/push/deploy/migrasi/ubah konfigurasi cron tanpa izin Arsyad).
 ```
 
 ## 14. DEFINITION OF DONE
